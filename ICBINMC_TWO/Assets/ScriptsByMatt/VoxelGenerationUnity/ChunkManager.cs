@@ -2090,9 +2090,11 @@ public class BlockCollection
 		Coord relCoord = woco % BLOCKSPERNOISEPATCH;
 
 		//fix:
-		Coord flipNeg = relCoord.booleanNegative () * (new Coord (BLOCKSPERNOISEPATCH - 1) - relCoord);
-		Coord posPart = relCoord.booleanPositive () * relCoord;
-		relCoord = flipNeg + posPart;
+//		Coord flipNeg = relCoord.booleanNegative () * (new Coord (BLOCKSPERNOISEPATCH - 1) - relCoord);
+//		Coord posPart = relCoord.booleanPositive () * relCoord;
+//		relCoord = flipNeg + posPart;
+		//end fix
+
 		return (relCoord + BLOCKSPERNOISEPATCH) % BLOCKSPERNOISEPATCH;
 	}
 }
