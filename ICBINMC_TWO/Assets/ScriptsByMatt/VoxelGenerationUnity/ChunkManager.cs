@@ -2262,29 +2262,48 @@ public class NoisePatch : ThreadedJob
 		populateBlocksFromNoise (start, range);
 	}
 
+//	private void swapValuesIfLarger( out int start, int the_start, out int end, int the_end) {
+//		start = the_start; end = the_end;
+//		if (start > end) {
+//			int prev_start = start;
+//			start = end;
+//			end = prev_start;
+//		}
+//	}
+
 	public void populateBlocksFromNoise(Coord start, Coord range)
 	{
 		if (generatedBlockAlready)
 			return;
 		//...
 		int x_start = (int)( start.x);
+		int xincr = 1; // x_start < 0 ? -1 : 1;
 		int z_start = (int)( start.z);
-		int y_start = (int)( start.y);
+		int zincr = 1; // z_start < 0 ? -1 : 1;
+		int y_start = (int)( start.y); //y always pos please!
+//		int yincr = y_start < 0 ? -1 : 1;
 
-		int x_end = (int)(x_start + range.x);
-		int y_end = (int)(y_start + range.y);
-		int z_end = (int)(z_start + range.z);
+		int x_end = (int)(x_start + xincr * range.x);
+		int y_end = (int)(y_start +  range.y);
+		int z_end = (int)(z_start + zincr * range.z);
+
+//		swapValuesIfLarger (out x_start, x_start,out x_end, x_end);
+//		swapValuesIfLarger (out z_start, z_start,out z_end, z_end);
 
 		int xx = x_start;
-		for (; xx < x_end; ++xx) 
+//		bool xcomparison = x_start > 0 ? xx < x_end : xx > x_end;
+//		bool xcomparison = xx < x_end;
+		for (; xx < x_end ; xx = xx + xincr) 
 		{
 			int zz = z_start;
-			for (; zz < z_end; ++zz) 
+//			bool zcomparison = z_start > 0 ? zz < z_end : zz > z_end;
+//			bool zcomparison = zz < z_end; 
+			for (; zz < z_end; zz = zz + zincr) 
 			{
 				float noise_val = m_chunkManager.noiseHandler [xx, zz];
 
 				int yy = y_start; // (int) ccoord.y;
-				for (; yy < y_end; ++ yy) 
+				for (; yy < y_end; yy = yy + 1) 
 				{
 
 					BlockType btype = BlockType.Air;
@@ -2323,6 +2342,7 @@ public class NoisePatch : ThreadedJob
 							}
 						}
 					}
+					//TODO: add a lock(someObject) here?
 //					UnityEngine.Debug.Log (" creating block at x " + xx + " y " + yy + " z " + zz);
 					blocks [xx , yy , zz] = new Block (btype);
 				}
