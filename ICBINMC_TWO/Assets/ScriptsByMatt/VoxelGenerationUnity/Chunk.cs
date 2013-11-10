@@ -627,6 +627,10 @@ public class Chunk // : MonoBehaviour
 		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
 
 		// TODO: clear the lists?
+
+		vertices_list.Clear ();
+		uvcoords_list.Clear ();
+		triangles_list.Clear ();
 	}
 
 	public void clearMeshOfGameObject(GameObject _gameObj)

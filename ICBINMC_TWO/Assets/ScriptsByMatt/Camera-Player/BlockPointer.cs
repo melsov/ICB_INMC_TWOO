@@ -14,7 +14,6 @@ public class BlockPointer : MonoBehaviour {
 	void Update () 
 	{
 
-
 //		RaycastHit hit;
 //		Vector3 fwd = transform.TransformDirection(Vector3.forward);
 //		if (Physics.Raycast(transform.position, fwd , out hit, 100))
@@ -41,14 +40,14 @@ public class BlockPointer : MonoBehaviour {
 
 //		RaycastHit hit;
 //		Vector3 midScreen = new Vector3 (Screen.width * .5f, Screen.height * .5f, 0f);
-//		if (!Physics.Raycast(camera.ScreenPointToRay(midScreen), out hit))
-//			return;
-//
-//		if (Input.GetMouseButton (0)) { //GetMouseButton(0) is true for the whole time that the left mouse button is down (so useful for punching blocks)
-//			
-//			hitHandler.handleLeftButtonHit (hit);
-//			
-//		}
+		if (!Physics.Raycast(camera.ScreenPointToRay(midScreen), out hit))
+			return;
+
+		if (Input.GetMouseButton (0)) { //GetMouseButton(0) is true for the whole time that the left mouse button is down (so useful for punching blocks)
+			
+			hitHandler.handleLeftButtonHit (hit);
+			
+		}
 //
 
 //		bug ("world point: " + hit.point + " tri index: " + hit.triangleIndex);
