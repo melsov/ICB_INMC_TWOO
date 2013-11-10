@@ -103,7 +103,7 @@ public class ChunkManager : MonoBehaviour
 
 		setupThesePatches = new List<NoisePatch> ();
 
-		spawnPlayerAtCoord = new Coord (6, 0, 6);
+//		spawnPlayerAtCoord = new Coord (6, 0, -63);
 //		noisePatches = new Dictionary<NoiseCoord, NoisePatch> ();
 	}
 
@@ -177,7 +177,7 @@ public class ChunkManager : MonoBehaviour
 	}
 
 	private Coord worldIndexForChunkCoordAndOffset(Coord cc, Coord offset) {
-		cc = cc + cc.booleanNegative ();
+//		cc = cc + cc.booleanNegative (); // no??
 		return new Coord ((int)(cc.x * CHUNKLENGTH + offset.x),(int) (cc.y * CHUNKLENGTH + offset.y),(int) (cc.z * CHUNKLENGTH + offset.z));
 	}
 
@@ -198,10 +198,11 @@ public class ChunkManager : MonoBehaviour
 			return null;
 		}
 
+//		bug ("trying to get a block from ch coord: " + cc.toString() + " offset: " + offset.toString() +" at woco: " + index.toString() );
 		
 		if (!blocks.noisePatches.ContainsKey (new NoiseCoord (cc / NoisePatch.CHUNKDIMENSION) ))
 		{
-//			bug ("trying to get a block for which we don't have the noise patch coord");
+			bug ("trying to get a block from ch coord: " + cc.toString() + " offset: " + offset.toString() +" for which we don't have a noise patch coord at woco: " + index.toString() );
 			return null;
 		}
 
@@ -256,7 +257,7 @@ public class ChunkManager : MonoBehaviour
 		}
 		if (ch.meshHoldingGameObject == null ) 
 		{
-			bug ("needed to give ch its mesh at this point (make ch on mT)");
+//			bug ("needed to give ch its mesh at this point (make ch on mT)");
 			giveChunkItsMeshObject (ch, ch.chunkCoord);
 		}
 
@@ -408,6 +409,7 @@ public class ChunkManager : MonoBehaviour
 			return;
 		}
 
+		bug ("destoying a block at: " + blockCoord.toString ());
 		updateChunk (ch);
 
 		// also update any adjacent chunks (to the destroyed block)
@@ -431,8 +433,8 @@ public class ChunkManager : MonoBehaviour
 
 	public System.Collections.IEnumerable directionCoordsForRelativeEdgeCoords(Coord blkRelativeCoord, Coord worldCoordOfBlockInQuestion)
 	{
-
-		Coord negPosOne = worldCoordOfBlockInQuestion.negNegOnePosPosOne ();
+		bug ("block rel coord: " + blkRelativeCoord.toString () + " world co of changed block: " + worldCoordOfBlockInQuestion.toString ());
+		Coord negPosOne = Coord.coordOne (); // worldCoordOfBlockInQuestion.negNegOnePosPosOne ();
 		if (blkRelativeCoord.x == 0)
 			yield return new Coord (-1, 0, 0) * negPosOne;
 		if (blkRelativeCoord.x == CHUNKLENGTH - 1)
@@ -467,10 +469,10 @@ public class ChunkManager : MonoBehaviour
 	}
 
 	Coord chunkRelativeCoord(Coord worldBlockCoord) {
-		return worldBlockCoord % CHUNKLENGTH;
+//		throw new Exception ("fix this for negs!!!");
+//		return (worldBlockCoord - worldBlockCoord.booleanNegative() * (CHUNKLENGTH) ) % CHUNKLENGTH; //new way doesn't work...
+		return (worldBlockCoord + worldBlockCoord.booleanNegative() ) % CHUNKLENGTH + worldBlockCoord.booleanNegative() * (CHUNKLENGTH - 1);
 	}
-
-
 
 	Chunk chunkContainingCoord(Coord co)
 	{
@@ -630,7 +632,7 @@ public class ChunkManager : MonoBehaviour
 	Vector3 worldPositionOfBlock(RaycastHit hit, bool placingBlock)
 	{
 		// we should get a Vec3 
-		// that describes the relative position of the triangles to the camera. //relPos
+		// that describes the relative position of the triangle to the camera. //relPos
 		// then we can figure out which face we want...by
 		// knowing that if they are facing in a (say) negative direction,
 		// we should 'cheat' the vec3 value slightly negative
@@ -674,7 +676,7 @@ public class ChunkManager : MonoBehaviour
 
 		Vector3 cheaterV = new Vector3 (x_same, y_same, z_same);
 
-		relPos = vmult (relPos, cheaterV);
+		relPos = Vector3.Scale (relPos, cheaterV);
 		relPos = relPos.normalized * 0.1f;
 
 		// put the point 'just inside' (by .1) of the block we want...
@@ -682,9 +684,9 @@ public class ChunkManager : MonoBehaviour
 		return worldAvg + (relPos * (placingBlock ? -1.0f : 1.0f) ); 
 	}
 
-	Vector3 vmult (Vector3 aa, Vector3 bb) {
-		return Vector3.Scale (aa, bb); // (aa.x * bb.x, aa.y * bb.y, aa.z * bb.z);
-	}
+//	Vector3 vmult (Vector3 aa, Vector3 bb) {
+//		return Vector3.Scale (aa, bb); // (aa.x * bb.x, aa.y * bb.y, aa.z * bb.z);
+//	}
 
 	Vector3 vdiv (Vector3 aa, Vector3 bb) {
 		return new Vector3 (bb.x == 0 ? 0 : aa.x / bb.x, bb.y == 0 ? 0 :  aa.y / bb.y, bb.z == 0 ? 0 :  aa.z / bb.z);
@@ -1059,7 +1061,8 @@ public class ChunkManager : MonoBehaviour
 
 					// GOT A NULL REF EXCEPTION HERE AT ONE POINT WHILE SPEEDING AROUND WORLD...(doesn't always happen...)
 					Chunk chh = chunkMap.chunkAtOrNullIfUnready (chco); //change unready to a bool return func. (TODO) //b/c what it was non null in fact...
-					if (chh == null || !chh.isActive) { // or not isActive
+					if (chh == null || !chh.isActive) 
+					{  
 						// chunks don't get destroyed when their meshes do (when, for example, the player moves away from them)
 						// therefore we might have an existing chunk that (hopefully) is just !isActive.
 						// or we may have never have encountered (made) this chunk at all...
@@ -1072,7 +1075,7 @@ public class ChunkManager : MonoBehaviour
 							if (chh == null) // careful!
 								continue;
 
-							chh.isActive = false;
+
 							chunkMap.addChunkAt (chh, chco);
 						} // TODO: separate making chunks and making the chunk meshes. want chunks as soon
 						// as we see that they might need to be created/exist.
@@ -1080,6 +1083,8 @@ public class ChunkManager : MonoBehaviour
 						// maybe they don't need a mesh if all air, or totally surrounded, etc.
 
 						destroyTheseChunks.Remove (chh);
+
+						chh.isActive = true;
 
 						if (chco.isInsideOfRange(m_veryCloseAndInFrontRealm)) {
 							createTheseVeryCloseAndInFrontChunks.Add (chh);
@@ -1578,6 +1583,10 @@ public class ChunkManager : MonoBehaviour
 	// Use this for initialization
 	void Start () 
 	{
+		Coord woco = new Coord (-16, 0, -17);
+		Coord cCoContaining = chunkRelativeCoord (woco);
+//		throw new Exception ("chunk relative co test is: 15, 0, 0 ?" + cCoContaining.toString ());
+
 //		Coord woco = new Coord (-16, 0, -17);
 //		Coord cCoContaining = chunkCoordContainingBlockCoord (woco);
 //		throw new Exception ("chunk co test is: -1, 0, -2 ?" + cCoContaining.toString ());
@@ -1604,7 +1613,7 @@ public class ChunkManager : MonoBehaviour
 
 //		wait until its done (like it was on a main thread :)
 		while (!firstNoisePatch.Update()) {
-			bug ("noise patch one still not done");
+//			bug ("noise patch one still not done");
 		}
 
 //		foreach(NoiseCoord nc in noiseCoordsSurroundingNoiseCoord(initialNoiseCoord))
@@ -2083,7 +2092,10 @@ public class BlockCollection
 
 	public Block specialGetBlockForTesting(Coord woco) 
 	{
+
 		NoiseCoord nco = noiseCoordForWorldCoord (woco);
+		bug ("special get block NOISE coord: " + nco.toString ());
+
 		if (!noisePatches.ContainsKey(nco))
 		{
 //			throw new System.ArgumentException ("noise co not in the dictionary: " + nco.toString ());
@@ -2092,10 +2104,10 @@ public class BlockCollection
 
 		NoisePatch np = noisePatches [nco];
 
-		Block retB = np.blockAtWorldBlockCoord (woco);
 		Coord relCo = np.patchRelativeBlockCoordForWorldBlockCoord (woco);
 		bug ("special get block at world co at patch relative coo: " + relCo.toString ());
-		return retB;
+
+		return np.blockAtWorldBlockCoord (woco);
 
 //		Coord relCoord = noisePatchRelativeCoordFromWorldCoord (woco); // = woco % BLOCKSPERNOISEPATCH;
 //		bug ("got a rel coord in bcollection: " + relCoord.toString ());
@@ -2117,7 +2129,8 @@ public class BlockCollection
 
 	private NoiseCoord noiseCoordForWorldCoord(Coord woco){
 //		woco = (woco.booleanNegative () * -1 * BLOCKSPERNOISEPATCH) + woco;
-		woco =  woco - (woco.booleanNegative () * BLOCKSPERNOISEPATCH) ; // (shift neg coords by -1)
+//		woco =  woco + woco.booleanNegative() - (woco.booleanNegative () * BLOCKSPERNOISEPATCH) ; // (shift neg coords by -1)
+		woco =  woco - (woco.booleanNegative () * (BLOCKSPERNOISEPATCH  - 1)) ; // (shift neg coords by -1)
 		return new NoiseCoord (woco / BLOCKSPERNOISEPATCH);
 	}
 
@@ -2221,9 +2234,9 @@ public class NoisePatch : ThreadedJob
 		BLOCKSPERPATCHLENGTH = array_dim;
 
 		//test
-//		Coord woco = new Coord (65, 0, 0);
+//		Coord woco = new Coord (-65, 0, 10);
 //		Coord nCoContaining = patchRelativeBlockCoordForWorldBlockCoord (woco);
-//		throw new Exception ("patch rel co test is: 1, 0, 0 ?" + nCoContaining.toString ());
+//		throw new Exception ("patch rel co test is: 63, 0, 10 ?" + nCoContaining.toString ());
 
 //		Coord chco = new Coord (-5, 12, -7);
 //		Coord nCoContaining = patchRelativeBlockCoordForChunkCoord (chco);
@@ -2289,7 +2302,8 @@ public class NoisePatch : ThreadedJob
 
 	public Block blockAtChunkCoordOffset(Coord chunkCo, Coord offset) 
 	{
-		Coord index = patchRelativeBlockCoordForChunkCoord(chunkCo) + offset;
+//		Coord index = patchRelativeBlockCoordForChunkCoord(chunkCo) + offset; // YIKES! offset needs to be signed!!
+		Coord index = patchRelativeBlockCoordForChunkCoord (chunkCo) + offset; // ??? * chunkCo.negNegOnePosPosOne();
 
 		if (!index.isIndexSafe(patchDimensions)) // nothing
 		{
@@ -2371,9 +2385,11 @@ public class NoisePatch : ThreadedJob
 			return;
 		//...
 		int x_start = (int)( start.x);
-		bool xIsNeg = x_start < 0;
+//		bool xIsNeg = x_start < 0; //silly
+		bool xIsNeg = coord.x < 0;
 		int z_start = (int)( start.z);
-		bool zIsNeg = z_start < 0;
+//		bool zIsNeg = z_start < 0;
+		bool zIsNeg = coord.z < 0;
 		int y_start = (int)( start.y); //y always pos please!
 
 		int x_end = (int)(x_start + range.x);
@@ -2403,7 +2419,7 @@ public class NoisePatch : ThreadedJob
 //					if (xx % 16 == 0)
 //						wallMaker = 1.5f;
 					// no caves for now...
-					int noiseAsWorldHeight =(int) ((noise_val * .5 + .5) * patchDimensions.y * .2);
+					int noiseAsWorldHeight = (int)((noise_val * .5 + .5) * patchDimensions.y * .4); // * (zz/32.0f) * (xx/64.0f));
 
 					if (yy < patchDimensions.y - 4 ) // 4 blocks of air on top
 					{ 
@@ -2430,9 +2446,11 @@ public class NoisePatch : ThreadedJob
 					}
 					//TODO: add a lock(someObject) here?
 //					UnityEngine.Debug.Log (" creating block at x " + xx + " y " + yy + " z " + zz);
-					
-					blocks [  xIsNeg ? x_end - 1 - xx : xx , yy , zIsNeg ? z_end - 1 - zz : zz] = new Block (btype);
-//					blocks [  xx , yy , zz] = new Block (btype);
+
+//					blocks [  xIsNeg ? x_end - 1 - xx : xx , yy , zIsNeg ? zz : z_end - 1 - zz] = new Block (btype); //switchy
+//					blocks [  xIsNeg ? x_end - 1 - xx : xx , yy , zIsNeg ? z_end - 1 - zz : zz] = new Block (btype);
+//					blocks [x_end - 1 - xx , yy , z_end - 1 - zz] = new Block (btype);
+					blocks [xx , yy ,  zz] = new Block (btype);
 				}
 
 			}

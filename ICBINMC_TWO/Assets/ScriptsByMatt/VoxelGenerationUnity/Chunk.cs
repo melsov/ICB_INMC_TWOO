@@ -22,6 +22,9 @@ using System.Collections.Generic;
 // dvektor == "direction vector"
 // sometimes duplicates functionality of 'Coord' and vis-versa
 // 'oh well'
+using System;
+
+
 public struct dvektor
 {
 	public int x,y,z;
@@ -184,6 +187,10 @@ public struct ChunkIndex
 		return new ChunkIndex (aa.x + bb.x, aa.y + bb.y, aa.z + bb.z);
 	}
 
+	public string toString(){
+		return "Chunk Index: x: " + x + " y: " + y + " z: " + z;
+	}
+
 
 }
 
@@ -205,6 +212,8 @@ public class Chunk // : MonoBehaviour
 	public bool isActive;
 
 	public GameObject meshHoldingGameObject;
+
+	private int random_new_chunk_color_int_test;
 
 	public Chunk()
 	{
@@ -326,7 +335,7 @@ public class Chunk // : MonoBehaviour
 	{
 		float tile_length = 0.25f;
 		int tiles_per_row = (int)(1.0f / tile_length);
-		int cXBasedOnXCoord = chunkCoord.x % tiles_per_row;
+		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
 		int cYBasedOnZCoord = chunkCoord.z % tiles_per_row;
 
 		float cX = cXBasedOnXCoord * tile_length;
@@ -389,6 +398,7 @@ public class Chunk // : MonoBehaviour
 	public void makeMesh()
 	{
 		// (re)create my mesh.
+		random_new_chunk_color_int_test = (int)(UnityEngine.Random.value * 4.0f);
 
 		vertices_list = new List<Vector3> ();
 		triangles_list = new List<int> ();
@@ -410,12 +420,17 @@ public class Chunk // : MonoBehaviour
 
 					Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (i, j, k));
 
+
+
 					if (b == null)
 					{
 						//want *****??????
 //						bug ("block was null in makeMesh"); //WEIRD THIS CAUSES THE SEP THREAD TO WORK??? (TODO: why)
 						continue;
 					}
+
+					if ((b.type != BlockType.Air))
+						noNeedToRenderFlag = false;
 
 					int dir = (int) Direction.xpos; // zero // TEST
 //					int dir = (int) Direction.yneg; // zero
@@ -438,10 +453,24 @@ public class Chunk // : MonoBehaviour
 						bool chunkMaxAndPosDir = !negDir && totalUnitVek == CHUNKLENGTH - 1; // the opposite
 
 						bool reachingBeyondChunkEdge = zeroAndNegDir || chunkMaxAndPosDir;
-						Block blockNextDoor = reachingBeyondChunkEdge && b.type != BlockType.Air ? nextBlock((Direction) dir, ijk, true) : nextBlock ((Direction)dir, ijk);
+						Block blockNextDoor = null;
 
-						if ((b.type != BlockType.Air))
-							noNeedToRenderFlag = false;
+						// don't bother if we're not going to use...
+						// if non-air and non-edge
+						if (b.type == BlockType.Air || reachingBeyondChunkEdge) 
+						{
+							blockNextDoor = reachingBeyondChunkEdge && b.type != BlockType.Air ? nextBlock ((Direction)dir, ijk, true) : nextBlock ((Direction)dir, ijk);
+						}
+
+
+
+						//debug 
+						if (blockNextDoor != null && reachingBeyondChunkEdge && blockNextDoor.type == BlockType.Air)
+						{
+							if (blockNextDoor == null) {
+								bug ("we were reaching beyond this chunk but got a null block. reaching from chunk index (coord)" + ijk.toString () + "in Dir: " + dir);
+							}
+						}
 
 
 						if (b.type == BlockType.Air || (blockNextDoor != null && reachingBeyondChunkEdge && blockNextDoor.type == BlockType.Air)) 
