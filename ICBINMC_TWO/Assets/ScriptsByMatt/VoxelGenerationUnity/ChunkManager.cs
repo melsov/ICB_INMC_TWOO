@@ -25,6 +25,7 @@ using System.Diagnostics;
  *
  */
 using System.ComponentModel;
+using System.Threading;
 
 
 public class ChunkManager : MonoBehaviour 
@@ -516,6 +517,7 @@ public class ChunkManager : MonoBehaviour
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 200, 150, 40), "creThsChs Cnt:" + createTheseChunks.Count );
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 240, 150, 40), "desThsChs Cnt:" + destroyTheseChunks.Count );
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 280, 150, 40), "verCls Cnt:" + createTheseVeryCloseAndInFrontChunks.Count );
+//		GUI.Box (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "FPS:" + Time.deltaTime );
 
 //		Coord corner = new Coord (Screen.width - 170, 1, Screen.height - 200);
 //		Coord box = new Coord (10, 1, 10);
@@ -527,7 +529,7 @@ public class ChunkManager : MonoBehaviour
 //		}
 
 
-		// DRAW A + IN THE MIDDLE
+		// DRAW A '+' IN THE MIDDLE
 		float boxSize = 20;
 		GUI.Box (new Rect (Screen.width * .5f - boxSize/2.0f, Screen.height * .5f - boxSize/2.0f, boxSize, boxSize), "+");
 	}
@@ -1075,7 +1077,7 @@ public class ChunkManager : MonoBehaviour
 							if (chh == null) // careful!
 								continue;
 
-
+							chh.isActive = false;
 							chunkMap.addChunkAt (chh, chco);
 						} // TODO: separate making chunks and making the chunk meshes. want chunks as soon
 						// as we see that they might need to be created/exist.
@@ -1084,7 +1086,7 @@ public class ChunkManager : MonoBehaviour
 
 						destroyTheseChunks.Remove (chh);
 
-						chh.isActive = true;
+
 
 						if (chco.isInsideOfRange(m_veryCloseAndInFrontRealm)) {
 							createTheseVeryCloseAndInFrontChunks.Add (chh);

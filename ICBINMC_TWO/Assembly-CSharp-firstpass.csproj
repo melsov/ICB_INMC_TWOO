@@ -52,6 +52,7 @@
      <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.LESSER.txt" />
+     <None Include="Assets\Materials\ShadersMP\BlockShader.shader" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
