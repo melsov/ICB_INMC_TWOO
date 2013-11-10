@@ -41,36 +41,36 @@ public class BlockPointer : MonoBehaviour {
 
 //		RaycastHit hit;
 //		Vector3 midScreen = new Vector3 (Screen.width * .5f, Screen.height * .5f, 0f);
-		if (!Physics.Raycast(camera.ScreenPointToRay(midScreen), out hit))
-			return;
-
-		if (Input.GetMouseButton (0)) { //GetMouseButton(0) is true for the whole time that the left mouse button is down (so useful for punching blocks)
-			
-			hitHandler.handleLeftButtonHit (hit);
-			
-		}
-
+//		if (!Physics.Raycast(camera.ScreenPointToRay(midScreen), out hit))
+//			return;
+//
+//		if (Input.GetMouseButton (0)) { //GetMouseButton(0) is true for the whole time that the left mouse button is down (so useful for punching blocks)
+//			
+//			hitHandler.handleLeftButtonHit (hit);
+//			
+//		}
+//
 
 //		bug ("world point: " + hit.point + " tri index: " + hit.triangleIndex);
 			
-//// Draw lines in the three d views - don't need right now
-		MeshCollider meshCollider = hit.collider as MeshCollider;
-		if (meshCollider == null || meshCollider.sharedMesh == null)
-			return;
-
-		Mesh mesh = meshCollider.sharedMesh;
-		Vector3[] vertices = mesh.vertices;
-		int[] triangles = mesh.triangles;
-		Vector3 p0 = vertices[triangles[hit.triangleIndex * 3 + 0]];
-		Vector3 p1 = vertices[triangles[hit.triangleIndex * 3 + 1]];
-		Vector3 p2 = vertices[triangles[hit.triangleIndex * 3 + 2]];
-		Transform hitTransform = hit.collider.transform;
-		p0 = hitTransform.TransformPoint(p0);
-		p1 = hitTransform.TransformPoint(p1);
-		p2 = hitTransform.TransformPoint(p2);
-		Debug.DrawLine(p0, p1);
-		Debug.DrawLine(p1, p2);
-		Debug.DrawLine(p2, p0);
+////// Draw lines in the three d views - don't need right now
+//		MeshCollider meshCollider = hit.collider as MeshCollider;
+//		if (meshCollider == null || meshCollider.sharedMesh == null)
+//			return;
+//
+//		Mesh mesh = meshCollider.sharedMesh;
+//		Vector3[] vertices = mesh.vertices;
+//		int[] triangles = mesh.triangles;
+//		Vector3 p0 = vertices[triangles[hit.triangleIndex * 3 + 0]];
+//		Vector3 p1 = vertices[triangles[hit.triangleIndex * 3 + 1]];
+//		Vector3 p2 = vertices[triangles[hit.triangleIndex * 3 + 2]];
+//		Transform hitTransform = hit.collider.transform;
+//		p0 = hitTransform.TransformPoint(p0);
+//		p1 = hitTransform.TransformPoint(p1);
+//		p2 = hitTransform.TransformPoint(p2);
+//		Debug.DrawLine(p0, p1);
+//		Debug.DrawLine(p1, p2);
+//		Debug.DrawLine(p2, p0);
 
 
 

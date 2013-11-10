@@ -502,8 +502,11 @@ public class Chunk // : MonoBehaviour
 
 								Direction meshFaceDirection = (Direction)dir + shift;
 
-								int[] posTriangles = new int[] { 0, 2, 3, 1, 2, 0 };  // clockwise when looking from pos towards neg
-								int[] negTriangles = new int[] { 0, 3, 2, 1, 0, 2 }; // the opposite
+//								int[] posTriangles = new int[] { 0, 2, 3, 1, 2, 0 };  // clockwise when looking from pos towards neg
+//								int[] negTriangles = new int[] { 0, 3, 2, 1, 0, 2 }; // the opposite
+
+								int[] posTriangles = new int[] { 0, 2, 3, 0, 1, 2 };  // clockwise when looking from pos towards neg
+								int[] negTriangles = new int[] { 0, 3, 2, 0, 2, 1 }; // the opposite
 
 
 								tris =(dir + shift) % 2 == 0 ? posTriangles : negTriangles; 
