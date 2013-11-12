@@ -70,7 +70,7 @@ public class ChunkManager : MonoBehaviour
 
 	public Coord spawnPlayerAtCoord = new Coord (6, 0, 6);
 
-	private FrustumChecker frustumChecker;
+//	private FrustumChecker frustumChecker;
 	private bool gotAFarAwayChunkTest;
 	private Ray farawayRayTest;
 	private Vector3 farAwayPos;
@@ -232,6 +232,7 @@ public class ChunkManager : MonoBehaviour
 		{
 //			throw new System.ArgumentException ("yo we don't have a noise patch for this chunk?? " + ncoo.toString());
 			bug ("um... we don't have a noise patch for this chunk. " + ncoo.toString ());
+			c.isActive = false;
 			return null;
 		}
 
@@ -261,44 +262,6 @@ public class ChunkManager : MonoBehaviour
 		c.meshHoldingGameObject = gObj; //the chunk gets a reference to the gameObject that it will work with (convenient)
 	}
 
-//	{
-//		Vector3 pos = new Vector3 (CHUNKLENGTH * coord.x, CHUNKLENGTH * coord.y, CHUNKLENGTH * coord.z);
-//
-//		Chunk c = new Chunk ();// (Chunk) Instantiate (prefabChunk, pos, transform.rotation);
-//
-//		//change: the mesh is NOT of type Chunk (just a game object)
-//		Transform gObjTrans = (Transform) Instantiate(prefabMeshHolder, pos, transform.rotation);
-//		GameObject gObj = gObjTrans.gameObject;
-//
-//		//c.transform.parent = transform;
-//		gObj.transform.parent = transform;
-//		c.m_chunkManager = this;
-//		c.CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
-//
-//		c.meshHoldingGameObject = gObj; //the chunk gets a reference to the gameObject that it will work with (convenient)
-//
-//		c.chunkCoord = coord;
-//
-//		return c;
-//	}
-
-//	Chunk makeNewChunk(Coord coord) //OLD WAY
-//	{
-//		Vector3 pos = new Vector3 (CHUNKLENGTH * coord.x, CHUNKLENGTH * coord.y, CHUNKLENGTH * coord.z);
-//
-//		Chunk c = (Chunk) Instantiate (prefabChunk, pos, transform.rotation);
-//
-//		//change: the mesh is NOT of type Chunk (just a game object)
-//		//		GameObject c = (GameObject) Instantiate(prefabChunk, pos, transform.rotation);
-//
-//
-//		c.transform.parent = transform;
-//		c.m_chunkManager = this;
-//		c.CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
-//		c.chunkCoord = coord;
-//
-//		return c;
-//	}
 
 	public void destroyBlockAt(Coord blockCoord) 
 	{
@@ -582,34 +545,10 @@ public class ChunkManager : MonoBehaviour
 		buildMapAtRange (some_range);
 	}
 
-//	void buildMapAtRange(CoRange mapChunkRange) //OLD WAY
-//	{
-//		noiseHandler.Generate ();
-//
-//		populateBlocksArray (ChunkCoord.chunkCoordZero(), new ChunkCoord(8,4,4));
-//
-//
-//		mapChunkRange = chunkMap.makeCoRangeSafe (mapChunkRange);
-//
-//		ChunkCoord start = new ChunkCoord (mapChunkRange.start); //  ChunkCoord.chunkCoordZero(); // ChunkCoord.chunkCoordOne (); // ChunkCoord.chunkCoordZero (); // new ChunkCoord (2, 2, 2);
-//		ChunkCoord range = new ChunkCoord (mapChunkRange.range);// new ChunkCoord (3, 4, 4); //new ChunkCoord (8, 4, 4); 
-//
-//		//must update map before 'manually' adding chunks
-//		updateCreateTheseChunksList ( mapChunkRange);
-//		rebuildMapFrom (start, range);
-//	}
-
 	void buildMapAtRange(CoRange mapChunkRange)
 	{
-//		noiseHandler.Generate ();
-
-//		populateBlocksArray (ChunkCoord.chunkCoordZero(), new ChunkCoord(8,4,4));
-
-
-//		mapChunkRange = chunkMap.makeCoRangeSafe (mapChunkRange);
-
-		ChunkCoord start = new ChunkCoord (mapChunkRange.start); //  ChunkCoord.chunkCoordZero(); // ChunkCoord.chunkCoordOne (); // ChunkCoord.chunkCoordZero (); // new ChunkCoord (2, 2, 2);
-		ChunkCoord range = new ChunkCoord (mapChunkRange.range); // new ChunkCoord (3, 4, 4); //new ChunkCoord (8, 4, 4); 
+		ChunkCoord start = new ChunkCoord (mapChunkRange.start);
+		ChunkCoord range = new ChunkCoord (mapChunkRange.range);
 
 		//must update map before 'manually' adding chunks
 		updateCreateTheseChunksList ( mapChunkRange);
@@ -619,146 +558,9 @@ public class ChunkManager : MonoBehaviour
 
 	void updateChunk(Chunk ch)
 	{
-//		if (ch.meshHoldingGameObject == null)
-//		{
-//			giveChunkItsMeshObject (ch, ch.chunkCoord);
-//		}
-//		ch.makeMesh ();
-//		ch.applyMesh ();
-		bug ("about to update ch at coord: " + ch.chunkCoord.toString ());
 		makeChunkOnMainThread (ch);
 	}
 
-//	void makeChunkAt(ChunkCoord start)
-//	{
-//		makeChunksFrom (start, ChunkCoord.chunkCoordOne ());
-//	}
-//
-//	void makeChunksFrom(Coord start, Coord range)
-//	{
-//		makeChunksFrom (new ChunkCoord (start), new ChunkCoord (range));
-//	}
-//
-//	void makeChunksFrom(ChunkCoord start, ChunkCoord range)
-//	{
-//		makeChunksFrom (start, range, false);
-//	}
-//
-//	void makeChunksFrom(ChunkCoord start, ChunkCoord range, bool alwaysCreateNewChunks)
-//	{
-//		//***want
-//		if (bakeryOfChunks == null )
-//		{
-//			bug ("what bakery null??");
-//			return;
-//		}
-//
-//		if (bakeryOfChunks.Update () == false) // bakery still baking?
-//		{
-////			bug ("don't make chunks, still baking...");
-//			return;
-//		}
-//
-//		// *** there may be chunks ready from the last 'chunk bake' 
-//		// *** so add them to the world
-//
-//		addJustBakedChunks ();
-//
-//
-//		// *** now collect any more chunks we may need
-//		List<Chunk> freshlyMadeChunks;
-//		freshlyMadeChunks = shouldBeBakedChunks (start, range, alwaysCreateNewChunks);
-//
-//		if (freshlyMadeChunks.Count > 0) {
-//			bakeryOfChunks.chunks = freshlyMadeChunks; // NOTE: do we want to protect these chunks from being messed with?
-//			bakeryOfChunks.Start ();
-//		}
-////
-////		if (false)
-////		foreach(Chunk c in freshlyMadeChunks) {
-////			if (c != null) {
-////				c.makeMesh ();
-////				c.applyMesh ();
-////				activeChunks.Add (c);
-////	//				madeMeshCountTest++;
-////			}
-//
-//	}
-//
-//	void addJustBakedChunks()
-//	{
-//		//***want
-//		List<Chunk> finishedChs = new List<Chunk> ();
-//		finishedChs.AddRange (bakeryOfChunks.finishedChunks); // paranoid about the thread safety thing (TODO: learn more about what is safe)
-//
-//		//DEBUG test
-//		if (bakeryOfChunks.finishedChunks.Count > 0)
-//		{
-////			AudioSource auS = playerCameraTransform.parent.GetComponent<AudioSource> ();
-//			if (audioSourceCamera != null)
-//				audioSourceCamera.Play ();
-//			else 
-//				bug("no camera Audio source??");
-//			bug ("adding this many chunks on main thread: " + finishedChs.Count);
-//		} 
-//		else {
-//			bug ("no chunks were  just baked");
-//		}//end test
-//
-//		int bakeChCountTest = 0;
-//		foreach(Chunk fchunk in finishedChs)
-//		{
-//			bakeChCountTest++;
-//			if (fchunk.noNeedToRenderFlag) {
-//				fchunk.meshHoldingGameObject.SetActive (false);
-////				fchunk.transform.gameObject.SetActive (false); // = false;
-//				fchunk.clearMesh ();
-//			} else {
-//				fchunk.applyMesh (); //we couldn't do this in the sep thread
-//				fchunk.meshHoldingGameObject.SetActive (true);
-//				//fchunk.transform.gameObject.SetActive (true);
-//				activeChunks.Add (fchunk);
-//			}
-//
-//
-//		}
-////		bug ("baked this many chunks on alt thread: " + bakeChCountTest);
-//	}
-
-//	List<Chunk > shouldBeBakedChunks(ChunkCoord start, ChunkCoord range, bool alwaysCreateNewChunks)
-//	{
-//		// *** NOW collect any more chunks we may need
-//		List<Chunk> freshlyMadeChunks = new List<Chunk> ();
-//
-//		// first give chunks their blocks
-//		int createdCountTest = 0;
-//		int i = start.x;
-//
-//		for (; i < start.x + range.x; ++i) {
-//
-//			int j = (int) start.y;
-//			for (; j < start.y + range.y; ++j) {
-//
-//				int k = start.z;
-//				for (; k < start.z + range.z; ++k) {
-//					Coord coord = new Coord (i, j, k);
-//
-//					if (alwaysCreateNewChunks || chunkMap.chunkAt(coord) == null)
-//					{
-//						Chunk ch = makeNewChunk (coord);
-//						// add chunk to ch map
-//						chunkMap.addChunkAt (ch, coord);
-//						freshlyMadeChunks.Add (ch);
-//
-//						createdCountTest++;
-//					}
-//				}
-//			}
-//		}
-//		bug ("created this number of chunks: " + createdCountTest);
-//
-//		return freshlyMadeChunks;
-//	}
 
 	#region get player realms and update lists
 
@@ -803,9 +605,8 @@ public class ChunkManager : MonoBehaviour
 
 		// 0 z pos, 90 x pos
 		Coord plCoord = playerLocatedAtChunkCoord ();
-		Coord halfR = new Coord (1,0,1);
+		Coord halfR = new Coord (1,2,1);
 		CoRange retRange = playerChunkRange (plCoord, halfR);
-
 
 //		int eulerZone =(int)((playerCameraTransform.eulerAngles.y + 45.0f) / 90) ;
 		Coord addToStart = new Coord (0);
@@ -835,41 +636,44 @@ public class ChunkManager : MonoBehaviour
 		return retRange;
 	}
 
+	// TODO: an overhaul for this
+	// decide what we want!
 	IEnumerator updateChunkLists()
 	{
-//		if (bakeryOfChunks.Update() == false)
-//		{
-//			return;
-//		}
 		while (true) 
 		{
 			//simplistic
 			if (!Coord.Equals (lastPlayerBlockCoord, new Coord (playerCameraTransform.position))) 
 			{
 				lastPlayerBlockCoord = new Coord (playerCameraTransform.position);
+
 				// very close and in front range
 				m_veryCloseAndInFrontRealm = getVeryCloseAndInFrontRange ();
 				CoRange wantActiveRealm = m_veryCloseAndInFrontRealm;
 
 				Coord playerChunkCoo = playerLocatedAtChunkCoord ();
 
-				if (!playerChunkCoo.equalTo (lastPlayerChunkCoord)) {
-
+				//want?
+				if (!playerChunkCoo.equalTo (lastPlayerChunkCoord)) 
+				{
 					lastPlayerChunkCoord = playerChunkCoo;
 
-					wantActiveRealm = nearbyChunkRange (playerChunkCoo);
-					m_wantActiveRealm = wantActiveRealm; // for testing
-
+					//want?
+//					wantActiveRealm = nearbyChunkRange (playerChunkCoo);
+//					m_wantActiveRealm = wantActiveRealm; 
 
 					m_dontDestroyRealm = getDontDestroyRealm ();
 
-					foreach (Chunk chunk in activeChunks) {
+					foreach (Chunk chunk in activeChunks) 
+					{
 						if (chunk == null)
 							continue;
 
-						//			if (!chunk.chunkCoord.isInsideOfRange(wantActiveRealm))
-						if (!chunk.chunkCoord.isInsideOfRange (m_dontDestroyRealm)) {
-							if (!destroyTheseChunks.Contains (chunk)) {
+						if (!chunk.chunkCoord.isInsideOfRange (m_dontDestroyRealm)) 
+						{
+							if (!destroyTheseChunks.Contains (chunk)) 
+							{
+								chunk.isActive = false;
 								destroyTheseChunks.Add (chunk);
 							}
 						}
@@ -919,6 +723,7 @@ public class ChunkManager : MonoBehaviour
 //		}
 //	}
 
+//TODO: make the whole chunk invntory system more logical
 	public void updateCreateTheseChunksList(CoRange _activeCoRange) 
 	{
 //		if (!chunkMap.coIsOnMap (_activeCoRange.start))
@@ -940,29 +745,30 @@ public class ChunkManager : MonoBehaviour
 					// GOT A NULL REF EXCEPTION HERE AT ONE POINT WHILE SPEEDING AROUND WORLD...(doesn't always happen...)
 					Chunk chh = chunkMap.chunkAtOrNullIfUnready (chco); //change unready to a bool return func. (TODO) //b/c what it was non null in fact...
 					if (chh == null || !chh.isActive) 
-					{  
+					{
 						// chunks don't get destroyed when their meshes do (when, for example, the player moves away from them)
 						// therefore we might have an existing chunk that (hopefully) is just !isActive.
 						// or we may have never have encountered (made) this chunk at all...
 						// in any case, don't make its accompanying mesh just yet (it might be all air, or all solid and surrounded for example)
 
-						if (chh == null) {
-
+						if (chh == null) 
+						{
 							chh = makeNewChunkButNotItsMesh (chco);
 
 							if (chh == null) // careful!
 								continue;
 
-							chh.isActive = false;
+//							chh.isActive = true;
 							chunkMap.addChunkAt (chh, chco);
-						} // TODO: separate making chunks and making the chunk meshes. want chunks as soon
+						} 
+						// TODO: separate making chunks and making the chunk meshes. want chunks as soon
 						// as we see that they might need to be created/exist.
 						// want the meshes only after we've been through their blocks
 						// maybe they don't need a mesh if all air, or totally surrounded, etc.
 
 						destroyTheseChunks.Remove (chh);
 
-
+						chh.isActive = true;
 
 						if (chco.isInsideOfRange(m_veryCloseAndInFrontRealm)) {
 							createTheseVeryCloseAndInFrontChunks.Add (chh);
@@ -970,9 +776,9 @@ public class ChunkManager : MonoBehaviour
 							createTheseChunks.Add (chh);
 						}
 					}
-					else {
-//						bug ("chunk was not null and/or was ready??? at : " + chco.toString());
-					}
+//					else {
+////						bug ("chunk was not null and/or was ready??? at : " + chco.toString());
+//					}
 				}
 			}
 		}
@@ -982,76 +788,76 @@ public class ChunkManager : MonoBehaviour
 
 	#region create and destroy chunk enumerators
 
-	IEnumerator createFurtherAwayChunks() // not in use.
-	{
-		yield return new WaitForSeconds (1.5f);
-
-		while(true)
-		{
-			if (createTheseChunks.Count == 0) 
-			{
-				float depth = 1.0f;
-				Ray rayMiss;
-				Coord chunkCo;
-				Chunk needToActivateCh;
-				bool foundOneCondition = false;
-
-				bool onMapAndNull = false; // = (needToActivateCh == null) && (chunkMap.coIsOnMap (chunkCo));
-				bool notNullAndNeedToRender = false;
-
-				int attempts = 0;
-
-				rayMiss = frustumChecker.nextRaycastMiss ();
-
-				if (rayMiss.origin != Vector3.zero && rayMiss.direction != Vector3.up) {
-					//want ***
-					do {
-						depth += 1.0f; // (float)frustumChecker.screenIterationCount ();
-
-//						bug ("depth is: " + depth);
-
-						Vector3 nextChunkPos = rayMiss.GetPoint (CHUNKLENGTH * depth);
-
-						farawayRayTest = rayMiss;
-						farAwayPos = nextChunkPos;
-
-						chunkCo = chunkCoordContainingBlockCoord (new Coord (nextChunkPos));
-						needToActivateCh = chunkMap.chunkAt (chunkCo);
-
-						onMapAndNull = (needToActivateCh == null) && (chunkMap.coIsOnMap (chunkCo));
-						notNullAndNeedToRender = (needToActivateCh != null) && (!needToActivateCh.noNeedToRenderFlag) && !needToActivateCh.isActive;
-						foundOneCondition = onMapAndNull || notNullAndNeedToRender;
-
-						wasNullAndNeededToRenderTest = onMapAndNull;
-						wasInactiveAndNotNullTest = notNullAndNeedToRender;
-
-					} while (!foundOneCondition && attempts++ < 6);
-
-					if (foundOneCondition) {
-
-//					bug ("found a far away chunk with " + attempts + " attempts.");
-						gotAFarAwayChunkTest = true;
-						// ** want
-						if (onMapAndNull) {
-							needToActivateCh = makeNewChunkButNotItsMesh (chunkCo);
-							needToActivateCh.isActive = false;
-							chunkMap.addChunkAt (needToActivateCh, chunkCo); // danger: this code is a copy from updateCreateList (TODO: unify)...
-						} 
-
-						//				want ***
-						makeChunksFromOnMainThreadAtCoord (chunkCo);
-//						makeChunksFromOnMainThread (new ChunkCoord (chunkCo), ChunkCoord.chunkCoordOne ());
-					} else {
-						gotAFarAwayChunkTest = false;
-//					bug ("didn't find any far away chunks with " + attempts + " attempts.");
-					}
-				}
-
-			}
-			yield return new WaitForSeconds (1.5f);
-			
-		}
-	}
+//	IEnumerator createFurtherAwayChunks() // not in use.
+//	{
+//		yield return new WaitForSeconds (1.5f);
+//
+//		while(true)
+//		{
+//			if (createTheseChunks.Count == 0) 
+//			{
+//				float depth = 1.0f;
+//				Ray rayMiss;
+//				Coord chunkCo;
+//				Chunk needToActivateCh;
+//				bool foundOneCondition = false;
+//
+//				bool onMapAndNull = false; // = (needToActivateCh == null) && (chunkMap.coIsOnMap (chunkCo));
+//				bool notNullAndNeedToRender = false;
+//
+//				int attempts = 0;
+//
+//				rayMiss = frustumChecker.nextRaycastMiss ();
+//
+//				if (rayMiss.origin != Vector3.zero && rayMiss.direction != Vector3.up) {
+//					//want ***
+//					do {
+//						depth += 1.0f; // (float)frustumChecker.screenIterationCount ();
+//
+////						bug ("depth is: " + depth);
+//
+//						Vector3 nextChunkPos = rayMiss.GetPoint (CHUNKLENGTH * depth);
+//
+//						farawayRayTest = rayMiss;
+//						farAwayPos = nextChunkPos;
+//
+//						chunkCo = chunkCoordContainingBlockCoord (new Coord (nextChunkPos));
+//						needToActivateCh = chunkMap.chunkAt (chunkCo);
+//
+//						onMapAndNull = (needToActivateCh == null) && (chunkMap.coIsOnMap (chunkCo));
+//						notNullAndNeedToRender = (needToActivateCh != null) && (!needToActivateCh.noNeedToRenderFlag) && !needToActivateCh.isActive;
+//						foundOneCondition = onMapAndNull || notNullAndNeedToRender;
+//
+//						wasNullAndNeededToRenderTest = onMapAndNull;
+//						wasInactiveAndNotNullTest = notNullAndNeedToRender;
+//
+//					} while (!foundOneCondition && attempts++ < 6);
+//
+//					if (foundOneCondition) {
+//
+////					bug ("found a far away chunk with " + attempts + " attempts.");
+//						gotAFarAwayChunkTest = true;
+//						// ** want
+//						if (onMapAndNull) {
+//							needToActivateCh = makeNewChunkButNotItsMesh (chunkCo);
+//							needToActivateCh.isActive = false;
+//							chunkMap.addChunkAt (needToActivateCh, chunkCo); // danger: this code is a copy from updateCreateList (TODO: unify)...
+//						} 
+//
+//						//				want ***
+//						makeChunksFromOnMainThreadAtCoord (chunkCo);
+////						makeChunksFromOnMainThread (new ChunkCoord (chunkCo), ChunkCoord.chunkCoordOne ());
+//					} else {
+//						gotAFarAwayChunkTest = false;
+////					bug ("didn't find any far away chunks with " + attempts + " attempts.");
+//					}
+//				}
+//
+//			}
+//			yield return new WaitForSeconds (1.5f);
+//			
+//		}
+//	}
 
 	void drawDebugRay()
 	{
@@ -1079,16 +885,16 @@ public class ChunkManager : MonoBehaviour
 					// TRY THE FOLLOWING: find a chunk that in the current active realm
 					// throw out chunks that aren't in
 					bool foundOne = true;
-					while (!chunk.chunkCoord.isInsideOfRange(m_veryCloseAndInFrontRealm))
-					{
-						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
-						if (createTheseVeryCloseAndInFrontChunks.Count == 0) {
-							foundOne = false;
-							break;
-						}
-						chunk = createTheseVeryCloseAndInFrontChunks [0];
-
-					}
+//					while (!chunk.chunkCoord.isInsideOfRange(m_veryCloseAndInFrontRealm))
+//					{
+//						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
+//						if (createTheseVeryCloseAndInFrontChunks.Count == 0) {
+//							foundOne = false;
+//							break;
+//						}
+//						chunk = createTheseVeryCloseAndInFrontChunks [0];
+//
+//					}
 
 					if (foundOne)
 					{
@@ -1347,7 +1153,6 @@ public class ChunkManager : MonoBehaviour
 
 	void makeNewAndSetupPatchAtNoiseCoord(NoiseCoord ncoord)
 	{
-		bug ("making new noise patch at: " + ncoord.toString());
 		makeNoisePatchIfNotExistsAtNoiseCoord (ncoord); 
 
 		generateNoiseForPatchAtCoord (ncoord, false);
@@ -1461,18 +1266,6 @@ public class ChunkManager : MonoBehaviour
 	// Use this for initialization
 	void Start () 
 	{
-		Coord woco = new Coord (-16, 0, -17);
-		Coord cCoContaining = chunkRelativeCoord (woco);
-//		throw new Exception ("chunk relative co test is: 15, 0, 0 ?" + cCoContaining.toString ());
-
-//		Coord woco = new Coord (-16, 0, -17);
-//		Coord cCoContaining = chunkCoordContainingBlockCoord (woco);
-//		throw new Exception ("chunk co test is: -1, 0, -2 ?" + cCoContaining.toString ());
-
-//		Coord woco = new Coord (-4, 0, -16);
-//		NoiseCoord cCoContaining = noiseCoordContainingChunkCoord (woco);
-//		throw new Exception ("chunk co test is: -1, -4 ?" + cCoContaining.toString ());
-
 		firstNoisePatchDone = false;
 
 		chunkMap = new ChunkMap (); //new Coord (WORLD_XLENGTH_CHUNKS, WORLD_HEIGHT_CHUNKS, WORLD_ZLENGTH_CHUNKS));
@@ -1480,7 +1273,7 @@ public class ChunkManager : MonoBehaviour
 		lastPlayerNoiseCoord = new NoiseCoord (100000000, -100000003);
 		setNoiseHandlerResolution ();
 		noiseHandler.initNoiseMap ();
-		frustumChecker = new FrustumChecker (playerCameraTransform, (int) CHUNKLENGTH);
+//		frustumChecker = new FrustumChecker (playerCameraTransform, (int) CHUNKLENGTH);
 
 		audioSourceCamera = playerCameraTransform.parent.GetComponent<AudioSource> ();
 
@@ -1550,12 +1343,14 @@ public class ChunkManager : MonoBehaviour
 
 //		jobUpdate ();
 
-		drawDebugLinesForChunkRange (m_wantActiveRealm);
+//		drawDebugLinesForChunkRange (m_wantActiveRealm);
+
+		drawDebugLinesForChunkRange (m_veryCloseAndInFrontRealm);
 
 //		frustumChecker.drawLastRay ();
 		drawDebugRay ();
 
-		drawDebugLinesForBlockAtWorldCoord (m_testBreakMakeBlockWorldPos);
+//		drawDebugLinesForBlockAtWorldCoord (m_testBreakMakeBlockWorldPos);
 
 	}
 
