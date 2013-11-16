@@ -26,6 +26,7 @@ using System.Diagnostics;
  */
 using System.ComponentModel;
 using System.Threading;
+using System.Collections.Specialized;
 
 
 public class ChunkManager : MonoBehaviour 
@@ -39,7 +40,8 @@ public class ChunkManager : MonoBehaviour
 	public NoiseHandler noiseHandler;
 
 	public const uint CHUNKLENGTH = 16;
-	public uint WORLD_HEIGHT_CHUNKS = 4;
+	public const int CHUNKHEIGHT = 64;
+	public int WORLD_HEIGHT_CHUNKS = 1;
 	public uint WORLD_XLENGTH_CHUNKS = 8;
 	public uint WORLD_ZLENGTH_CHUNKS = 4;
 
@@ -85,7 +87,7 @@ public class ChunkManager : MonoBehaviour
 	{
 		noiseHandler = new NoiseHandler ();
 
-		WORLD_HEIGHT_BLOCKS = (int) (WORLD_HEIGHT_CHUNKS * CHUNKLENGTH);
+		WORLD_HEIGHT_BLOCKS = (int) (WORLD_HEIGHT_CHUNKS * CHUNKHEIGHT);
 
 		blocks = new BlockCollection ((int)(CHUNKLENGTH * NoisePatch.CHUNKDIMENSION));
 
@@ -220,6 +222,7 @@ public class ChunkManager : MonoBehaviour
 
 		c.m_chunkManager = this;
 		c.CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
+		c.CHUNKHEIGHT = (int)ChunkManager.CHUNKHEIGHT;
 
 		c.chunkCoord = coord;
 
@@ -328,6 +331,8 @@ public class ChunkManager : MonoBehaviour
 		UnityEngine.Debug.Log (str);
 	}
 
+	#region finding coords and chunks
+
 	Coord chunkCoordContainingBlockCoord(Coord co)
 	{
 //		if (!co.isIndexSafe (m_mapDims_blocks))
@@ -356,6 +361,38 @@ public class ChunkManager : MonoBehaviour
 
 		return chunkMap.chunkAt(chunkCo);
 	}
+
+	Coord playerPosCoord() {
+		return new Coord (playerCameraTransform.position);
+	}
+
+	private bool playerOccupiesCoord(Coord cc) {
+		//BUG: doesn't work if block surface is right in player's face!!
+		//works too well for blocks in front
+		Vector3 cocenter = Coord.GeomCenterOfBLock (cc);
+		if (Vector3.Distance (playerCameraTransform.position, cocenter) < 1f)
+			return true;
+
+		if (Vector3.Distance (playerCameraTransform.position - Vector3.up, cocenter) < 1f)
+			return true; 
+
+		Coord ppos = playerPosCoord ();
+		if (Coord.Equals (ppos, cc))
+			return true;
+
+		return false;
+
+//
+//		Coord ppos = playerPosCoord ();
+//		if (Coord.Equals (ppos, cc))
+//			return true;
+//		ppos.y -= 1;
+//		if (Coord.Equals (ppos, cc))
+//			return true;
+//		return false;
+	}
+
+	#endregion
 
 	//swiped from 'Noise Handler' (demo.cs)
 	public void OnGUI() {
@@ -428,6 +465,8 @@ public class ChunkManager : MonoBehaviour
 
 		Coord altBlockCoord =  hitOrPlaceBlockCoordFromWorldPos (blockWorldPos);// new Coord (blockWorldPos);
 
+
+
 //		if (blockCoord.equalTo (altBlockCoord)) {
 //			bug ("block coords from two methods are equal");
 ////			destroyBlockAt (blockCoord );
@@ -449,6 +488,11 @@ public class ChunkManager : MonoBehaviour
 	{
 		Vector3 blockWorldPos = worldPositionOfBlock (hit, true);
 		Coord placingCoord = hitOrPlaceBlockCoordFromWorldPos (blockWorldPos); //  new Coord (blockWorldPos);
+
+		if (playerOccupiesCoord(placingCoord)){
+			bug ("player occupies coord");
+			return;
+		}
 
 		m_testBreakMakeBlockWorldPos = placingCoord;
 
@@ -588,7 +632,7 @@ public class ChunkManager : MonoBehaviour
 
 	CoRange getDontDestroyRealm() 
 	{
-		Coord halfR = new Coord (3, 3, 3); // larger than wActiveRealm
+		Coord halfR = new Coord (5, 4, 5); // larger than wActiveRealm
 		return playerChunkRange (playerLocatedAtChunkCoord (), halfR);
 	}
 
@@ -597,7 +641,13 @@ public class ChunkManager : MonoBehaviour
 //		int halfLength = 1;
 //		Coord halfRealmLength = new Coord (halfLength);  
 
-		return new CoRange (playerChunkCoord - halfRange, (halfRange * 2) + 1);
+		return clipRangeHeightToWorldHeightDimsChunks (new CoRange (playerChunkCoord - halfRange, (halfRange * 2) + 1) );
+	}
+
+	CoRange clipRangeHeightToWorldHeightDimsChunks(CoRange the_range) {
+		the_range.start.y = the_range.start.y < 0 ? 0 : the_range.start.y;
+		the_range.range.y = the_range.outerLimit ().y > (int)WORLD_HEIGHT_CHUNKS ? (int)(WORLD_HEIGHT_CHUNKS - the_range.start.y) : the_range.range.y;
+		return the_range;
 	}
 
 	CoRange getVeryCloseAndInFrontRange()
@@ -605,7 +655,7 @@ public class ChunkManager : MonoBehaviour
 
 		// 0 z pos, 90 x pos
 		Coord plCoord = playerLocatedAtChunkCoord ();
-		Coord halfR = new Coord (1,2,1);
+		Coord halfR = new Coord (3,2,3);
 		CoRange retRange = playerChunkRange (plCoord, halfR);
 
 //		int eulerZone =(int)((playerCameraTransform.eulerAngles.y + 45.0f) / 90) ;
@@ -1318,12 +1368,14 @@ public class ChunkManager : MonoBehaviour
 		//		StartCoroutine (createChunksFromCreateList ());
 		//		StartCoroutine (destroyChunksFromDestroyList ());
 
-		StartCoroutine (updateChunkLists ());
-		StartCoroutine (createAndDestroyChunksFromLists ()); // combined above two
 
-//		StartCoroutine (createFurtherAwayChunks ());
+		if (false) {
+			StartCoroutine (updateChunkLists ());
+			StartCoroutine (createAndDestroyChunksFromLists ()); // combined above two
+			//		StartCoroutine (createFurtherAwayChunks ());
 
-		StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
+			StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
+		}
 
 
 	}
@@ -1695,7 +1747,8 @@ public struct NoiseCoord
 
 public class NoisePatch : ThreadedJob
 {
-	public const int CHUNKDIMENSION = 4;
+	public const int CHUNKDIMENSION = 4;// new Coord(4,1,4);
+	private Coord BLOCKDIMENSIONS;
 	private int CHUNKLENGTH;
 	private int BLOCKSPERPATCHLENGTH;
 
@@ -1729,10 +1782,11 @@ public class NoisePatch : ThreadedJob
 	{
 		coord = _noiseCo;
 		CHUNKLENGTH = _chunkLen;
-		int array_dim = _chunkLen * CHUNKDIMENSION; //grab borders of neighbor blocks from the noise as well (therefor extra two elements in array in each dimension)
 
-		blocks = new Block[array_dim, array_dim, array_dim];
-		patchDimensions = new Coord (array_dim);
+		patchDimensions =  new Coord(_chunkLen, ChunkManager.CHUNKHEIGHT, _chunkLen) * CHUNKDIMENSION;
+
+		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
+
 		m_chunkManager = _chunkMan;
 
 		BLOCKSPERPATCHLENGTH = array_dim;
@@ -1919,6 +1973,8 @@ public class NoisePatch : ThreadedJob
 					if (yy < patchDimensions.y - 4 ) // 4 blocks of air on top
 					{ 
 
+
+
 						if (false) {
 							int total = xx + yy + zz;
 							if (total < (CHUNKLENGTH - 5) * 3 && total > 4)
@@ -1928,14 +1984,18 @@ public class NoisePatch : ThreadedJob
 							if (yy == 0) {
 								btype = BlockType.BedRock;
 							} else if (noiseAsWorldHeight > yy) {
-								if (yy < CHUNKLENGTH)
-									btype = BlockType.Grass;
-								else if (yy < CHUNKLENGTH * 2)
-									btype = BlockType.Sand;
-								else if (yy < CHUNKLENGTH * 3)
-									btype = BlockType.Dirt;
-								else
-									btype = BlockType.Stone;
+
+								btype = BlockType.Grass;
+
+
+//								if (yy < CHUNKLENGTH)
+//									btype = BlockType.Grass;
+//								else if (yy < CHUNKLENGTH * 2)
+//									btype = BlockType.Sand;
+//								else if (yy < CHUNKLENGTH * 3)
+//									btype = BlockType.Dirt;
+//								else
+//									btype = BlockType.Stone;
 							}
 						}
 					}
@@ -2056,6 +2116,10 @@ public struct Coord
 		return new Coord (aa.x % bb , aa.y % bb , aa.z % bb );
 	}
 
+	public static Coord operator % (Coord aa, Coord bb) {
+		return new Coord (aa.x % bb.x , aa.y % bb.y , aa.z % bb.z );
+	}
+
 	public static Coord operator +(Coord aa, float  bb) {
 		return new Coord (aa.x + bb , aa.y + bb , aa.z + bb );
 	}
@@ -2150,6 +2214,15 @@ public struct Coord
 	public Vector3 toVector3()
 	{
 		return new Vector3 ((float)x, (float)y, (float)z);
+	}
+
+	public static Vector3 GeomCenterOfBLock(Coord cc) {
+		Coord negPos = cc.negNegOnePosPosOne ();
+		return cc.toVector3 () + negPos.toVector3 () * .5f;
+	}
+
+	public static int Volume(Coord cc) {
+		return (cc.x * cc.y * cc.z);
 	}
 }
 

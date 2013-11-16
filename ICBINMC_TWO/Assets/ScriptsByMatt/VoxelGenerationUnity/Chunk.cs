@@ -197,6 +197,7 @@ public struct ChunkIndex
 public class Chunk // : MonoBehaviour 
 {
 	public int CHUNKLENGTH; //duplicate of chunkManager's chunklength...
+	public int CHUNKHEIGHT;
 
 	public ChunkManager m_chunkManager;
 	public Coord chunkCoord;
@@ -246,7 +247,7 @@ public class Chunk // : MonoBehaviour
 //				retBlock = blocks [ci.x - 1, ci.y, ci.z];
 			break;
 		case(Direction.ypos):
-			if (notOnlyWithinThisChunk || ci.y < CHUNKLENGTH - 1)
+			if (notOnlyWithinThisChunk || ci.y < CHUNKHEIGHT - 1)
 				offset = new Coord (ci.x , ci.y + 1, ci.z);
 //				retBlock = m_chunkManager.blockAtChunkCoordOffset (chunkCoord, offset);
 //				retBlock = blocks [ci.x, ci.y + 1, ci.z];
@@ -331,36 +332,39 @@ public class Chunk // : MonoBehaviour
 		return new Vector3[] { v0, v1, v2, v3 };
 	}
 
-	Vector2[] uvCoordsForBlockType( BlockType btype)
+	Vector2[] uvCoordsForBlockType( BlockType btype, Direction dir)
 	{
 		float tile_length = 0.25f;
 		int tiles_per_row = (int)(1.0f / tile_length);
 		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
 		int cYBasedOnZCoord = chunkCoord.z % tiles_per_row;
 
-		float cX = cXBasedOnXCoord * tile_length;
-		float cY = cYBasedOnZCoord * tile_length;
+//test...
+//		float cX = cXBasedOnXCoord * tile_length;
+//		float cY = cYBasedOnZCoord * tile_length;
 
-		// want when not testing
-//		float cX = 0.0f;
-//		float cY = 0.0f;
-	
-//		switch (btype) {
-//		case BlockType.Stone:
-//			cY = tile_length;
-//			break;
-//		case BlockType.Sand:
-//			cY = tile_length * 2;
-//			break;
-//		case BlockType.Dirt:
-//			cY = tile_length * 3;
-//			break;
-//		case BlockType.BedRock:
-//			cY = tile_length * 2; //silly value at the moment
-//			break;
-//		default:
-//			break;
-//		}
+		float cX = 0.0f;
+		float cY = 0.0f;
+
+		switch (btype) {
+		case BlockType.Stone:
+			cY = tile_length;
+			cX = tile_length;
+			break;
+		case BlockType.Sand:
+			cY = tile_length * 2;
+			break;
+		case BlockType.Dirt:
+			cY = tile_length * 3;
+			break;
+		case BlockType.BedRock:
+			cY = tile_length * 2; //silly value at the moment
+			break;
+		default: //GRASS
+			if (dir != Direction.ypos)
+				cY = tile_length;
+			break;
+		}
 
 		return new Vector2[] { 
 			new Vector2 (cX, cY), 
@@ -412,15 +416,13 @@ public class Chunk // : MonoBehaviour
 		for (; i < CHUNKLENGTH; ++i) 
 		{
 			int j = 0;
-			for (; j < CHUNKLENGTH; ++j) 
+			for (; j < CHUNKHEIGHT; ++j) 
 			{
 				int k = 0;
 				for (; k< CHUNKLENGTH; ++k) 
 				{
 
 					Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (i, j, k));
-
-
 
 					if (b == null)
 					{
@@ -495,7 +497,7 @@ public class Chunk // : MonoBehaviour
 								Vector3[] verts = new Vector3[]{};
 								int[] tris = new int[]{};
 
-								Vector2[] uvs = uvCoordsForBlockType (targetBlock.type);
+								Vector2[] uvs = uvCoordsForBlockType (targetBlock.type, (Direction) (dir + shift) );
 
 								// if on edge make the face for the block at this chunk index, else the one next to it in Direction dir.
 								ChunkIndex nextToIJK = reachingBeyondChunkEdge ? ijk : ChunkIndex.ChunkIndexNextToIndex (ijk,(Direction) dir);

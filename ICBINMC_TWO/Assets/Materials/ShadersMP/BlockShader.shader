@@ -7,6 +7,7 @@
     
     Pass 
     {
+        LOD 100
         CGPROGRAM
         
         #pragma vertex vert
@@ -49,17 +50,6 @@
         fixed4 frag(v2f i) : COLOR {
             return  tex2D(_BlockTex, i.uv);
         }
-
-
-//        fixed4 frag (v2f i) : COLOR0 {
-//            return i.color;
-//        }
-
-//        float4 frag (v2f i) : COLOR {
-////            return tex2d(_MyTex, i.uv);
-//            return mul(tex2d(_MainTex, i.uv), i.color);
-//        }
-
 
         ENDCG
     }
