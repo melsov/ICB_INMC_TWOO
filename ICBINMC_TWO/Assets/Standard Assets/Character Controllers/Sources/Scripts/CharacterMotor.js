@@ -189,9 +189,6 @@ private function UpdateFunction () {
 	
 	// Apply gravity and jumping force
 	velocity = ApplyGravityAndJumping (velocity);
-
-	// Update velocity based on input
-	//velocity = ApplyInputVelocityChange(velocity);
 	
 	// Moving platform support
 	var moveDistance : Vector3 = Vector3.zero;
@@ -363,10 +360,10 @@ private function ApplyInputVelocityChange (velocity : Vector3) {
 		desiredVelocity.y = 0;
 	}
 	
-//	if (grounded)
-//		desiredVelocity = AdjustGroundVelocityToNormal(desiredVelocity, groundNormal);
-//	else
-//		velocity.y = 0;
+	if (grounded)
+		desiredVelocity = AdjustGroundVelocityToNormal(desiredVelocity, groundNormal);
+	else
+		velocity.y = 0;
 	
 	// Enforce max velocity change
 	var maxVelocityChange : float = GetMaxAcceleration(grounded) * Time.deltaTime;
@@ -419,8 +416,7 @@ private function ApplyGravityAndJumping (velocity : Vector3) {
 		velocity.y = Mathf.Max (velocity.y, -movement.maxFallSpeed);
 	}
 		
-	//if (grounded) {
-	if (true) {		// jump any time! MMP
+	if (grounded) {
 		// Jump only if the jump button was pressed down in the last 0.2 seconds.
 		// We use this check instead of checking if it's pressed down right now
 		// because players will often try to jump in the exact moment when hitting the ground after a jump
