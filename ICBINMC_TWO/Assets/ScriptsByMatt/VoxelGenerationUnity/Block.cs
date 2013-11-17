@@ -1,16 +1,22 @@
 using UnityEngine;
 using System.Collections;
 
-public struct Sides
-{
-	public bool xp, xn, yp, yn, zp, zn;
+//serialize namespaces
+using System;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
+using System.Diagnostics;
 
-//	public Sides()
-//	{
+//public struct Sides
+//{
+//	public bool xp, xn, yp, yn, zp, zn;
 //
-//	}
-
-}
+////	public Sides()
+////	{
+////
+////	}
+//
+//}
 
 public enum Direction
 {
@@ -23,11 +29,11 @@ public enum BlockType
 
 }
 
-
+[Serializable]
 public class Block  {
 
-	public Sides sides;
-	public BlockType type;
+//	public Sides sides;
+	public BlockType type { get; set;}
 
 	public Block()
 	{
@@ -51,27 +57,27 @@ public class Block  {
 	}
 
 	
-	public void activateSideWithDirection(Direction dir)
-	{
-		switch (dir) {
-		case Direction.xpos:
-			sides.xp = true;
-			break;
-		case Direction.xneg:
-			sides.xn = true;
-			break;
-		case Direction.ypos:
-			sides.yp  = true;
-			break;
-		case Direction.yneg:
-			sides.yn  = true;
-			break;
-		case Direction.zpos:
-			sides.zp = true;
-			break;
-		default:
-			sides.zn = true;
-			break;
-		}
-	}
+//	public void activateSideWithDirection(Direction dir)
+//	{
+//		switch (dir) {
+//		case Direction.xpos:
+//			sides.xp = true;
+//			break;
+//		case Direction.xneg:
+//			sides.xn = true;
+//			break;
+//		case Direction.ypos:
+//			sides.yp  = true;
+//			break;
+//		case Direction.yneg:
+//			sides.yn  = true;
+//			break;
+//		case Direction.zpos:
+//			sides.zp = true;
+//			break;
+//		default:
+//			sides.zn = true;
+//			break;
+//		}
+//	}
 }

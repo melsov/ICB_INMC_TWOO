@@ -48,10 +48,8 @@
      <None Include="Assets\Materials\ShadersMP\SkyBox.shader" />
      <None Include="Assets\Standard Assets\Skyboxes\_skybox info.txt" />
      <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
-     <None Include="Assets\Plugins\whydoidoit.com\license.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.LESSER.txt" />
-     <None Include="Assets\UnitySerializer\readme.txt" />
      <None Include="Assets\Materials\ShadersMP\BlockShader.shader" />
  <Reference Include="\Applications\Unity\Unity.app\Contents\Frameworks\Managed\UnityEditor.Graphs">
  <HintPath>\Applications\Unity\Unity.app\Contents\Frameworks\Managed\UnityEditor.Graphs.dll</HintPath>
@@ -73,10 +71,6 @@
       <Project>{0582B614-8D19-87D4-1A58-AB8B18BE0282}</Project>      <Name>Assembly-UnityScript-firstpass</Name>    </ProjectReference>
     <ProjectReference Include="Assembly-CSharp.csproj">
       <Project>{0F8EBFAA-C48E-39A1-E8C9-B43F660DF968}</Project>      <Name>Assembly-CSharp</Name>    </ProjectReference>
-    <ProjectReference Include="Assembly-UnityScript.unityproj">
-      <Project>{91F54442-0D1E-0AD2-4C38-C1BF1B813750}</Project>      <Name>Assembly-UnityScript</Name>    </ProjectReference>
-    <ProjectReference Include="Assembly-CSharp-Editor-firstpass.csproj">
-      <Project>{561856EB-B5A9-7F26-6170-6DAB78805DDA}</Project>      <Name>Assembly-CSharp-Editor-firstpass</Name>    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

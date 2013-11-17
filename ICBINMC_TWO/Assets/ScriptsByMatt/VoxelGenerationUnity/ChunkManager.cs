@@ -9,6 +9,9 @@ using System.Security.Cryptography;
 using System.Runtime.ConstrainedExecution;
 using System.Diagnostics;
 
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
+
 
 /*
  *MAIN CLASS FOR ICBINMC
@@ -37,6 +40,7 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Threading;
 using System.Collections.Specialized;
+using System.Runtime.Serialization;
 
 
 public class ChunkManager : MonoBehaviour 
@@ -276,6 +280,8 @@ public class ChunkManager : MonoBehaviour
 		// also update any adjacent chunks (to the destroyed block)
 		foreach (Chunk adjCh in chunksTouchingBlockCoord(blockCoord) )
 			updateChunk(adjCh);
+
+		blocks [blockCoord] = destroyMe; // get NoisePatch to update lists.
 	}
 
 	public System.Collections.IEnumerable chunksTouchingBlockCoord(Coord blockWorldCoord)
@@ -412,6 +418,11 @@ public class ChunkManager : MonoBehaviour
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 200, 150, 40), "creThsChs Cnt:" + createTheseChunks.Count );
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 240, 150, 40), "desThsChs Cnt:" + destroyTheseChunks.Count );
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 280, 150, 40), "verCls Cnt:" + createTheseVeryCloseAndInFrontChunks.Count );
+
+		if (GUI.Button (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "SAVE" ))
+		{
+			blocks.saveNoisePatchesToPlayerPrefs ();
+		}
 //		GUI.Box (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "FPS:" + Time.deltaTime );
 
 //		Coord corner = new Coord (Screen.width - 170, 1, Screen.height - 200);
@@ -500,6 +511,8 @@ public class ChunkManager : MonoBehaviour
 		Chunk ch = chunkContainingCoord (placingCoord);
 		ch.noNeedToRenderFlag = false;
 		updateChunk (ch);
+
+		blocks [placingCoord] = b; // get saved blocks to update.
 	}
 
 	BlockType currentHeldBlockType () {
@@ -1285,7 +1298,7 @@ public class ChunkManager : MonoBehaviour
 				{
 					if (!np.generatedNoiseAlready) {
 						bug ("about to gen noise at: " + np.coord.x + " y: " + np.coord.z);
-						np.generateNoisePatch ();
+						np.generateNoiseAndPopulateBlocksAsync ();
 					}
 //					if (!np.generatedBlockAlready)
 //						np.populateBlocksFromNoise ();
@@ -1354,7 +1367,7 @@ public class ChunkManager : MonoBehaviour
 		if (blocks.noisePatches.ContainsKey (ncoord))
 			return blocks.noisePatches [ncoord];
 
-		NoisePatch npatch = new NoisePatch (ncoord, (int) CHUNKLENGTH, this);
+		NoisePatch npatch = new NoisePatch (ncoord, this);
 		blocks.noisePatches.Add (ncoord, npatch);
 
 		return npatch;
@@ -1365,7 +1378,7 @@ public class ChunkManager : MonoBehaviour
 		if (blocks.noisePatches.ContainsKey (ncoord))
 			return;
 
-		NoisePatch npatch = new NoisePatch (ncoord, (int) CHUNKLENGTH, this);
+		NoisePatch npatch = new NoisePatch (ncoord, this);
 		blocks.noisePatches.Add (ncoord, npatch);
 	}
 
@@ -1380,7 +1393,7 @@ public class ChunkManager : MonoBehaviour
 		if (mainThread)
 			np.genNoiseOnMainThread();
 		else 
-			np.generateNoisePatch ();
+			np.generateNoiseAndPopulateBlocksAsync ();
 	}
 
 	void populateBlocksForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
@@ -1460,6 +1473,16 @@ public class ChunkManager : MonoBehaviour
 
 		chunkMap = new ChunkMap (); //new Coord (WORLD_XLENGTH_CHUNKS, WORLD_HEIGHT_CHUNKS, WORLD_ZLENGTH_CHUNKS));
 
+		blocks.getSavedNoisePatches (); // from player prefs, if any...
+
+		foreach(KeyValuePair<NoiseCoord, NoisePatch> npatch in blocks.noisePatches)
+		{
+			NoisePatch np = (NoisePatch)npatch.Value;
+			np.coord = npatch.Key;
+			np.updateChunkManager (this);
+
+		}
+
 		lastPlayerNoiseCoord = new NoiseCoord (100000000, -100000003);
 		setNoiseHandlerResolution ();
 		noiseHandler.initNoiseMap ();
@@ -1468,13 +1491,22 @@ public class ChunkManager : MonoBehaviour
 		audioSourceCamera = playerCameraTransform.parent.GetComponent<AudioSource> ();
 
 		NoiseCoord initialNoiseCoord = new NoiseCoord (0, 0);
-//		makeNewAndSetupPatchAtNoiseCoord (initialNoiseCoord);
-		makeNewAndSetupPatchAtNoiseCoordMainThread (initialNoiseCoord);
-		NoisePatch firstNoisePatch = blocks.noisePatches [initialNoiseCoord];
 
-		foreach (NoiseCoord ncoord in noiseCoordsSurroundingNoiseCoord(firstNoisePatch.coord)) 
+		// save data (check if there is any)
+
+//		if (!blocks.noisePatches.ContainsKey (initialNoiseCoord)) 
+//		{
+			//		makeNewAndSetupPatchAtNoiseCoord (initialNoiseCoord);
+			makeNewAndSetupPatchAtNoiseCoordMainThread (initialNoiseCoord);
+//			NoisePatch firstNoisePatch = blocks.noisePatches [initialNoiseCoord];
+//		}
+
+		foreach (NoiseCoord ncoord in noiseCoordsSurroundingNoiseCoord(initialNoiseCoord)) 
 		{
+//			if (!blocks.noisePatches.ContainsKey (ncoord))
 			makeNewAndSetupPatchAtNoiseCoordMainThread (ncoord);
+//			else
+//				bug ("it had the noise coord already: " + ncoord);
 		}
 
 		// ** MAKE SURROUNDING PATCHES AS WELL **// AND WAIT UNTIL ALL ARE DONE...
@@ -1485,7 +1517,7 @@ public class ChunkManager : MonoBehaviour
 //			{
 //				if (!np.generatedNoiseAlready) {
 //					bug ("about to gen noise at: " + np.coord.x + " y: " + np.coord.z);
-//					np.generateNoisePatch ();
+//					np.generateNoiseAndPopulateBlocksAsync ();
 //				}
 ////				setupThesePatches.RemoveAt (0);
 //			} else {
@@ -1561,6 +1593,12 @@ public class ChunkManager : MonoBehaviour
 
 	}
 
+//	void OnApplicationQuit() {
+//		blocks.saveNoisePatchesToPlayerPrefs ();
+//		bug ("saved hopefully");
+//		PlayerPrefs.Save();
+//	}
+
 	IEnumerator sillyYieldFunc()
 	{
 		int i = 0;
@@ -1592,11 +1630,18 @@ public class ChunkManager : MonoBehaviour
 }
 
 //courtesy of: http://answers.unity3d.com/questions/357033/unity3d-and-c-coroutines-vs-threading.html
-public class ThreadedJob
+[Serializable]
+public class ThreadedJob : ISerializable
 {
 	private bool m_IsDone = false;
 	private object m_Handle = new object();
 	private System.Threading.Thread m_Thread = null;
+
+	public ThreadedJob () 
+	{
+
+	}
+
 	public bool IsDone
 	{
 		get
@@ -1631,7 +1676,7 @@ public class ThreadedJob
 
 	protected virtual void OnFinished() { }
 
-	public virtual bool Update()
+	public virtual bool Update()	
 	{
 		if (IsDone)
 		{
@@ -1645,38 +1690,25 @@ public class ThreadedJob
 		ThreadFunction();
 		IsDone = true;
 	}
-}
 
-public class BakeryOfChunks : ThreadedJob
-{
-	public List<Chunk> chunks;
-	public List<Chunk> finishedChunks;
+	#region Serializable interface
 
-	protected override void ThreadFunction()
+	protected virtual void doGetObject (SerializationInfo info, StreamingContext context) { }
+
+	// awkardly, we must implement iSerializable, to AVOID doing any serialization in ThreadedJob—or so it seems.
+	// 'doGetObject()' gets called on NoisePatch which actually does the serializing
+	void ISerializable.GetObjectData(SerializationInfo oInfo, StreamingContext oContext)
 	{
-//		Debug.Log ("starting baking thread");
-
-//		finishedChunks.Clear ();
-		// bake chunks
-//		foreach (Chunk ch in chunks )
-//		{
-//			ch.makeMesh ();
-//		}
-
-//		Debug.Log ("end of baking thread func");
+		this.doGetObject (oInfo, oContext);
 	}
 
-	protected override void OnFinished()
+	// The special constructor is used to deserialize values. 
+	public ThreadedJob(SerializationInfo info, StreamingContext context)
 	{
-//		Debug.Log ("chunks finished at time: " + Time.time);
-//
-//		finishedChunks = new List<Chunk > ();
-//		finishedChunks.AddRange (chunks);
-//		chunks.Clear ();
+
 	}
+	#endregion
 }
-
-
 
 public class ChunkMap
 {
@@ -1712,19 +1744,8 @@ public class ChunkMap
 
 	void destroyChunkMeshOfChunk(Chunk ch) 
 	{
-		//		foreach (Component compo in ch.GetComponents<SphereCollider>())
-		//			GameObject.Destroy (compo);
-		//		foreach (Component compo in ch.GetComponents< MeshFilter>())
-		//			GameObject.Destroy (compo);
-		//		foreach (Component compo in ch.GetComponents< MeshRenderer>())
-		//			GameObject.Destroy (compo);
-		//		foreach (Component compo in ch.GetComponents<Component>()) //destroy the rest (yeah!)
-		//			GameObject.Destroy (compo); // previous Unity code
-
-		GameObject chObj = ch.meshHoldingGameObject; //  ch.transform.gameObject;
-
+		GameObject chObj = ch.meshHoldingGameObject; 
 		GameObject.Destroy (chObj);
-
 		ch.destroyAndSetGameObjectToNull ();
 	}
 
@@ -1741,8 +1762,7 @@ public class ChunkMap
 		return chunks [co]; 
 	}
 
-	public Chunk chunkAtOrNullIfUnready(int ii, int jj, int kk) 
-	{
+	public Chunk chunkAtOrNullIfUnready(int ii, int jj, int kk) {
 		return chunkAtOrNullIfUnready (new Coord (ii, kk, jj));
 	}
 
@@ -1802,13 +1822,41 @@ public class BlockCollection
 	private static Coord BLOCKSPERNOISEPATCH = NoisePatch.PATCHDIMENSIONSCHUNKS * new Coord((int)ChunkManager.CHUNKLENGTH, 
 	                                                                                                   (int) ChunkManager.CHUNKHEIGHT, 
 	                                                                                                   (int)ChunkManager.CHUNKLENGTH);
+	private const string NOISE_PATCHES_SAVE_NAME = "SavedNoisePatches";
 
 	public BlockCollection () 
 	{
-		//test
-//		Coord woco = new Coord (-65, 0, -43);
-//		NoiseCoord nCoContaining = noiseCoordForWorldCoord (woco);
-//		throw new Exception ("noise co containing woco is  ? -2 , -1" + nCoContaining.toString ());
+	}
+
+	public void getSavedNoisePatches () 
+	{
+//		PlayerPrefs.DeleteAll ();
+		//Get the data
+		var data = PlayerPrefs.GetString(NOISE_PATCHES_SAVE_NAME);
+
+		//If not blank then load it
+		if(!string.IsNullOrEmpty(data))
+		{
+			//Binary formatter for loading back
+			var b = new BinaryFormatter();
+			//Create a memory stream with the data
+			var m = new MemoryStream(Convert.FromBase64String(data));
+				noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
+
+		} 
+	}
+
+	public void saveNoisePatchesToPlayerPrefs() 
+	{
+		var b = new BinaryFormatter();
+		var m = new MemoryStream();
+		b.Serialize(m, noisePatches);
+
+		PlayerPrefs.SetString(NOISE_PATCHES_SAVE_NAME, 
+			Convert.ToBase64String(
+				m.GetBuffer()
+			)
+		);
 	}
 
 	public Block this[int xx, int yy, int zz]
@@ -1831,7 +1879,6 @@ public class BlockCollection
 			NoiseCoord nco = noiseCoordForWorldCoord (woco);
 			if (!noisePatches.ContainsKey(nco))
 			{
-//				throw new System.ArgumentException ("noise co not in the dictionary: " + nco.toString ());
 				return null;
 			}
 			NoisePatch np = noisePatches [nco];
@@ -1877,6 +1924,7 @@ public class BlockCollection
 
 }
 
+[Serializable]
 public struct NoiseCoord
 {
 	public int x; 
@@ -1909,23 +1957,156 @@ public struct NoiseCoord
 	}
 }
 
+[Serializable]
 public class NoisePatch : ThreadedJob
 {
 	public const int CHUNKDIMENSION = 4;// new Coord(4,1,4);
 	public const int CHUNKHEIGHTDIMENSION = 1;
 	public static Coord PATCHDIMENSIONSCHUNKS = new Coord (CHUNKDIMENSION, CHUNKHEIGHTDIMENSION, CHUNKDIMENSION);
 	private Coord BLOCKDIMENSIONS;
-	private static int CHUNKLENGTH;
+	private static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
 	private int BLOCKSPERPATCHLENGTH;
 
 	private static Coord patchDimensions;
-	public Block[,,] blocks;
-	public NoiseCoord coord;
+//	public Block[,,] blocks;
+	public Block[,,] blocks { get; set;}
+//	public NoiseCoord coord;
+	public NoiseCoord coord {get; set;}
 
-	public bool generatedNoiseAlready;
-	public bool generatedBlockAlready;
+	public bool generatedNoiseAlready {get; set;}
+	public bool generatedBlockAlready {get; set;}
 
 	private ChunkManager m_chunkManager;
+
+	private SavableBlock[,,] m_RSavedBlocks;
+	public List<SavableBlock> savedBlocks { get; set;}
+
+
+	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
+	{
+//		savedBlocks = new List<SavableBlock> ();
+		coord = _noiseCo;
+
+//		patchDimensions =  new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
+//			ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
+//			CHUNKLENGTH * CHUNKDIMENSION) ;
+//
+//		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
+//		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
+
+		m_chunkManager = _chunkMan;
+
+//		BLOCKSPERPATCHLENGTH = patchDimensions.x; 
+
+		otherConstructorStuff ();
+	}
+
+	private void otherConstructorStuff() {
+		savedBlocks = new List<SavableBlock> ();
+
+		patchDimensions =  new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
+			ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
+			CHUNKLENGTH * CHUNKDIMENSION) ;
+
+		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
+		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
+
+		BLOCKSPERPATCHLENGTH = patchDimensions.x;
+	}
+
+	public void updateChunkManager(ChunkManager _chunkMan) {
+		m_chunkManager = _chunkMan;
+	}
+
+	public Block blockAtPatchCoord(Coord _worldCo) {
+		return null;
+	}
+
+	public bool coordIsInBlocksArray(Coord indexCo) {
+		if (!indexCo.isIndexSafe(patchDimensions)) //debug purposes
+		{
+			bug ("coord out of array bounds for this noise patch: coord: " + indexCo.toString() + " array bounds: " + patchDimensions.toString ());
+			return false;
+		}
+
+		return indexCo.isIndexSafe (patchDimensions);
+
+	}
+
+	#region Serialization
+	// Implement this method to serialize data. The method is called  
+	// on serialization. 
+	protected override void doGetObject(SerializationInfo info, StreamingContext context)
+	{
+		info.AddValue ("NoiseCoord", coord, typeof(NoiseCoord));
+		updateSavableBlockList ();
+		info.AddValue ("SavedBlocks", savedBlocks, typeof(List<SavableBlock>));
+	}
+//
+//	protected override void doSerializeConstructor(SerializationInfo info, StreamingContext context)
+//	{
+//		//useless?
+//	}
+
+	public NoisePatch(SerializationInfo info, StreamingContext context)
+	{
+		otherConstructorStuff ();
+
+		coord = (NoiseCoord) info.GetValue("NoiseCoord", typeof(NoiseCoord));
+		savedBlocks = (List<SavableBlock>) info.GetValue("SavedBlocks", typeof(List<SavableBlock>));
+		updateSavableAndNormalBlocksArray ();
+		generatedBlockAlready = false;
+		generatedNoiseAlready = false;
+	}
+
+	private void addSavableBlock(Block _b, Coord patchRelCo) {
+		m_RSavedBlocks [patchRelCo.x, patchRelCo.y, patchRelCo.z] = new SavableBlock (_b.type, patchRelCo);
+	}
+
+	private void updateSavableBlockList() 
+	{
+		savedBlocks.Clear ();
+
+		int x_end = m_RSavedBlocks.GetLength (0);
+		int y_end = m_RSavedBlocks.GetLength (1);
+		int z_end = m_RSavedBlocks.GetLength (2);
+
+		int xx = 0;
+		for (; xx < x_end; xx++) {
+			int zz = 0;
+			for (; zz < z_end; zz++) {
+				int yy = 0; // (int) ccoord.y;
+				for (; yy < y_end; yy++) 
+				{
+					if (m_RSavedBlocks[xx,yy,zz] != null) {
+						savedBlocks.Add (m_RSavedBlocks [xx, yy, zz]);
+					}
+				}
+			}
+		}
+
+	}// end func
+
+	private void updateSavableAndNormalBlocksArray() {
+		foreach(SavableBlock sb in savedBlocks) {
+
+			//check index??
+			m_RSavedBlocks [sb.coord.x, sb.coord.y, sb.coord.z] = sb;
+
+			if (sb.coord.isIndexSafe(patchDimensions))
+				blocks [sb.coord.x, sb.coord.y, sb.coord.z] = new Block(sb.type);
+		}
+	}
+//
+//	private void updateBlocksArrayWithSavableBlocksList() {
+//		foreach(SavableBlock sb in savedBlocks) {
+//			if (sb.coord.isIndexSafe(patchDimensions))
+//				blocks [sb.coord.x, sb.coord.y, sb.coord.z] = new Block(sb.type);
+//		}
+//	}
+
+
+	#endregion
 
 	#region implement threaded job funcs
 
@@ -1951,44 +2132,6 @@ public class NoisePatch : ThreadedJob
 		return new CoRange (start, range);
 	}
 
-	public NoisePatch(NoiseCoord _noiseCo, int _chunkLen, ChunkManager _chunkMan)
-	{
-		coord = _noiseCo;
-		CHUNKLENGTH = _chunkLen;
-
-		patchDimensions =  new Coord(_chunkLen * CHUNKDIMENSION, 
-		                             ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
-		                              _chunkLen * CHUNKDIMENSION) ;
-
-		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
-
-		m_chunkManager = _chunkMan;
-
-		BLOCKSPERPATCHLENGTH = patchDimensions.x; // array_dim;
-
-		//test
-//		Coord woco = new Coord (129	, 0, -64);
-//		Coord nCoContaining = patchRelativeBlockCoordForWorldBlockCoord (woco);
-//		throw new Exception ("patch rel co test is: 1, 0, 0 ?" + nCoContaining.toString ());
-
-//		Coord chco = new Coord (-5, 12, -7);
-//		Coord nCoContaining = patchRelativeBlockCoordForChunkCoord (chco);
-//		throw new Exception ("patch rel co test is: 48, 0, 16 ?" + nCoContaining.toString ());
-	}
-
-	public Block blockAtPatchCoord(Coord _worldCo) {
-		return null;
-	}
-
-	public bool coordIsInBlocksArray(Coord indexCo) {
-		if (!indexCo.isIndexSafe(patchDimensions)) //debug purposes
-		{
-			bug ("coord out of array bounds for this noise patch: coord: " + indexCo.toString() + " array bounds: " + patchDimensions.toString ());
-			return false;
-		}
-
-		return indexCo.isIndexSafe (patchDimensions);
-	}
 
 	private static Coord patchRelativeChunkCoordForChunkCoord(Coord chunkCo) 
 	{
@@ -2088,6 +2231,9 @@ public class NoisePatch : ThreadedJob
 	public void setBlockAtWorldCoord(Block bb, Coord woco) {
 		Coord relCo = patchRelativeBlockCoordForWorldBlockCoord (woco);
 		blocks [relCo.x, relCo.y, relCo.z] = bb;
+
+		//save any set block
+		addSavableBlock (bb, relCo);
 	}
 
 	void bug(string str) {
@@ -2099,7 +2245,7 @@ public class NoisePatch : ThreadedJob
 		generatedBlockAlready = false;
 	}
 
-	public void generateNoisePatch()
+	public void generateNoiseAndPopulateBlocksAsync()
 	{
 //		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
 //		generatedNoiseAlready = true;
@@ -2150,6 +2296,9 @@ public class NoisePatch : ThreadedJob
 	{
 		if (generatedBlockAlready)
 			return;
+
+		// put saved blocks in first...
+//		updateBlocksArrayWithSavableBlocksList ();
 		//...
 		int x_start = (int)( start.x);
 		bool xIsNeg = coord.x < 0;
@@ -2173,56 +2322,43 @@ public class NoisePatch : ThreadedJob
 				for (; yy < y_end; yy++) 
 				{
 
-					BlockType btype = BlockType.Air;
+					if (blocks [xx, yy, zz] == null) // if not we apparently had a saved block...
+					{
+						BlockType btype = BlockType.Air;
 
-					//test
-					//					if (yy < 37)
-					//						btype = BlockType.Grass;
+						int noiseAsWorldHeight = (int)((noise_val * .5 + .5) * patchDimensions.y * .4); // * (zz/32.0f) * (xx/64.0f));
 
-//					float wallMaker = 1.0f; //test
+						if (yy < patchDimensions.y - 4) { // 4 blocks of air on top
+							if (false) {
+								int total = xx + yy + zz;
+								if (total < (CHUNKLENGTH - 5) * 3 && total > 4)
+									btype = BlockType.Grass;
+							} else {
+
+								if (yy == 0) {
+									btype = BlockType.BedRock;
+								} else if (noiseAsWorldHeight > yy) {
+
+									btype = BlockType.Grass;
+
 //
-//					if (xx % 16 == 0)
-//						wallMaker = 1.5f;
-					// no caves for now...
-					// TODO: we shouldn't really use patchDim.y. For this we want 
-					// to defer to chunkManager's WORLDHEIGHTBLOCKS
-					int noiseAsWorldHeight = (int)((noise_val * .5 + .5) * patchDimensions.y * .4); // * (zz/32.0f) * (xx/64.0f));
-
-					if (yy < patchDimensions.y - 4 ) // 4 blocks of air on top
-					{ 
-
-
-
-						if (false) {
-							int total = xx + yy + zz;
-							if (total < (CHUNKLENGTH - 5) * 3 && total > 4)
-								btype = BlockType.Grass;
-						} else {
-
-							if (yy == 0) {
-								btype = BlockType.BedRock;
-							} else if (noiseAsWorldHeight > yy) {
-
-								btype = BlockType.Grass;
-
-
-//								if (yy < CHUNKLENGTH)
-//									btype = BlockType.Grass;
-//								else if (yy < CHUNKLENGTH * 2)
-//									btype = BlockType.Sand;
-//								else if (yy < CHUNKLENGTH * 3)
-//									btype = BlockType.Dirt;
-//								else
-//									btype = BlockType.Stone;
+//									if (yy < CHUNKLENGTH)
+//										btype = BlockType.Grass;
+//									else if (yy < CHUNKLENGTH * 2)
+//										btype = BlockType.Sand;
+//									else if (yy < CHUNKLENGTH * 3)
+//										btype = BlockType.Dirt;
+//									else
+//										btype = BlockType.Stone;
+								}
 							}
 						}
+						//TODO: add a lock(someObject) here?
+						//					UnityEngine.Debug.Log (" creating block at x " + xx + " y " + yy + " z " + zz);
+
+						blocks [xx, yy, zz] = new Block (btype);
 					}
-					//TODO: add a lock(someObject) here?
-//					UnityEngine.Debug.Log (" creating block at x " + xx + " y " + yy + " z " + zz);
-
-					blocks [xx , yy ,  zz] = new Block (btype);
 				}
-
 			}
 		}
 
@@ -2232,7 +2368,19 @@ public class NoisePatch : ThreadedJob
 
 }
 
+[Serializable]
+public class SavableBlock : Block
+{
+	public Coord coord;
 
+	public SavableBlock (BlockType _type , Coord _coord) {
+		this.type = _type;
+		this.coord = _coord;
+	}
+}
+
+
+[Serializable]
 public struct Coord
 {
 	public int x, y, z;
@@ -2574,5 +2722,13 @@ public struct ChunkRange
 	{
 		start = st; 
 		range = new ChunkCoord (length);
+	}
+}
+
+public static class B 
+{
+	public static void brk() 
+	{
+		UnityEngine.Debug.Break();
 	}
 }

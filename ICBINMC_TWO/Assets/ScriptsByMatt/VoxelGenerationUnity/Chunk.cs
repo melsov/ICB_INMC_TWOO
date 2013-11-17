@@ -20,8 +20,7 @@ using System.Collections.Generic;
  
 
 // dvektor == "direction vector"
-// sometimes duplicates functionality of 'Coord' and vis-versa
-// 'oh well'
+// duplicates functionality of 'Coord' and vis-versa...
 using System;
 
 
