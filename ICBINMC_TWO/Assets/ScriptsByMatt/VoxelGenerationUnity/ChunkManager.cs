@@ -258,8 +258,7 @@ public class ChunkManager : MonoBehaviour
 
 	public void destroyBlockAt(Coord blockCoord) 
 	{
-//		Block destroyMe = blocks.specialGetBlockForTesting (blockCoord);
-		Block destroyMe = blocks [blockCoord]; // [blockCoord.x , blockCoord.y, blockCoord.z];
+		Block destroyMe = blocks [blockCoord]; 
 
 		if (destroyMe.type == BlockType.Air) {
 			bug ("block was air already! " + blockCoord.toString());
@@ -277,7 +276,7 @@ public class ChunkManager : MonoBehaviour
 
 		updateChunk (ch);
 
-		// also update any adjacent chunks (to the destroyed block)
+		// also update any chunks touching the destroyed block
 		foreach (Chunk adjCh in chunksTouchingBlockCoord(blockCoord) )
 			updateChunk(adjCh);
 

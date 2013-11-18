@@ -46,6 +46,7 @@
   <ItemGroup>
      <Compile Include="Assets\ChunkMesh.cs" />
      <Compile Include="Assets\GraveYardCode.cs" />
+     <Compile Include="Assets\Materials\ShadersMP\GameClock.cs" />
      <Compile Include="Assets\ScriptsByMatt\Camera-Player\BlockPointer.cs" />
      <Compile Include="Assets\ScriptsByMatt\TetraMesh.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Block.cs" />
