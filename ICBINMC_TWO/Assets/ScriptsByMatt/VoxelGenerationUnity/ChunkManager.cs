@@ -995,6 +995,9 @@ public class ChunkManager : MonoBehaviour
 						if (chunk != null) {
 							makeChunksFromOnMainThreadAtCoord (chunk.chunkCoord);
 						}
+						else {
+							throw new Exception ("null chunks in very close list??");
+						}
 						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
 					}
 				}
@@ -1045,53 +1048,53 @@ public class ChunkManager : MonoBehaviour
 		}
 	}
 
-	IEnumerator createChunksFromCreateList()
-	{
-		while (true)
-		{
-			if(shouldBeCreatingChunksNow())
-			{
-				if (createTheseChunks.Count > 0)
-				{
-					Chunk chunk = createTheseChunks [0];
-
-					if (chunk != null) {
-						makeChunksFromOnMainThread (new ChunkCoord (chunk.chunkCoord), ChunkCoord.chunkCoordOne ());
-					}
-					createTheseChunks.RemoveAt (0);
-				}
-			}
-//			bug ("child count: " + transform.childCount + " active Chunks count: " + activeChunks.Count);
-			yield return new WaitForSeconds (.1f);
-		}
-	}
-
-	IEnumerator destroyChunksFromDestroyList()
-	{
-		yield return new WaitForSeconds (5.0f);
-
-		while (true)
-		{
-			if (shouldBeDestroyingChunksNow())
-			{
-				if (destroyTheseChunks.Count > 0) 
-				{
-					Chunk chunk = destroyTheseChunks[0];
-
-					if (chunk != null)
-					{
-//						if (!chunk.chunkCoord.isInsideOfRange (m_wantActiveRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
-						if (!chunk.chunkCoord.isInsideOfRange (m_dontDestroyRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
-							chunkMap.destroyChunkAt (chunk.chunkCoord);
-							activeChunks.Remove (chunk);
-						} 
-					}
-					destroyTheseChunks.RemoveAt (0);
-				}
-			}
-			yield return new WaitForSeconds(.1f);
-		}
-	}
+//	IEnumerator createChunksFromCreateList()
+//	{
+//		while (true)
+//		{
+//			if(shouldBeCreatingChunksNow())
+//			{
+//				if (createTheseChunks.Count > 0)
+//				{
+//					Chunk chunk = createTheseChunks [0];
+//
+//					if (chunk != null) {
+//						makeChunksFromOnMainThread (new ChunkCoord (chunk.chunkCoord), ChunkCoord.chunkCoordOne ());
+//					}
+//					createTheseChunks.RemoveAt (0);
+//				}
+//			}
+////			bug ("child count: " + transform.childCount + " active Chunks count: " + activeChunks.Count);
+//			yield return new WaitForSeconds (.1f);
+//		}
+//	}
+//
+//	IEnumerator destroyChunksFromDestroyList()
+//	{
+//		yield return new WaitForSeconds (5.0f);
+//
+//		while (true)
+//		{
+//			if (shouldBeDestroyingChunksNow())
+//			{
+//				if (destroyTheseChunks.Count > 0) 
+//				{
+//					Chunk chunk = destroyTheseChunks[0];
+//
+//					if (chunk != null)
+//					{
+////						if (!chunk.chunkCoord.isInsideOfRange (m_wantActiveRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
+//						if (!chunk.chunkCoord.isInsideOfRange (m_dontDestroyRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
+//							chunkMap.destroyChunkAt (chunk.chunkCoord);
+//							activeChunks.Remove (chunk);
+//						} 
+//					}
+//					destroyTheseChunks.RemoveAt (0);
+//				}
+//			}
+//			yield return new WaitForSeconds(.1f);
+//		}
+//	}
 
 	IEnumerator checkAsyncChunksList()
 	{
@@ -1115,7 +1118,8 @@ public class ChunkManager : MonoBehaviour
 								//async...
 								activeChunks.Add (chunk);
 //								chunk.applyMesh ();
-								StartCoroutine (chunk.applyMeshToGameObjectCoro ());
+//								StartCoroutine (chunk.applyMeshToGameObjectCoro ());
+								yield return StartCoroutine(chunk.applyMeshToGameObjectCoro ());
 								chunk.isActive = true;
 							}
 							else {
@@ -1530,15 +1534,12 @@ public class ChunkManager : MonoBehaviour
 //			bug ("noise patch one still not done");
 //		}
 
-
-
-
 		finishStartSetup ();
 
 	}
 
 	private void finishStartSetup() {
-		Coord spawnPAtChunkCoord = chunkCoordContainingBlockCoord (spawnPlayerAtCoord);
+		Coord spawnPAtChunkCoord  = chunkCoordContainingBlockCoord (spawnPlayerAtCoord);
 
 		//		CoRange nearbyCoRa = corangeFromNoiseCoord (initalNoiseCoord);
 		//		bug ("noise patch based co range: " + nearbyCoRa.toString ());
@@ -1564,6 +1565,7 @@ public class ChunkManager : MonoBehaviour
 			StartCoroutine (updateSetupPatchesListI ());
 		}
 
+//		placePlayerAtSpawnPoint ();
 	}
 
 	private void placePlayerAtSpawnPoint() {
@@ -2327,20 +2329,16 @@ public class NoisePatch : ThreadedJob
 
 						int noiseAsWorldHeight = (int)((noise_val * .5 + .5) * patchDimensions.y * .4); // * (zz/32.0f) * (xx/64.0f));
 
-						if (yy < patchDimensions.y - 4) { // 4 blocks of air on top
-							if (false) {
-								int total = xx + yy + zz;
-								if (total < (CHUNKLENGTH - 5) * 3 && total > 4)
-									btype = BlockType.Grass;
-							} else {
+						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
+						{ 
+							if (yy == 0) 
+							{
+								btype = BlockType.BedRock;
+							} 
+							else if (noiseAsWorldHeight > yy) 
+							{
+								btype = BlockType.Grass;
 
-								if (yy == 0) {
-									btype = BlockType.BedRock;
-								} else if (noiseAsWorldHeight > yy) {
-
-									btype = BlockType.Grass;
-
-//
 //									if (yy < CHUNKLENGTH)
 //										btype = BlockType.Grass;
 //									else if (yy < CHUNKLENGTH * 2)
@@ -2349,7 +2347,6 @@ public class NoisePatch : ThreadedJob
 //										btype = BlockType.Dirt;
 //									else
 //										btype = BlockType.Stone;
-								}
 							}
 						}
 						//TODO: add a lock(someObject) here?
