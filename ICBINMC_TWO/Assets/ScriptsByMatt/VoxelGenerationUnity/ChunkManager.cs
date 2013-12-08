@@ -1,6 +1,9 @@
+#define TERRAIN_TEST
+
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 using System.IO;
 using System;
@@ -41,6 +44,7 @@ using System.ComponentModel;
 using System.Threading;
 using System.Collections.Specialized;
 using System.Runtime.Serialization;
+using System.Runtime.InteropServices;
 
 
 public class ChunkManager : MonoBehaviour 
@@ -55,7 +59,7 @@ public class ChunkManager : MonoBehaviour
 
 	//TODO: make the rest const
 	public const uint CHUNKLENGTH = 16;
-	public const int CHUNKHEIGHT = 64;
+	public const int CHUNKHEIGHT = 256;
 	public const int WORLD_HEIGHT_CHUNKS = 1;
 
 	private const int WORLD_HEIGHT_BLOCKS = (int) (WORLD_HEIGHT_CHUNKS * CHUNKHEIGHT);
@@ -95,6 +99,11 @@ public class ChunkManager : MonoBehaviour
 	public BlockCollection blocks;
 
 	private bool firstNoisePatchDone = false;
+
+	public Transform terrainTestPlane;
+	#if TERRAIN_TEST
+	private Texture2D terrainTex;
+	#endif
 
 	public ChunkManager()
 	{
@@ -274,13 +283,15 @@ public class ChunkManager : MonoBehaviour
 			return;
 		}
 
+		blocks [blockCoord] = destroyMe; // get NoisePatch to update lists.
+
 		updateChunk (ch);
 
 		// also update any chunks touching the destroyed block
 		foreach (Chunk adjCh in chunksTouchingBlockCoord(blockCoord) )
 			updateChunk(adjCh);
 
-		blocks [blockCoord] = destroyMe; // get NoisePatch to update lists.
+
 	}
 
 	public System.Collections.IEnumerable chunksTouchingBlockCoord(Coord blockWorldCoord)
@@ -422,6 +433,12 @@ public class ChunkManager : MonoBehaviour
 		{
 			blocks.saveNoisePatchesToPlayerPrefs ();
 		}
+
+		#if TERRAIN_TEST
+		float imScale = .25f;
+		GUI.Box(new Rect ( 4, Screen.height - terrainTex.height * imScale , terrainTex.width * imScale, terrainTex.height * imScale), terrainTex );
+		#endif
+
 //		GUI.Box (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "FPS:" + Time.deltaTime );
 
 //		Coord corner = new Coord (Screen.width - 170, 1, Screen.height - 200);
@@ -437,6 +454,8 @@ public class ChunkManager : MonoBehaviour
 		// DRAW A '+' IN THE MIDDLE
 		float boxSize = 20;
 		GUI.Box (new Rect (Screen.width * .5f - boxSize/2.0f, Screen.height * .5f - boxSize/2.0f, boxSize, boxSize), "+");
+
+
 	}
 
 	#region handle block hits
@@ -462,7 +481,11 @@ public class ChunkManager : MonoBehaviour
 
 		Coord altBlockCoord =  hitOrPlaceBlockCoordFromWorldPos (blockWorldPos);// new Coord (blockWorldPos);
 
-
+		if (altBlockCoord.y == 0) //BEDROCK
+		{
+			bug ("hit bedrock");
+			return;
+		}
 
 //		if (blockCoord.equalTo (altBlockCoord)) {
 //			bug ("block coords from two methods are equal");
@@ -509,9 +532,12 @@ public class ChunkManager : MonoBehaviour
 
 		Chunk ch = chunkContainingCoord (placingCoord);
 		ch.noNeedToRenderFlag = false;
-		updateChunk (ch);
 
 		blocks [placingCoord] = b; // get saved blocks to update.
+
+		updateChunk (ch);
+
+
 	}
 
 	BlockType currentHeldBlockType () {
@@ -662,7 +688,10 @@ public class ChunkManager : MonoBehaviour
 
 		// 0 z pos, 90 x pos
 		Coord plCoord = playerLocatedAtChunkCoord ();
-		Coord halfR = new Coord (3,0,3);
+
+		Coord halfR = new Coord (1,0,1);
+
+//		Coord halfR = new Coord (3,0,3);
 //		Coord halfR = new Coord (2,2,2); // TEST see if not reaching so far helps to eliminate gaps...
 		CoRange retRange = playerChunkRange (plCoord, halfR);
 
@@ -701,7 +730,8 @@ public class ChunkManager : MonoBehaviour
 		while (true) 
 		{
 			//simplistic
-			if (!Coord.Equals (lastPlayerBlockCoord, new Coord (playerCameraTransform.position))) 
+//			if (!Coord.Equals (lastPlayerBlockCoord, new Coord (playerCameraTransform.position))) 
+			if (true)
 			{
 				lastPlayerBlockCoord = new Coord (playerCameraTransform.position);
 
@@ -1229,7 +1259,7 @@ public class ChunkManager : MonoBehaviour
 
 
 
-	#region Noise Patch related funcs
+	#region funcs for noise patches
 	// instead of blocks array, now there's a noise patch 
 	// in the beginning, make noise for and blocks for one noise patch (hopefully the one where we're putting the player
 	// then make noise for the surrounding noise patches
@@ -1300,7 +1330,6 @@ public class ChunkManager : MonoBehaviour
 				if (np != null) 
 				{
 					if (!np.generatedNoiseAlready) {
-						bug ("about to gen noise at: " + np.coord.x + " y: " + np.coord.z);
 						np.generateNoiseAndPopulateBlocksAsync ();
 					}
 //					if (!np.generatedBlockAlready)
@@ -1320,6 +1349,7 @@ public class ChunkManager : MonoBehaviour
 		NoisePatch np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet (ncoord); 
 
 		np.genNoiseAndPopulateBlocksOnMainThread ();
+
 	}
 
 	void makeNewAndSetupPatchAtNoiseCoord(NoiseCoord ncoord)
@@ -1352,6 +1382,8 @@ public class ChunkManager : MonoBehaviour
 		yield return new NoiseCoord (ncoord.x, ncoord.z - znudge);
 		yield return new NoiseCoord (ncoord.x - nudge, ncoord.z - znudge);
 
+		#if NOT_NOW
+
 		nudge = 2;
 		znudge = 2;
 		yield return new NoiseCoord (ncoord.x + nudge, ncoord.z);
@@ -1363,6 +1395,7 @@ public class ChunkManager : MonoBehaviour
 		yield return new NoiseCoord (ncoord.x, ncoord.z - znudge);
 		yield return new NoiseCoord (ncoord.x - nudge, ncoord.z - znudge);
 
+		#endif
 	}
 
 	NoisePatch makeNoisePatchIfNotExistsAtNoiseCoordAndGet(NoiseCoord ncoord) 
@@ -1512,6 +1545,22 @@ public class ChunkManager : MonoBehaviour
 //				bug ("it had the noise coord already: " + ncoord);
 		}
 
+		#if TERRAIN_TEST
+		terrainTex = blocks.textureForTerrainAtXEqualsZero();
+		terrainTex.Apply();
+
+		bug("terrain tex height: " + terrainTex.height + " width: "  + terrainTex.width);
+		terrainTex.filterMode = FilterMode.Point;
+		terrainTex.anisoLevel = 1;
+		terrainTestPlane.renderer.material.mainTexture = terrainTex;
+		File.WriteAllBytes(Application.dataPath + "/../TerrainSlice.png", terrainTex.EncodeToPNG() );
+
+		return;
+		#endif
+
+
+
+
 		// ** MAKE SURROUNDING PATCHES AS WELL **// AND WAIT UNTIL ALL ARE DONE...
 //		updateSetupPatchesList ();
 //		foreach(NoisePatch np in setupThesePatches) {
@@ -1557,7 +1606,6 @@ public class ChunkManager : MonoBehaviour
 			StartCoroutine (createAndDestroyChunksFromLists ()); // combined above two
 			//		StartCoroutine (createFurtherAwayChunks ());
 
-			// want...
 			StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
 
 			StartCoroutine (checkAsyncChunksList ());
@@ -1565,7 +1613,7 @@ public class ChunkManager : MonoBehaviour
 			StartCoroutine (updateSetupPatchesListI ());
 		}
 
-//		placePlayerAtSpawnPoint ();
+		placePlayerAtSpawnPoint ();
 	}
 
 	private void placePlayerAtSpawnPoint() {
@@ -1613,6 +1661,7 @@ public class ChunkManager : MonoBehaviour
 	
 	public Coord highestSurfaceBlockCoordAt(Coord c) 
 	{
+//		NoisePatch npAtCoord = blocks.
 		Block retBlock = null;
 		int yy = WORLD_HEIGHT_BLOCKS - 1;
 //		c = c.makeIndexSafe (m_mapDims_blocks);
@@ -1622,6 +1671,7 @@ public class ChunkManager : MonoBehaviour
 				break;
 		} while (retBlock.type == BlockType.Air);
 
+		bug("place player at coord with yy: " + yy);
 		return new Coord (c.x, yy, c.z);
 	}
 
@@ -1893,6 +1943,86 @@ public class BlockCollection
 		}
 	}
 
+	#if TERRAIN_TEST
+	public Texture2D textureForTerrainAtXEqualsZero()
+	{
+		List<Color> colorData = new List<Color> ();
+
+		Color[][] colorAr = new Color[ChunkManager.CHUNKHEIGHT] [];
+
+		for (int i  = 0; i < colorAr.Length; ++i) {
+			colorAr [i] = new Color[ChunkManager.CHUNKLENGTH * NoisePatch.CHUNKDIMENSION];
+		}
+
+		int lowestZCoord = 0;
+		int highestZCoord = 0;
+
+		int patchCount = 0;
+
+		foreach(KeyValuePair<NoiseCoord, NoisePatch> npatch in noisePatches)
+		{
+			NoiseCoord nco = npatch.Key;
+
+			if (nco.x != 0)
+				continue;
+
+			lowestZCoord = nco.z < lowestZCoord ? nco.z : lowestZCoord;
+			highestZCoord = nco.z > highestZCoord ? nco.z : highestZCoord;
+		}
+
+		//get patch count
+		for (int zi = lowestZCoord; zi <= highestZCoord; zi++ ) {
+			NoiseCoord nco = new NoiseCoord (0, zi);
+			if (!noisePatches.ContainsKey(nco)) {
+				continue;
+			}
+			NoisePatch np = noisePatches [nco];
+			if (np.textureSlice != null) {
+				patchCount++;
+
+			}
+		}
+
+		bug ("patch count was: " + patchCount);
+		int patchWidth = (int)(ChunkManager.CHUNKLENGTH * NoisePatch.CHUNKDIMENSION);
+		int tex2DWidth = (int)patchWidth * patchCount; // (ChunkManager.CHUNKLENGTH * patchCount * NoisePatch.CHUNKDIMENSION);
+		Texture2D result = new Texture2D (tex2DWidth, (int)(ChunkManager.CHUNKHEIGHT));
+
+		int iterations = 0;
+
+		for (int zi = lowestZCoord; zi <= highestZCoord; zi++, iterations++ ) {
+			NoiseCoord nco = new NoiseCoord (0, zi);
+			if (!noisePatches.ContainsKey(nco)) {
+				continue;
+			}
+			NoisePatch np = noisePatches [nco];
+			if (np.textureSlice != null) {
+//				colorData.AddRange (np.textureSlice);
+
+				int texSliceWidth = np.textureSlice.GetLength (1);
+
+				for (int j = 0; j < np.textureSlice.GetLength(0); ++j) {
+					for (int k = 0; k < texSliceWidth; ++k) {
+						result.SetPixel (k + patchWidth * iterations, j, np.textureSlice [j, k]);
+					}
+
+				}
+
+			}
+		}
+
+//		result.SetPixels(colorData.ToArray());
+		return result;
+	}
+	#endif
+
+	public NoisePatch noisePatchAtWorldCoord (Coord woco) {
+		NoiseCoord nco = noiseCoordForWorldCoord (woco);
+		if (!noisePatches.ContainsKey(nco)) 
+			return null;
+		return noisePatches [nco];
+	}
+
 //	public Block specialGetBlockForTesting(Coord woco) 
 //	{
 //
@@ -1964,11 +2094,13 @@ public class NoisePatch : ThreadedJob
 	public const int CHUNKDIMENSION = 4;// new Coord(4,1,4);
 	public const int CHUNKHEIGHTDIMENSION = 1;
 	public static Coord PATCHDIMENSIONSCHUNKS = new Coord (CHUNKDIMENSION, CHUNKHEIGHTDIMENSION, CHUNKDIMENSION);
-	private Coord BLOCKDIMENSIONS;
+
 	private static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
 	private int BLOCKSPERPATCHLENGTH;
 
-	private static Coord patchDimensions;
+	private static Coord patchDimensions =new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
+					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
+					CHUNKLENGTH * CHUNKDIMENSION);
 //	public Block[,,] blocks;
 	public Block[,,] blocks { get; set;}
 //	public NoiseCoord coord;
@@ -1982,32 +2114,23 @@ public class NoisePatch : ThreadedJob
 	private SavableBlock[,,] m_RSavedBlocks;
 	public List<SavableBlock> savedBlocks { get; set;}
 
+	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
+
+	#if TERRAIN_TEST
+//	public Color[] textureSlice;
+	public Color[,] textureSlice = new Color[patchDimensions.y, patchDimensions.z];
+	#endif
 
 	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
 	{
-//		savedBlocks = new List<SavableBlock> ();
 		coord = _noiseCo;
-
-//		patchDimensions =  new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
-//			ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
-//			CHUNKLENGTH * CHUNKDIMENSION) ;
-//
-//		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
-//		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
-
 		m_chunkManager = _chunkMan;
-
-//		BLOCKSPERPATCHLENGTH = patchDimensions.x; 
 
 		otherConstructorStuff ();
 	}
 
 	private void otherConstructorStuff() {
 		savedBlocks = new List<SavableBlock> ();
-
-		patchDimensions =  new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
-			ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
-			CHUNKLENGTH * CHUNKDIMENSION) ;
 
 		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
 		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
@@ -2098,14 +2221,6 @@ public class NoisePatch : ThreadedJob
 				blocks [sb.coord.x, sb.coord.y, sb.coord.z] = new Block(sb.type);
 		}
 	}
-//
-//	private void updateBlocksArrayWithSavableBlocksList() {
-//		foreach(SavableBlock sb in savedBlocks) {
-//			if (sb.coord.isIndexSafe(patchDimensions))
-//				blocks [sb.coord.x, sb.coord.y, sb.coord.z] = new Block(sb.type);
-//		}
-//	}
-
 
 	#endregion
 
@@ -2235,11 +2350,141 @@ public class NoisePatch : ThreadedJob
 
 		//save any set block
 		addSavableBlock (bb, relCo);
+
+		updateYSurfaceMapWithBlockAndRelCoord (bb, relCo);
+	}
+
+	private void debugList(List<int> list) {
+		string str = "";
+		foreach(int i in list) {
+			str = str + ", " + i;
+		}
+		bug("A list: " + str);
+	}
+	
+	private void updateYSurfaceMapWithBlockAndRelCoord(Block bb, Coord relCo) 
+	{
+		List<int> heights = ySurfaceMap [relCo.x * patchDimensions.x + relCo.z];
+
+		bool isAiryBlock = bb.type == BlockType.Air; //CONDITION MIGHT NEED TO CHANGE LATER. HENCE 'AIRY'
+
+		if (heights.Count == 1) 
+		{
+			if (isAiryBlock) {
+				if (heights[0] == relCo.y + 1) {
+					heights [0] = relCo.y;
+				} else {
+					heights.Insert (0, relCo.y);
+					heights.Insert (0, relCo.y);
+				}
+			} 
+			else //SOLID BLOCK
+			{
+				if (heights[0] == relCo.y) {
+					heights [0] += 1;
+				} else {
+					if (heights[0] > relCo.y) 
+						throw new Exception ("we are surprised. how can we add a solid block to a solid column area?");
+					
+					heights.Add (relCo.y - 1);
+					heights.Add (relCo.y + 1);
+				}
+			}
+			return;
+		}
+
+		int i = 0;
+		while (i < heights.Count) {
+			if (heights [i] > relCo.y)
+				break;
+			i++;
+		}
+
+
+		if (isAiryBlock) 
+		{
+			if (i == 0) {
+				if (heights [i] == relCo.y + 1 && heights [i + 1] == relCo.y + 1) {
+					heights [i] = relCo.y;
+					return;
+				}
+			}
+
+			//CONNECTED TWO AIR COLUMNS?
+			if (i > 0) {
+				if (heights [i] == relCo.y + 1 && heights [i - 1] == relCo.y - 1) {
+					heights.RemoveAt (i - 1);
+					heights.RemoveAt (i - 1);
+					return;
+				}
+			}
+
+			if (heights[i] == relCo.y + 1) {
+				heights [i] = relCo.y;
+				return;
+			}
+			if (heights[i -1] == relCo.y - 1) {
+				heights [i - 1] = relCo.y;
+				return;
+			}
+
+			//MADE A GAP IN A SOLID COLUMN
+			heights.Insert (i - 1, relCo.y);
+			heights.Insert (i - 1, relCo.y);
+		} 
+		else // SOLID BLOCK
+		{
+			if (i > 1) //SURELY IT IS, UNLESS HEIGHTS IS EMPTY! (WE KNOW IT'S NOT EQ. TO 1 AT THIS PT)
+			{ 
+				//FILLED A GAP TO MAKE A SOLID COLUMN?
+				if (heights[i - 1] == relCo.y && heights[i -2] == relCo.y) {
+					heights.RemoveAt (i - 2);
+					heights.RemoveAt (i - 2);
+					return;
+				}
+
+				if (heights[i - 1] == relCo.y) {
+					heights [i - 1] += 1;
+					return;
+				}
+
+				if (heights[i - 2] == relCo.y) {
+					heights [i - 2] += 1;
+					return;
+				}
+
+				//BLOCK WAS INSERTED INTO AN AIR COLUMN
+				heights.Insert (i, relCo.y + 1);
+				heights.Insert (i, relCo.y - 1);
+
+				// WEIRD CASE: FILLED A GAP TO MAKE A COLUMN THAT NOW SPANS 0 TO WORLD MAX HEIGHT (HEIGHT[0] == MAX HEIGHT??)
+			}
+		}
 	}
 
 	void bug(string str) {
 		UnityEngine.Debug.Log (str);
 	}
+
+	#region Surface Maps
+
+	public List<int>[] ySurfaceMapForChunk(Chunk chunk) 
+	{
+		List<List<int>> retList = new List<List<int>> ();
+		Coord patchRel = patchRelativeBlockCoordForChunkCoord (chunk.chunkCoord);
+
+		int startIndex = patchRel.x * patchDimensions.x + patchRel.z;
+		int i = 0;
+		for(; i < CHUNKLENGTH; ++i) 
+		{
+			int startRange = startIndex + patchDimensions.x * i;
+			retList.AddRange ( ySurfaceMap.Skip(startRange).Take(CHUNKLENGTH));
+		}
+
+		return retList.ToArray ();
+	}
+
+	#endregion
 
 	void resetAlreadyDoneFlags () {
 		generatedNoiseAlready = false;
@@ -2272,6 +2517,9 @@ public class NoisePatch : ThreadedJob
 			return;
 
 		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
+
+		m_chunkManager.noiseHandler.GenerateAltAtNoiseCoord (coord);
+
 		generatedNoiseAlready = true;
 	}
 
@@ -2293,6 +2541,130 @@ public class NoisePatch : ThreadedJob
 		populateBlocksFromNoise (start, range);
 	}
 
+//	private void populateBlocksFromNoise(Coord start, Coord range)
+//	{
+//		if (generatedBlockAlready)
+//			return;
+//
+//		// put saved blocks in first...
+////		updateBlocksArrayWithSavableBlocksList ();
+//		//...
+//		int x_start = (int)( start.x);
+//		int z_start = (int)( start.z);
+//		int y_start = (int)( start.y); 
+//
+//		int x_end = (int)(x_start + range.x);
+//		int y_end = (int)(y_start + range.y);
+//		int z_end = (int)(z_start + range.z);
+//
+//		Block curBlock = null;
+//		Block prevYBlock = null;
+//
+//
+//		int xx = x_start;
+//		for (; xx < x_end ; xx++ ) 
+//		{
+//			int zz = z_start;
+//			for (; zz < z_end; zz++ ) 
+//			{
+//				float noise_val =  m_chunkManager.noiseHandler [xx, zz];
+//				float alt_noise_val = m_chunkManager.noiseHandler.getAltNoise (xx, zz); // .75 for testing wth checker
+//				//TODO: use another section of the noiseMap to make stuff more asymmetrical (along with a modulo perhaps?)
+//				//get the other section based off of (say) (xx + alt_noise_val) % patchD.x
+//
+//				List<int> yHeights = new List<int> ();
+//
+//				int yy = y_start; // (int) ccoord.y;
+//				for (; yy < y_end; yy++) 
+//				{
+//
+//					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
+//					{
+//						BlockType btype = BlockType.Air;
+//
+////						int noiseAsWorldHeight = (int)(Mathf.Clamp(noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); // * (zz/32.0f) * (xx/64.0f));
+////						int altNoiseWorldHeight = (int)(Mathf.Clamp(alt_noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); 
+//
+//						int noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * .1f); // * (zz/32.0f) * (xx/64.0f));
+//						int altNoiseWorldHeight = (int)((alt_noise_val * .5f + .5f) * patchDimensions.y * .1f); 
+//						int surface_nudge = (int)(patchDimensions.y * .05f); // (int)((Mathf.Abs (altNoiseWorldHeight) + noiseAsWorldHeight) * .05f);
+//
+//						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
+//						{ 
+//							if (yy == 0) {
+//								btype = BlockType.BedRock;
+//							} else if (noiseAsWorldHeight + surface_nudge > yy && altNoiseWorldHeight < yy) {
+//								btype = BlockType.Grass;
+//							} else if (yy < altNoiseWorldHeight - noiseAsWorldHeight * .4) {
+//								btype = BlockType.Stone;
+////								bool isCaveZone = noiseAsWorldHeight * 1.4f + patchDimensions.y * .2f > altNoiseWorldHeight + yy * 4.5f;
+////								bool isCaveZone = noise_val > alt_noise_val;
+////								bool isCaveZone = 0 < alt_noise_val;
+////								if (isCaveZone) 
+////								{
+////
+////									bool yLess = false; // yy - (yy)/patchDimensions.y < altNoiseWorldHeight - noiseAsWorldHeight * .1f;
+////									if (yy > altNoiseWorldHeight || yLess) 
+////									{
+////
+////										if (yLess)
+////											btype = BlockType.Sand; // silly
+////										else
+////											btype = BlockType.Stone;
+////
+////										//									if (yy < CHUNKLENGTH)
+////										//										btype = BlockType.Grass;
+////										//									else if (yy < CHUNKLENGTH * 2)
+////										//										btype = BlockType.Sand;
+////										//									else if (yy < CHUNKLENGTH * 3)
+////										//										btype = BlockType.Dirt;
+////										//									else
+////										//										btype = BlockType.Stone;
+////									}
+////									else 
+////									{
+////										btype = BlockType.Air;
+////									}
+////								}
+////								else //NO CAVES
+////								{
+////									btype = BlockType.Grass;
+////								}
+//							}
+//						}
+//						
+//						blocks [xx, yy, zz] = new Block (btype);
+//					}
+//
+//					curBlock = blocks [xx, yy, zz];
+//
+//					// Y SURFACE MAP
+//					if (yy > 0) {
+//						prevYBlock = blocks [xx, yy - 1, zz];
+//						if (prevYBlock.type != curBlock.type) {
+//							if (curBlock.type == BlockType.Air) {
+//								yHeights.Add (yy);
+//							} 
+//							else if (prevYBlock.type == BlockType.Air) {
+//								yHeights.Add (yy - 1);
+//							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
+//						}
+//					}
+//
+//				} // end for yy
+//				if (yHeights.Count == 0)
+//					yHeights = null;
+//				ySurfaceMap [xx * patchDimensions.x + zz] = yHeights;
+//
+//			} // end for zz
+//
+//		} // end for xx
+//
+//		generatedBlockAlready = true;
+//	}
+//
+//
+	// NEW with peturbing
 	private void populateBlocksFromNoise(Coord start, Coord range)
 	{
 		if (generatedBlockAlready)
@@ -2302,14 +2674,19 @@ public class NoisePatch : ThreadedJob
 //		updateBlocksArrayWithSavableBlocksList ();
 		//...
 		int x_start = (int)( start.x);
-		bool xIsNeg = coord.x < 0;
 		int z_start = (int)( start.z);
-		bool zIsNeg = coord.z < 0;
 		int y_start = (int)( start.y); 
 
 		int x_end = (int)(x_start + range.x);
 		int y_end = (int)(y_start + range.y);
 		int z_end = (int)(z_start + range.z);
+
+		Block curBlock = null;
+		Block prevYBlock = null;
+
+//		#if TERRAIN_TEST
+//		textureSlice = new Color[range.z, range.y];
+//		#endif
 
 		int xx = x_start;
 		for (; xx < x_end ; xx++ ) 
@@ -2317,52 +2694,171 @@ public class NoisePatch : ThreadedJob
 			int zz = z_start;
 			for (; zz < z_end; zz++ ) 
 			{
-				float noise_val = m_chunkManager.noiseHandler [xx, zz];
+//				float alt_noise_val = m_chunkManager.noiseHandler.getAltNoise (xx, zz);
+
+				// use alt noise to nudge xx and zz a little, for possible overhangs
+
+				float noise_val;
+
+				// we really might want to use another noise map that can get an arbitrary number
+				// i.e. use a noise func more directly??...
+
+				 // .75 for testing wth checker
+				//TODO: use another section of the noiseMap to make stuff more asymmetrical (along with a modulo perhaps?)
+				//get the other section based off of (say) (xx + alt_noise_val) % patchD.x
+
+				List<int> yHeights = new List<int> ();
 
 				int yy = y_start; // (int) ccoord.y;
 				for (; yy < y_end; yy++) 
 				{
 
-					if (blocks [xx, yy, zz] == null) // if not we apparently had a saved block...
+					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
 					{
 						BlockType btype = BlockType.Air;
 
-						int noiseAsWorldHeight = (int)((noise_val * .5 + .5) * patchDimensions.y * .4); // * (zz/32.0f) * (xx/64.0f));
+//						int noiseAsWorldHeight = (int)(Mathf.Clamp(noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); // * (zz/32.0f) * (xx/64.0f));
+//						int altNoiseWorldHeight = (int)(Mathf.Clamp(alt_noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); 
+
+//						float alt_noise_at_yz = m_chunkManager.noiseHandler.getAltNoise (noiseCoordSafeValue (yy * (patchDimensions.x/patchDimensions.y) ), zz);
+						float alt_noise_at_yz = m_chunkManager.noiseHandler.getAltNoise (yy % patchDimensions.x , zz);
+						int xzNudge = (int)(10 * alt_noise_at_yz * .6f * Mathf.Max (1f, (float)(.5f + yy / y_end)));
+
+						noise_val = m_chunkManager.noiseHandler [noiseCoordSafeValue(xx + xzNudge), zz];
+
+//						float noise_val = m_chunkManager.noiseHandler [xx,zz];
+//						float noise_val = m_chunkManager.noiseHandler [noiseCoordSafeValue(xx + xzNudge), noiseCoordSafeValue(zz + xzNudge)];
+
+						int noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * .2f); // * (zz/32.0f) * (xx/64.0f));
+//						int altNoiseWorldHeight = (int)((alt_noise_val * .5f + .5f) * patchDimensions.y * .1f); 
+						int surface_nudge = (int)(patchDimensions.y * .05f); // (int)((Mathf.Abs (altNoiseWorldHeight) + noiseAsWorldHeight) * .05f);
 
 						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
 						{ 
-							if (yy == 0) 
-							{
+							if (yy == 0) {
 								btype = BlockType.BedRock;
-							} 
-							else if (noiseAsWorldHeight > yy) 
-							{
+							} else if (noiseAsWorldHeight > yy) {
 								btype = BlockType.Grass;
-
-//									if (yy < CHUNKLENGTH)
-//										btype = BlockType.Grass;
-//									else if (yy < CHUNKLENGTH * 2)
-//										btype = BlockType.Sand;
-//									else if (yy < CHUNKLENGTH * 3)
-//										btype = BlockType.Dirt;
-//									else
-//										btype = BlockType.Stone;
 							}
 						}
-						//TODO: add a lock(someObject) here?
-						//					UnityEngine.Debug.Log (" creating block at x " + xx + " y " + yy + " z " + zz);
 
 						blocks [xx, yy, zz] = new Block (btype);
+
 					}
-				}
-			}
-		}
+
+					curBlock = blocks [xx, yy, zz];
+
+
+
+					// Y SURFACE MAP
+					if (yy > 0) {
+						prevYBlock = blocks [xx, yy - 1, zz];
+						if (prevYBlock.type != curBlock.type) {
+							if (curBlock.type == BlockType.Air) {
+								yHeights.Add (yy);
+							} 
+							else if (prevYBlock.type == BlockType.Air) {
+								yHeights.Add (yy - 1);
+							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
+						}
+					}
+
+				} // end for yy
+				if (yHeights.Count == 0)
+					yHeights = null;
+				ySurfaceMap [xx * patchDimensions.x + zz] = yHeights;
+
+			} // end for zz
+
+		} // end for xx
+
+		#if TERRAIN_TEST
+		textureSlice = GetTexture ();
+		#endif
 
 		generatedBlockAlready = true;
 	}
 
+	private static float scaleNegOneOneFloatsToRange(float value, float _range ) {
+		return value * _range;
+	}
+
+	private static int noiseCoordSafeValue(int value) {
+		if (value < 0)
+			return 0;
+		if (value >= patchDimensions.x)
+			return patchDimensions.x - 1;
+
+		return value;
+	}
+
+	#region get texture
+
+	public Color[,] GetTexture()
+	{
+		return this.GetTexture(LibNoise.Unity.Gradient.Grayscale);
+	}
+
+	/// <summary>
+	/// Creates a texture map for the current content of the noise map.
+	/// </summary>
+	/// <param name="device">The graphics device to use.</param>
+	/// <param name="gradient">The gradient to color the texture map with.</param>
+	/// <returns>The created texture map.</returns>
+	public Color[,] GetTexture(LibNoise.Unity.Gradient gradient)
+	{
+		return this.GetTexture(ref gradient, patchDimensions.z, patchDimensions.y);
+	}
+
+	public Color[,] GetTexture(ref LibNoise.Unity.Gradient gradient, int texWidth, int texHeight)
+	{
+//		Texture2D result = new Texture2D(texWidth, texHeight);
+//		Color[] data = new Color[texWidth * texHeight];
+		Color[,] data = new Color[texHeight ,texWidth];
+		int id = 0;
+
+		int texFour = texHeight / 4;
+
+		for (int y = 0; y < texFour * 4 ; y++)
+		{
+			for (int z = 0; z < texWidth; z++, id++)
+			{
+//		for (int z = 0; z < texWidth; z++)
+//		{
+//			for (int y = 0; y < texFour * 4 ; y++, id++)
+//			{
+				Block b = blocks [0, y, z];
+
+//				float d =  
+					//y % 4 == 0 ? 1f : (float)(x / texWidth);  // (float)(y / texHeight); // .75f; // 0.0f;
+//				if (!float.IsNaN(this.m_borderValue) && (x == 0 || x == this.m_width - 1 || y == 0 || y == this.m_height - 1))
+//				{
+//					d = this.m_borderValue;
+//				}
+//				else
+//				{
+//					d = this.m_data[x, y];
+//				}
+				data [y,z] = b.type == BlockType.Air ? Color.black : Color.white;  // new Color (d, d, d, 1f);// gradient[d];
+			}
+		}
+
+		return data;
+		//result.SetData<Color>(data);
+		//Debug.Log("Setting pixels");
+//		result.SetPixels(data);
+//		return result;
+	}
+
+	#endregion
+
+	private static int shiftCoordBy(int coordMaxValue, float scale) {
+		return (int)(coordMaxValue * scale);
+	}
 
 }
+
+
 
 [Serializable]
 public class SavableBlock : Block
@@ -2375,6 +2871,10 @@ public class SavableBlock : Block
 	}
 }
 
+public struct CavePoint
+{
+
+}
 
 [Serializable]
 public struct Coord
@@ -2719,6 +3219,11 @@ public struct ChunkRange
 		start = st; 
 		range = new ChunkCoord (length);
 	}
+}
+
+public enum BlockType
+{
+	Grass, Path, TreeTrunk, TreeLeaves, BedRock, Air, Stone, Stucco, Sand, Dirt, ParapetStucco, LightBulb
 }
 
 public static class B 

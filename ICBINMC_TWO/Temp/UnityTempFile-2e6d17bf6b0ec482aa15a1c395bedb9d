@@ -36,6 +36,7 @@
 -define:UNITY_EDITOR_OSX
 'Assets/ChunkMesh.cs'
 'Assets/GraveYardCode.cs'
+'Assets/Materials/ShadersMP/GameClock.cs'
 'Assets/ScriptsByMatt/Camera-Player/BlockPointer.cs'
 'Assets/ScriptsByMatt/TetraMesh.cs'
 'Assets/ScriptsByMatt/VoxelGenerationUnity/Block.cs'

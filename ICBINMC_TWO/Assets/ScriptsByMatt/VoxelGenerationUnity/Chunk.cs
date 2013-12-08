@@ -1,3 +1,5 @@
+//#define TESTRENDER
+
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -233,6 +235,8 @@ public class Chunk : ThreadedJob
 
 	private int random_new_chunk_color_int_test;
 
+	private static int[] m_meshGenPhaseOneDirections = new int[] {0, 1, 4, 5}; // (Direction enum)
+
 	public Chunk()
 	{
 		vertices_list = new List<Vector3> ();
@@ -363,9 +367,9 @@ public class Chunk : ThreadedJob
 	Vector2[] uvCoordsForBlockType( BlockType btype, Direction dir)
 	{
 		float tile_length = 0.25f;
-		int tiles_per_row = (int)(1.0f / tile_length);
-		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
-		int cYBasedOnZCoord = chunkCoord.z % tiles_per_row;
+//		int tiles_per_row = (int)(1.0f / tile_length);
+//		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
+//		int cYBasedOnZCoord = chunkCoord.z % tiles_per_row;
 
 //test...
 //		float cX = cXBasedOnXCoord * tile_length;
@@ -381,7 +385,8 @@ public class Chunk : ThreadedJob
 			cX = tile_length;
 			break;
 		case BlockType.Sand:
-			cY = tile_length * 2;
+			cX = tile_length * 2;
+			cY = tile_length; //<-- silly // * 2;
 			break;
 		case BlockType.Dirt:
 			cY = tile_length * 3;
@@ -390,8 +395,22 @@ public class Chunk : ThreadedJob
 			cY = tile_length * 2; //silly value at the moment
 			break;
 		default: //GRASS
-			if (dir != Direction.ypos)
-				cY = tile_length;
+			//testing...make geom more visible
+			if (dir == Direction.xpos) 
+			{
+				cX = tile_length;
+			} else if (dir == Direction.xneg) {
+				cX = tile_length; cY = tile_length;
+			} else if (dir == Direction.yneg) {
+				cX = 2 * tile_length; cY = tile_length;
+			} else if (dir == Direction.zneg) {
+				cX = 3 * tile_length; cY = 3 * tile_length;
+			} else if (dir == Direction.zpos) {
+				cY = 3 * tile_length;
+			}
+			//end testing
+//			if (dir != Direction.ypos)
+//				cY = tile_length;
 			break;
 		}
 
@@ -459,172 +478,6 @@ public class Chunk : ThreadedJob
 	public void makeMesh()
 	{
 		makeMeshAltThread (CHUNKLENGTH, CHUNKHEIGHT);
-		return; 
-////		throw new Exception ("don't want to call make mesh now");
-//		bug ("calling make mesh normal no coro");
-//		calculatedMeshAlready = false;
-//		// (re)create my mesh.
-//		random_new_chunk_color_int_test = (int)(UnityEngine.Random.value * 4.0f);
-//
-//		vertices_list = new List<Vector3> ();
-//		triangles_list = new List<int> ();
-//		uvcoords_list = new List<Vector2> ();
-//
-//		int triangles_index = 0;
-//
-//		noNeedToRenderFlag = true;
-//
-//		int i = 0;
-//		for (; i < CHUNKLENGTH; ++i) 
-//		{
-//			int j = 0;
-//			for (; j < CHUNKHEIGHT; ++j) 
-//			{
-//				int k = 0;
-//				for (; k< CHUNKLENGTH; ++k) 
-//				{
-//
-//					Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (i, j, k));
-//
-//					if (b == null)
-//					{
-//						//want *****??????
-////						bug ("block was null in makeMesh"); //WEIRD THIS CAUSES THE SEP THREAD TO WORK??? (TODO: why)
-//						continue;
-//					}
-//
-//					if ((b.type != BlockType.Air))
-//						noNeedToRenderFlag = false;
-//
-//					int dir = (int) Direction.xpos; // zero // TEST
-////					int dir = (int) Direction.yneg; // zero
-//
-//					Block targetBlock;
-//
-//					for (; dir <= (int) Direction.zneg; ++ dir) 
-////					for (; dir < (int) Direction.zpos; ++ dir) 
-//					{
-//						ChunkIndex ijk = new ChunkIndex (i, j, k);
-//
-//						// if block is of type air OR
-//						// OR if direction and coord "match" and block is not of type air...
-//						bool negDir = dir % 2 == 1;
-//
-//						dvektor dtotalUnitVek = new dvektor (ijk) * new dvektor ((Direction)dir);
-//						int totalUnitVek = dtotalUnitVek.total ();
-//
-//						bool zeroAndNegDir = negDir && totalUnitVek == 0; // at zero at the coord corresponding to direction & negDir
-//						bool chunkMaxAndPosDir = !negDir && totalUnitVek == CHUNKLENGTH - 1; // the opposite
-//
-//						bool reachingBeyondChunkEdge = zeroAndNegDir || chunkMaxAndPosDir;
-//						Block blockNextDoor = null;
-//
-//						// don't bother if we're not going to use...
-//						// if non-air and non-edge
-//						if (b.type == BlockType.Air || reachingBeyondChunkEdge) 
-//						{
-//							blockNextDoor = reachingBeyondChunkEdge && b.type != BlockType.Air ? nextBlock ((Direction)dir, ijk, true) : nextBlock ((Direction)dir, ijk);
-//						}
-//
-//
-//
-//						//debug 
-//						if (blockNextDoor == null && reachingBeyondChunkEdge) 
-//						{
-//							bug ("we were reaching beyond this chunk but got a null block. reaching from chunk index (coord)" + ijk.toString () + "in Dir: " + dir);
-//
-//						}
-//
-//
-////						if (b.type == BlockType.Air || (blockNextDoor != null && reachingBeyondChunkEdge && blockNextDoor.type == BlockType.Air)) 
-//						if ((reachingBeyondChunkEdge) || (b.type == BlockType.Air && blockNextDoor != null)) 
-//						{
-//
-//							// if we're on the edge and not air, we want to know about the block in the next chunk over. if we are an air block,
-//							// we want to throw out those blocks...
-//							// (we could have just checked for blocks in the next chunk, only if we were an air block, 
-//							// but then, we'd be drawing a bit of geom from the next chunk over...)
-//
-//							targetBlock = reachingBeyondChunkEdge ? b : blockNextDoor ; // if edge matches dir, we want 'this' block
-//
-//							if (targetBlock != null && targetBlock.type != BlockType.Air) //OK we got a block face that we can use
-//							{
-//								//ONE LAST CONDITION: ALLOWS US TO DEAL WITH 'REACHING-BEYOND' BLOCKS THAT WERE NULL
-//								//WHILE SKIPPING BEYOND BLOCKS THAT WEREN'T AIR
-//								if (reachingBeyondChunkEdge && blockNextDoor != null && blockNextDoor.type != BlockType.Air)
-//								{
-//									continue;
-//								}
-//								// get the opposite direction to the current one
-//								//direction enum: xpos = 0, xneg, ypos, yneg, zpos, zneg = 5
-//								int shift = negDir ? -1 : 1; 
-//
-//								if (reachingBeyondChunkEdge)
-//									shift = 0; // want the same direction in this edge case
-//
-//								Vector3[] verts = new Vector3[]{};
-//								int[] tris = new int[]{};
-//
-//								Vector2[] uvs;
-//
-//								if (reachingBeyondChunkEdge) //TEST
-//									uvs = uvCoordsForTestBlock ((blockNextDoor == null), dir);
-//								else 
-//									uvs = uvCoordsForBlockType (targetBlock.type, (Direction) (dir + shift) );
-//
-//								// if on edge make the face for the block at this chunk index, else the one next to it in Direction dir.
-//								ChunkIndex nextToIJK = reachingBeyondChunkEdge ? ijk : ChunkIndex.ChunkIndexNextToIndex (ijk,(Direction) dir);
-//
-//								Direction meshFaceDirection = (Direction)dir + shift;
-//
-//								int[] posTriangles = new int[] { 0, 2, 3, 0, 1, 2 };  // clockwise when looking from pos towards neg
-//								int[] negTriangles = new int[] { 0, 3, 2, 0, 2, 1 }; // the opposite
-//
-//								tris =(dir + shift) % 2 == 0 ? posTriangles : negTriangles; 
-//
-//								for (int ii = 0; ii < tris.Length; ++ii) {
-//									tris [ii] += triangles_index;
-//								}
-//								verts = faceMesh (meshFaceDirection, nextToIJK); // dir + shift == the opposite dir. (if xneg, xpos etc.)
-//								vertices_list.AddRange (verts);
-//								// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
-//								triangles_list.AddRange (tris);
-//								// 4 uv coords
-//								uvcoords_list.AddRange (uvs);
-//								triangles_index += 4;
-//							}
-//						}
-//					}
-//				}
-//			}
-//
-//		}
-//
-//		// ** want
-//		if (!noNeedToRenderFlag) // not all air (but are we all solid and solidly surrounded?)
-//		{
-//			noNeedToRenderFlag = (vertices_list.Count == 0);
-//
-//		}
-//
-//		calculatedMeshAlready = true;
-//
-//		// moved to apply mesh
-////		mesh.Clear ();
-////		mesh.vertices = vertices_list.ToArray ();
-////		mesh.uv = uvcoords_list.ToArray ();
-////		mesh.triangles = triangles_list.ToArray ();
-////
-////
-//////		GetComponent<MeshFilter>().meshCollider = meshc;
-//////		meshc.sharedMesh = mesh ;
-////
-////		mesh.RecalculateNormals();
-////		mesh.RecalculateBounds();
-////		mesh.Optimize();
-////
-//////		GetComponent<MeshCollider>().sharedMesh = null; // don't seem to need
-////		GetComponent<MeshCollider>().sharedMesh = mesh;
 	}
 
 	public void makeMeshAltThread(int CHLEN, int CHHeight)
@@ -665,14 +518,25 @@ public class Chunk : ThreadedJob
 					if ((b.type != BlockType.Air))
 						noNeedToRenderFlag = false;
 
-					int dir = (int) Direction.xpos; // zero // TEST
-//					int dir = (int) Direction.yneg; // zero
+//					int dir = (int) Direction.xpos; // zero 
+//					int dir = (int) Direction.zpos; // zero
+					int dir = (int) Direction.zneg; // zero
 
 					Block targetBlock;
 
-					for (; dir <= (int) Direction.zneg; ++ dir) 
+					int directionsLookupIndex = 0;
+
+					#if TESTRENDER
+					directionsLookupIndex = m_meshGenPhaseOneDirections.Length; // i.e. skip this
+					#endif
+
+					for (; directionsLookupIndex < m_meshGenPhaseOneDirections.Length ; ++directionsLookupIndex)
+//					for (; dir <= (int) Direction.zneg; ++ dir) 
 //					for (; dir < (int) Direction.zpos; ++ dir) 
 					{
+
+						dir = m_meshGenPhaseOneDirections [directionsLookupIndex];
+
 						ChunkIndex ijk = new ChunkIndex (i, j, k);
 
 						// if block is of type air OR
@@ -700,7 +564,7 @@ public class Chunk : ThreadedJob
 						//debug 
 						if (blockNextDoor == null && reachingBeyondChunkEdge) 
 						{
-							bug ("we were reaching beyond this chunk but got a null block. reaching from chunk index (coord)" + ijk.toString () + "in Dir: " + dir);
+//							bug ("we were reaching beyond this chunk but got a null block. reaching from chunk index (coord)" + ijk.toString () + "in Dir: " + dir);
 
 						}
 
@@ -773,9 +637,10 @@ public class Chunk : ThreadedJob
 					}
 				}
 			}
-
-//			yield return new WaitForSeconds (.1f);
 		}
+
+		// y Face approach
+		addYFaces (CHLEN, triangles_index); //want
 
 		// ** want
 		if (!noNeedToRenderFlag) // not all air (but are we all solid and solidly surrounded?)
@@ -785,24 +650,80 @@ public class Chunk : ThreadedJob
 		}
 
 		calculatedMeshAlready = true;
-
-		// moved to apply mesh
-//		mesh.Clear ();
-//		mesh.vertices = vertices_list.ToArray ();
-//		mesh.uv = uvcoords_list.ToArray ();
-//		mesh.triangles = triangles_list.ToArray ();
-//
-//
-////		GetComponent<MeshFilter>().meshCollider = meshc;
-////		meshc.sharedMesh = mesh ;
-//
-//		mesh.RecalculateNormals();
-//		mesh.RecalculateBounds();
-//		mesh.Optimize();
-//
-////		GetComponent<MeshCollider>().sharedMesh = null; // don't seem to need
-//		GetComponent<MeshCollider>().sharedMesh = mesh;
 	}
+
+
+	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
+	{
+		List<int>[] ySurfaceMap = m_noisePatch.ySurfaceMapForChunk (this);
+
+		List<int> heights;
+
+		int xx = 0;
+		for (; xx < CHLEN; ++xx) {
+			int zz = 0;
+			for (; zz < CHLEN; ++zz) {
+				int height_index = 0;
+				heights = ySurfaceMap [xx * CHLEN + zz];
+				if (heights != null) {
+					foreach (int hh in heights) 
+					{
+						#if TESTRENDER
+						if (height_index == heights.Count - 1)
+							break;
+						#endif
+//						bug ("adding some verts?");
+						int targetY = hh + 1;
+						Direction dir = Direction.ypos;
+						if (height_index % 2 == 0)
+						{
+							targetY = hh - 1;
+							dir = Direction.yneg;
+						}
+
+						ChunkIndex targetBlockIndex = new ChunkIndex (xx, targetY, zz);
+
+						Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, targetY, zz));
+
+						addYFaceAtChunkIndex (targetBlockIndex, b.type, dir, starting_tri_index);
+
+						height_index++;
+						starting_tri_index += 4;
+					}
+				}
+
+			}
+		}
+	}
+
+	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index)
+	{
+		Vector3[] verts = new Vector3[]{};
+		int[] tris = new int[]{};
+
+		Vector2[] uvs;
+
+		int shift = (int) dir % 2 == 1 ? -1 : 1;
+		Direction oppositeDir = (Direction) ((int) dir + shift);
+
+		uvs = uvCoordsForBlockType (bType, oppositeDir);
+
+		int[] posTriangles = new int[] { 0, 2, 3, 0, 1, 2 };  // clockwise when looking from pos towards neg
+		int[] negTriangles = new int[] { 0, 3, 2, 0, 2, 1 }; // the opposite
+
+		tris =(int)(oppositeDir) % 2 == 0 ? posTriangles : negTriangles; 
+
+		for (int ii = 0; ii < tris.Length; ++ii) {
+			tris [ii] += tri_index;
+		}
+		verts = faceMesh (oppositeDir, ci);
+		vertices_list.AddRange (verts);
+		// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
+		triangles_list.AddRange (tris);
+		// 4 uv coords
+		uvcoords_list.AddRange (uvs);
+	}
+
 
 	public void applyMesh()
 	{
@@ -889,21 +810,21 @@ public class Chunk : ThreadedJob
 		mesh.uv = uvcoords_list.ToArray ();
 		mesh.triangles = triangles_list.ToArray ();
 
-		yield return new WaitForSeconds (.1f);
+		yield return null; // new WaitForSeconds (.1f);
 
 		mesh.RecalculateNormals();
 
 		mesh.RecalculateBounds();
 
-		yield return new WaitForSeconds (.1f);
+		yield return null;// new WaitForSeconds (.1f);
 
 		mesh.Optimize();
 
-		yield return new WaitForSeconds (.1f);
+//		yield return null;// new WaitForSeconds (.1f);
 
 		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
 
-		yield return new WaitForSeconds (.1f);
+//		yield return null;// new WaitForSeconds (.1f);
 		// TODO: clear the lists?
 
 //		vertices_list.Clear ();
