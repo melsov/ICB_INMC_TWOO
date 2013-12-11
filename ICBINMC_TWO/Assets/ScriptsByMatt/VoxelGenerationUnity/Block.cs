@@ -18,10 +18,17 @@ public enum Direction
 //	Grass, Path, TreeTrunk, TreeLeaves, BedRock, Air, Stone, Stucco, Sand, Dirt, ParapetStucco, LightBulb
 //}
 
+public enum BiomeType
+{
+	Pasture, CraggyMountains, Ocean
+}
+
 [Serializable]
 public class Block  
 {
 	public BlockType type { get; set;}
+
+	//TODO: add BIOME type memvar. should we use store type and biomeType in one int?
 
 	public Block()
 	{

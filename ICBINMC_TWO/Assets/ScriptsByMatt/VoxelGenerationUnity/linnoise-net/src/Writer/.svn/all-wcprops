@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Writer
+END
+BMPWriter.cs
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Writer/BMPWriter.cs
+END
+AbstractWriter.cs
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Writer/AbstractWriter.cs
+END
+Heightmap32RawWriter.cs
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Writer/Heightmap32RawWriter.cs
+END
+Heightmap16RawWriter.cs
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Writer/Heightmap16RawWriter.cs
+END
+Heightmap8RawWriter.cs
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Writer/Heightmap8RawWriter.cs
+END

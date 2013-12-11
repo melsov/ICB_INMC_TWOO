@@ -145,7 +145,8 @@ public class NoiseHandler
 		// Initialize the noise map
 		this.m_noiseMap = new Noise2D(resolutionX, resolutionZ, moduleBase);
 
-		initAltNoiseMap();
+		initAltNoiseMap ();
+		initAltNoiseMap2 ();
 	}
 
 	private void initAltNoiseMap()

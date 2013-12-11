@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Transformer
+END
+ScalePoint.cs
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Transformer/ScalePoint.cs
+END
+Displace.cs
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Transformer/Displace.cs
+END
+TranslatePoint.cs
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Transformer/TranslatePoint.cs
+END
+RotatePoint.cs
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Transformer/RotatePoint.cs
+END
+Turbulence.cs
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Transformer/Turbulence.cs
+END

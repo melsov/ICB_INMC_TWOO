@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Combiner
+END
+Power.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Combiner/Power.cs
+END
+Multiply.cs
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Combiner/Multiply.cs
+END
+Min.cs
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Combiner/Min.cs
+END
+Max.cs
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Combiner/Max.cs
+END
+Add.cs
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Combiner/Add.cs
+END
+Substract.cs
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Combiner/Substract.cs
+END

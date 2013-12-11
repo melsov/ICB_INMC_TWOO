@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier
+END
+Clamp.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/Clamp.cs
+END
+Exponent.cs
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/Exponent.cs
+END
+Cache.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/Cache.cs
+END
+Curve.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/Curve.cs
+END
+Terrace.cs
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/Terrace.cs
+END
+Abs.cs
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/Abs.cs
+END
+ScaleBias.cs
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/ScaleBias.cs
+END
+Invert.cs
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/Invert.cs
+END
+ControlPoint.cs
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Modifier/ControlPoint.cs
+END

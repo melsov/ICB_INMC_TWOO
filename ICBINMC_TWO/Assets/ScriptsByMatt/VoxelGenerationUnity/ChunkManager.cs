@@ -1,4 +1,6 @@
-#define TERRAIN_TEST
+#define TEST_LIBNOISENET
+//#define TERRAIN_TEST
+
 
 using UnityEngine;
 using System.Collections;
@@ -101,9 +103,15 @@ public class ChunkManager : MonoBehaviour
 	private bool firstNoisePatchDone = false;
 
 	public Transform terrainTestPlane;
+
+	private Texture2D libnoiseTex;
 	#if TERRAIN_TEST
 	private Texture2D terrainTex;
 	#endif
+
+	public Graphics.Tools.Noise.Filter.RidgedMultiFractal ridgedMultiFractal; // = new Graphics.Tools.Noise.Filter.RidgedMultiFractal();
+
+	LibNoiseNetHandler m_libnoiseNetHandler;
 
 	public ChunkManager()
 	{
@@ -1382,7 +1390,7 @@ public class ChunkManager : MonoBehaviour
 		yield return new NoiseCoord (ncoord.x, ncoord.z - znudge);
 		yield return new NoiseCoord (ncoord.x - nudge, ncoord.z - znudge);
 
-		#if NOT_NOW
+//		#if NOT_NOW
 
 		nudge = 2;
 		znudge = 2;
@@ -1395,7 +1403,7 @@ public class ChunkManager : MonoBehaviour
 		yield return new NoiseCoord (ncoord.x, ncoord.z - znudge);
 		yield return new NoiseCoord (ncoord.x - nudge, ncoord.z - znudge);
 
-		#endif
+//		#endif
 	}
 
 	NoisePatch makeNoisePatchIfNotExistsAtNoiseCoordAndGet(NoiseCoord ncoord) 
@@ -1505,6 +1513,13 @@ public class ChunkManager : MonoBehaviour
 	// Use this for initialization
 	void Start () 
 	{
+		m_libnoiseNetHandler = new LibNoiseNetHandler();
+		Texture2D tex = m_libnoiseNetHandler.SaveTestImage ();
+		File.WriteAllBytes(Application.dataPath + "/../RMFractalSample_300x400.png", tex.EncodeToPNG() );
+		#if TEST_LIBNOISENET
+		return;
+		#endif
+		ridgedMultiFractal = new Graphics.Tools.Noise.Filter.RidgedMultiFractal();
 		firstNoisePatchDone = false;
 
 		chunkMap = new ChunkMap (); //new Coord (WORLD_XLENGTH_CHUNKS, WORLD_HEIGHT_CHUNKS, WORLD_ZLENGTH_CHUNKS));
@@ -1537,12 +1552,14 @@ public class ChunkManager : MonoBehaviour
 //			NoisePatch firstNoisePatch = blocks.noisePatches [initialNoiseCoord];
 //		}
 
+		int times = 0;
 		foreach (NoiseCoord ncoord in noiseCoordsSurroundingNoiseCoord(initialNoiseCoord)) 
 		{
 //			if (!blocks.noisePatches.ContainsKey (ncoord))
 			makeNewAndSetupPatchAtNoiseCoordMainThread (ncoord);
-//			else
-//				bug ("it had the noise coord already: " + ncoord);
+			if (times > 1)
+				break; //test
+			times++; //test
 		}
 
 		#if TERRAIN_TEST
@@ -1624,6 +1641,9 @@ public class ChunkManager : MonoBehaviour
 	// Update is called once per frame
 	void Update () 
 	{
+		#if TEST_LIBNOISENET
+		return;
+		#endif
 		//**want
 //		updateChunkLists ();
 
@@ -2684,6 +2704,8 @@ public class NoisePatch : ThreadedJob
 		Block curBlock = null;
 		Block prevYBlock = null;
 
+		int surface_nudge = (int)(patchDimensions.y * .4f); 
+
 //		#if TERRAIN_TEST
 //		textureSlice = new Color[range.z, range.y];
 //		#endif
@@ -2700,6 +2722,8 @@ public class NoisePatch : ThreadedJob
 
 				float noise_val;
 
+
+				
 				// we really might want to use another noise map that can get an arbitrary number
 				// i.e. use a noise func more directly??...
 
@@ -2716,7 +2740,9 @@ public class NoisePatch : ThreadedJob
 					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
 					{
 						BlockType btype = BlockType.Air;
+						float cave_noise_val = getSimplexNoise (xx, yy, zz); //getRMFNoise (xx, yy, zz); 
 
+						bool cave_here = caveIsHere (cave_noise_val, yy, surface_nudge); 
 //						int noiseAsWorldHeight = (int)(Mathf.Clamp(noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); // * (zz/32.0f) * (xx/64.0f));
 //						int altNoiseWorldHeight = (int)(Mathf.Clamp(alt_noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); 
 
@@ -2724,6 +2750,9 @@ public class NoisePatch : ThreadedJob
 						float alt_noise_at_yz = m_chunkManager.noiseHandler.getAltNoise (yy % patchDimensions.x , zz);
 						int xzNudge = (int)(10 * alt_noise_at_yz * .6f * Mathf.Max (1f, (float)(.5f + yy / y_end)));
 
+						// TODO: do we want to just calculate the noise more directly? (direct from a noise func?)
+						// can still arrange to cache the results if we think we need to.
+						// because needing noiseCoordsafe is cramping our style a bit...
 						noise_val = m_chunkManager.noiseHandler [noiseCoordSafeValue(xx + xzNudge), zz];
 
 //						float noise_val = m_chunkManager.noiseHandler [xx,zz];
@@ -2731,13 +2760,14 @@ public class NoisePatch : ThreadedJob
 
 						int noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * .2f); // * (zz/32.0f) * (xx/64.0f));
 //						int altNoiseWorldHeight = (int)((alt_noise_val * .5f + .5f) * patchDimensions.y * .1f); 
-						int surface_nudge = (int)(patchDimensions.y * .05f); // (int)((Mathf.Abs (altNoiseWorldHeight) + noiseAsWorldHeight) * .05f);
+
 
 						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
 						{ 
 							if (yy == 0) {
 								btype = BlockType.BedRock;
-							} else if (noiseAsWorldHeight > yy) {
+							} else if (!cave_here && noiseAsWorldHeight + surface_nudge > yy) {
+//							} else if (noiseAsWorldHeight + surface_nudge > yy) {
 								btype = BlockType.Grass;
 							}
 						}
@@ -2777,6 +2807,22 @@ public class NoisePatch : ThreadedJob
 		#endif
 
 		generatedBlockAlready = true;
+	}
+
+	private static bool caveIsHere(float cave_noise_val,int yy, int surfaceNudge) {
+		float yLevel = yy - surfaceNudge;
+//		float filter_value =   (float)((yy) /(float) patchDimensions.y); 
+		float filter_value =   (float)((yLevel) /(float) surfaceNudge * 2.0f); 
+//		filter_value *= filter_value;
+		return cave_noise_val > filter_value;
+	}
+
+	private float getSimplexNoise(int xx, int yy, int zz) {
+		return SimplexNoise.Noise.Generate ((float)((patchDimensions.x * coord.x + xx) / (float)patchDimensions.x), (float)yy / (float)patchDimensions.y, (float)((patchDimensions.z * coord.z + zz)/(float)patchDimensions.z)); 
+	}
+
+	private float getRMFNoise(int xx, int yy, int zz) {
+		return m_chunkManager.ridgedMultiFractal.GetValue ((float)((patchDimensions.x * coord.x + xx) / (float)patchDimensions.x), (float)yy / (float)patchDimensions.y, (float)((patchDimensions.z * coord.z + zz)/(float)patchDimensions.z)); 
 	}
 
 	private static float scaleNegOneOneFloatsToRange(float value, float _range ) {
