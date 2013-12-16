@@ -45,7 +45,6 @@ using System.Runtime.Serialization;
 using System.ComponentModel;
 using System.Threading;
 using System.Collections.Specialized;
-using System.Runtime.Serialization;
 using System.Runtime.InteropServices;
 
 
@@ -61,7 +60,7 @@ public class ChunkManager : MonoBehaviour
 
 	//TODO: make the rest const
 	public const uint CHUNKLENGTH = 16;
-	public const int CHUNKHEIGHT = 256;
+	public const int CHUNKHEIGHT = 64;
 	public const int WORLD_HEIGHT_CHUNKS = 1;
 
 	private const int WORLD_HEIGHT_BLOCKS = (int) (WORLD_HEIGHT_CHUNKS * CHUNKHEIGHT);
@@ -102,16 +101,15 @@ public class ChunkManager : MonoBehaviour
 
 	private bool firstNoisePatchDone = false;
 
-	public Transform terrainTestPlane;
+//	public Transform terrainTestPlane;
 
-	private Texture2D libnoiseTex;
 	#if TERRAIN_TEST
 	private Texture2D terrainTex;
 	#endif
 
-	public Graphics.Tools.Noise.Filter.RidgedMultiFractal ridgedMultiFractal; // = new Graphics.Tools.Noise.Filter.RidgedMultiFractal();
-
-	LibNoiseNetHandler m_libnoiseNetHandler;
+	public LibNoiseNetHandler m_libnoiseNetHandler;
+	
+	private NoiseCoord currentTargetedForCreationNoiseCo;
 
 	public ChunkManager()
 	{
@@ -138,11 +136,12 @@ public class ChunkManager : MonoBehaviour
 									(int) (cc.z * CHUNKLENGTH + offset.z));
 
 		if (index.y < 0 || index.y >= WORLD_HEIGHT_BLOCKS) {  
-			bug ("index. y out of range: " + index.toString ());
+			bug ("index. y out of range: (negative or greater than world height) " + index.toString ());
 			return null;
 		}
 		
-		if (!blocks.noisePatches.ContainsKey (new NoiseCoord (cc / NoisePatch.CHUNKDIMENSION) ))
+//		if (!blocks.noisePatches.ContainsKey (new NoiseCoord (cc / NoisePatch.CHUNKDIMENSION) ))
+		if (!blocks.noisePatchExistsAtWorldCoord(index) )
 		{
 			bug ("trying to get a block from ch coord: " + cc.toString() + " offset: " + offset.toString() +" for which we don't have a noise patch coord at woco: " + index.toString() );
 			return null;
@@ -151,50 +150,8 @@ public class ChunkManager : MonoBehaviour
 		return blocks [index]; 
 
 	}
-
-
-	void makeChunksFromOnMainThreadAtCoord(Coord coord)
-	{
-		if (!chunkMap.coIsOnMap (coord)) {
-			bug ("got co not on map at coord: " + coord.toString ());
-//			throw new System.ArgumentException ("looking for a chunk that was not on the map..." + coord.toString());
-			return;
-		}
-
-		Chunk ch = chunkMap.chunkAt (coord);
-		makeChunkOnMainThread (ch);
-
-	}
-
-	void makeChunkOnMainThread(Chunk ch)
-	{
-		if (ch == null )
-		{
-			throw new System.ArgumentException("Ch should not be null at this point", "ch");
-		}
-		if (ch.meshHoldingGameObject == null ) 
-		{
-//			bug ("needed to give ch its mesh at this point (make ch on mT)");
-			giveChunkItsMeshObject (ch, ch.chunkCoord);
-		}
-
-//		ch.makeMesh ();
-		ch.Start ();
-
-//		if (!ch.noNeedToRenderFlag) {
-////			ch.applyMesh ();
-//			 //async...
-//			activeChunks.Add (ch);
-//
-//			ch.isActive = true;
-			checkTheseAsyncChunksDoneCalculating.Add (ch);
-//		}
-//		else // why not get rid of the game object now?
-//		{
-//			chunkMap.destroyChunkAt (ch.chunkCoord);
-//		}
-	}
-
+	
+	
 	void makeChunksFromOnMainThread(ChunkCoord start, ChunkCoord range)
 	{
 		bug ("MKING CHS ON MAIN THREAD START");
@@ -214,16 +171,70 @@ public class ChunkManager : MonoBehaviour
 		} 
 	}
 
-//	Chunk makeNewOrGetExistingChunk(Coord _co)
-//	{
-//		Chunk ch = chunkMap.chunkAt (_co);
-//
-//		if (ch == null){ // if !isActive
-//			ch = makeNewChunk (_co);
-//		}
-//
-//		return ch;
-//	}
+	void makeChunksFromOnMainThreadAtCoord(Coord coord)
+	{
+		if (!chunkMap.coIsOnMap (coord)) {
+			bug ("got co not on map at coord: " + coord.toString ());
+//			throw new System.ArgumentException ("looking for a chunk that was not on the map..." + coord.toString());
+			return;
+		}
+
+		Chunk ch = chunkMap.chunkAt (coord);
+		makeChunkOnMainThread (ch);
+
+	}
+	
+	void makeChunksFromOnSepThreadAtCoord(Coord coord)
+	{
+		if (!chunkMap.coIsOnMap (coord)) {
+			bug ("got co not on map at coord: " + coord.toString ());
+//			throw new System.ArgumentException ("looking for a chunk that was not on the map..." + coord.toString());
+			return;
+		}
+
+		Chunk ch = chunkMap.chunkAt (coord);
+		makeChunkOnSepThread (ch);
+
+	}
+	
+	void makeChunkOnSepThread(Chunk ch)
+	{
+		makeChunk(ch, true);
+	}
+		
+	void makeChunkOnMainThread(Chunk ch)
+	{
+		makeChunk(ch, false);
+	}
+	
+	void makeChunk(Chunk ch, bool wantSepThread)
+	{
+		if (ch == null )
+			throw new System.ArgumentException("Ch should not be null at this point", "ch");
+
+		if (ch.meshHoldingGameObject == null ) {
+			giveChunkItsMeshObject (ch, ch.chunkCoord);
+		}
+		
+		if (wantSepThread) {
+			ch.Start (); 
+			checkTheseAsyncChunksDoneCalculating.Add (ch);
+			return;
+		}
+		
+		ch.makeMesh (); // ???
+		if (!ch.noNeedToRenderFlag) {
+			ch.applyMesh ();
+			activeChunks.Add (ch);
+
+			ch.isActive = true;
+		}
+		else // why not get rid of the game object now?
+		{
+			chunkMap.destroyChunkAt (ch.chunkCoord);
+		}
+	}
+
 
 	Chunk makeNewChunkButNotItsMesh(Coord coord)
 	{
@@ -238,7 +249,8 @@ public class ChunkManager : MonoBehaviour
 		// just a thought...
 		NoiseCoord ncoo = noiseCoordContainingChunkCoord (coord);
 
-		if (!blocks.noisePatches.ContainsKey(ncoo))
+//		if (!blocks.noisePatches.ContainsKey(ncoo))
+		if (!blocks.noisePatchAtCoordIsReady(ncoo))
 		{
 //			throw new System.ArgumentException ("yo we don't have a noise patch for this chunk?? " + ncoo.toString());
 //			bug ("um... we don't have a noise patch for this chunk. " + ncoo.toString ());
@@ -247,12 +259,6 @@ public class ChunkManager : MonoBehaviour
 		}
 
 		NoisePatch np = blocks.noisePatches [ncoo];
-
-		if (np == null){
-			throw new System.ArgumentException ("yo. we don't have a noise patch for this chunk??");
-			return null;
-		}
-
 		c.m_noisePatch = np;
 
 		return c;
@@ -407,6 +413,7 @@ public class ChunkManager : MonoBehaviour
 
 	//swiped from 'Noise Handler' (demo.cs)
 	public void OnGUI() {
+		
 //		int y = 0;
 //		foreach ( string i in System.Enum.GetNames(typeof(NoiseType)) ) {
 //			if (GUI.Button(new Rect(0,y,100,20), i) ) {
@@ -424,7 +431,14 @@ public class ChunkManager : MonoBehaviour
 //			}
 //			y+=20;
 //		}
-
+		
+		
+		// DRAW A '+' IN THE MIDDLE
+		float boxSize = 20;
+		GUI.Box (new Rect (Screen.width * .5f - boxSize/2.0f, Screen.height * .5f - boxSize/2.0f, boxSize, boxSize), "+");
+		
+		return; // !!!!!
+		
 		Coord playerCoord = new Coord (playerCameraTransform.position);
 		Coord chChoord = chunkCoordContainingBlockCoord (playerCoord);
 		NoiseCoord npatchCo = noiseCoordContainingChunkCoord (chChoord);
@@ -457,12 +471,6 @@ public class ChunkManager : MonoBehaviour
 //			Coord boxPos = corner - (chch.chunkCoord * box);
 //			GUI.Box (new Rect(boxPos.z, boxPos.x, box.x, box.z ), ".");
 //		}
-
-
-		// DRAW A '+' IN THE MIDDLE
-		float boxSize = 20;
-		GUI.Box (new Rect (Screen.width * .5f - boxSize/2.0f, Screen.height * .5f - boxSize/2.0f, boxSize, boxSize), "+");
-
 
 	}
 
@@ -730,6 +738,86 @@ public class ChunkManager : MonoBehaviour
 
 		return retRange;
 	}
+	
+	//YA chunk identifier:
+	// get the chunks in a list all of a row or all of a corner (to the mid-line each way), given a direction and a radius.
+	private static List<Coord> setOfCoordsInDirection(int PizzaAngle, int distance)
+	{
+		if (distance < 0) throw new Exception("neg distance doesn't make sense");
+		List<Coord> resultList = new List<Coord>();
+		Coord offSetCoord = blockyRadar(PizzaAngle) * distance;
+		
+		resultList.Add(offSetCoord);
+		
+		Coord nOne = new Coord(0, 0, 1);
+		Coord nTwo = new Coord(0, 0, -1);
+		
+		if (PizzaAngle % 2 == 1) // corner angle
+		{
+			if (PizzaAngle == 1)
+				nOne = new Coord(-1, 0, 0);
+			else if (PizzaAngle == 3)
+				nOne = new Coord(0, 0, -1);
+			else if (PizzaAngle == 5)
+				nOne = new Coord(1, 0, 0);
+			else 
+				nOne = new Coord(0, 0, 1);
+			
+			nTwo = Coord.FlipXZ(nOne);
+			
+			if (PizzaAngle == 3 || PizzaAngle == 7)
+				nTwo *= -1;
+		} else {
+			if (PizzaAngle == 2 || PizzaAngle == 6)
+			{
+				nOne = Coord.FlipXZ(nOne);
+				nTwo = Coord.FlipXZ(nTwo);
+			}
+		}
+		
+		for (int i = 1; i <= distance ; ++i)
+		{
+			resultList.Add(offSetCoord + (nOne * i));
+			resultList.Add(offSetCoord + (nTwo * i));
+		}
+		
+		return resultList;
+	}
+	
+	private int playerCameraAngleToPizzaAngle() 
+	{
+		int unityangle = (int)((playerCameraTransform.eulerAngles.y + 22.0f) / 45);
+		int angle = unityangle;
+		angle = angle == 8 ? 0 : angle;
+		
+		// Unity angles start at z pos and go clock-wise (pizza starts at x pox and go CCW)
+		angle = 8 - angle; 
+		angle += 2;
+		angle = angle % 8;
+		
+		return angle;
+	}
+	
+	private static int incrementPizzaAngleCCW(int startAngle, int increment) {
+		startAngle += increment;
+		startAngle = startAngle % 8;
+		startAngle += 8;
+		return startAngle % 8;
+	}
+	
+	private void addToCreateTheseChunksWithDistanceFromPlayer(int distance, int pizzaAngle )
+	{
+		Coord playerChCo = playerLocatedAtChunkCoord();
+		
+		
+		foreach(Coord offset in setOfCoordsInDirection(pizzaAngle, distance))
+		{
+			Coord coord_ = playerChCo + offset;
+//			bug("the coord to add with pizza was: " + coord_.toString() );
+			prepareCandidateChunkAtCoord(playerChCo + offset);
+		}
+	}
+	
 
 	// TODO: an overhaul for this
 	// decide what we want!
@@ -779,6 +867,12 @@ public class ChunkManager : MonoBehaviour
 				}
 
 				updateCreateTheseChunksList (wantActiveRealm);
+//				
+				// pizza chunks
+				int cameraPizzaAngle = playerCameraAngleToPizzaAngle();
+				addToCreateTheseChunksWithDistanceFromPlayer(2, cameraPizzaAngle);
+//				addToCreateTheseChunksWithDistanceFromPlayer(3, cameraPizzaAngle);
+				
 			}
 			yield return new WaitForSeconds (.2f);
 		}
@@ -839,46 +933,50 @@ public class ChunkManager : MonoBehaviour
 				for (; k < start.z + range.z; ++k) 
 				{
 					Coord chco = new Coord (i, j, k);
-
-					// GOT A NULL REF EXCEPTION HERE AT ONE POINT WHILE SPEEDING AROUND WORLD...(doesn't always happen...)
-					Chunk chh = chunkMap.chunkAtOrNullIfUnready (chco); //change unready to a bool return func. (TODO) //b/c what it was non null in fact...
-					if (chh == null || !chh.isActive) 
-					{
-						// chunks don't get destroyed when their meshes do (when, for example, the player moves away from them)
-						// therefore we might have an existing chunk that (hopefully) is just !isActive.
-						// or we may have never have encountered (made) this chunk at all...
-						// in any case, don't make its accompanying mesh just yet (it might be all air, or all solid and surrounded for example)
-
-						if (chh == null) 
-						{
-							chh = makeNewChunkButNotItsMesh (chco);
-
-							if (chh == null) // careful!
-								continue;
-
-//							chh.isActive = true;
-							chunkMap.addChunkAt (chh, chco);
-						} 
-						// TODO: separate making chunks and making the chunk meshes. want chunks as soon
-						// as we see that they might need to be created/exist.
-						// want the meshes only after we've been through their blocks
-						// maybe they don't need a mesh if all air, or totally surrounded, etc.
-
-						destroyTheseChunks.Remove (chh);
-
-						chh.isActive = true;
-
-						if (chco.isInsideOfRange(m_veryCloseAndInFrontRealm)) {
-							createTheseVeryCloseAndInFrontChunks.Add (chh);
-						} else {
-							createTheseChunks.Add (chh);
-						}
-					}
-//					else {
-////						bug ("chunk was not null and/or was ready??? at : " + chco.toString());
-//					}
+					
+					prepareCandidateChunkAtCoord(chco);
 				}
 			}
+		}
+	}
+	
+	private void prepareCandidateChunkAtCoord(Coord chco)
+	{
+		// GOT A NULL REF EXCEPTION HERE AT ONE POINT WHILE SPEEDING AROUND WORLD...(doesn't always happen...)
+		Chunk chh = chunkMap.chunkAtOrNullIfUnready (chco); //change unready to a bool return func. (TODO) //b/c what it was non null in fact...
+		if (chh == null || !chh.isActive) 
+		{
+			// chunks don't get destroyed when their meshes do (when, for example, the player moves away from them)
+			// therefore we might have an existing chunk that (hopefully) is just !isActive.
+			// or we may have never have encountered (made) this chunk at all...
+			// in any case, don't make its accompanying mesh just yet (it might be all air, or all solid and surrounded for example)
+
+			if (chh == null) 
+			{
+				chh = makeNewChunkButNotItsMesh (chco);
+
+				if (chh == null) // careful!
+					return;
+
+//							chh.isActive = true;
+				chunkMap.addChunkAt (chh, chco);
+			} 
+			// TODO: separate making chunks and making the chunk meshes. want chunks as soon
+			// as we see that they might need to be created/exist.
+			// want the meshes only after we've been through their blocks
+			// maybe they don't need a mesh if all air, or totally surrounded, etc.
+
+			destroyTheseChunks.Remove (chh);
+
+			chh.isActive = true;
+			
+			createTheseVeryCloseAndInFrontChunks.Add (chh);
+			
+//			if (chco.isInsideOfRange(m_veryCloseAndInFrontRealm)) {
+//				createTheseVeryCloseAndInFrontChunks.Add (chh);
+//			} else {
+//				createTheseChunks.Add (chh);
+//			}
 		}
 	}
 
@@ -969,76 +1067,107 @@ public class ChunkManager : MonoBehaviour
 		UnityEngine.Debug.DrawLine(farawayRayTest.origin, farAwayPos, col);
 	}
 
-
+	private Chunk getAReadyChunkFromList(List<Chunk> chunkList) {
+		if (chunkList.Count == 0) 
+			return null;
+		
+		foreach (Chunk ch in chunkList)
+		{
+			NoiseCoord ncoCh = noiseCoordContainingChunkCoord(ch.chunkCoord);
+			
+			if (blocks.noisePatchAtCoordIsReady(ncoCh)) {
+				return ch;
+			} 
+		}
+		return null;
+	}
 
 	IEnumerator createAndDestroyChunksFromLists()
 	{
 		while (true)
 		{
-			if (shouldBeCreatingChunksNow ()) {
-				if (createTheseVeryCloseAndInFrontChunks.Count > 0)
-				{
-
-					Chunk chunk = createTheseVeryCloseAndInFrontChunks [0];
-
-
-
-					// TRY THE FOLLOWING: find a chunk that in the current active realm
-					// throw out chunks that aren't in
-					bool foundOne = true;
-//					while (!chunk.chunkCoord.isInsideOfRange(m_veryCloseAndInFrontRealm))
+			if (shouldBeCreatingChunksNow ()) 
+			{
+				Chunk chunk = null; // = createTheseVeryCloseAndInFrontChunks [0];
+				bool foundOne = false;
+				
+				chunk = getAReadyChunkFromList(createTheseVeryCloseAndInFrontChunks);
+				foundOne = chunk != null;
+				
+//				if (!foundOne)
+//				{
+//					chunk = getAReadyChunkFromList(createTheseChunks);
+//					foundOne = chunk != null;
+//				}
+				
+				
+//				if (createTheseVeryCloseAndInFrontChunks.Count > 0)
+//				{
+//					
+////					NoiseCoord ncoOfChunk = noiseCoordContainingChunkCoord(chunk.chunkCoord);
+////					
+////					foundOne = blocks.noisePatchAtCoordIsReady(ncoOfChunk);
+//					
+//					foreach (Chunk ch in createTheseVeryCloseAndInFrontChunks)
 //					{
-//						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
-//						if (createTheseVeryCloseAndInFrontChunks.Count == 0) {
-//							foundOne = false;
+//						NoiseCoord ncoCh = noiseCoordContainingChunkCoord(ch.chunkCoord);
+//						
+//						if (blocks.noisePatchAtCoordIsReady(ncoCh)) {
+//							chunk = ch;
+//							foundOne = true;
 //							break;
+//						} else {
+//							bug ("no noise patch yet at noise Co: " + ncoCh.ToString() );
 //						}
-//						chunk = createTheseVeryCloseAndInFrontChunks [0];
+//					}
+//					
+//					// TRY THE FOLLOWING: find a chunk that in the current active realm
+//					// throw out chunks that aren't in
+//					
+////					while (!chunk.chunkCoord.isInsideOfRange(m_veryCloseAndInFrontRealm))
+////					{
+////						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
+////						if (createTheseVeryCloseAndInFrontChunks.Count == 0) {
+////							foundOne = false;
+////							break;
+////						}
+////						chunk = createTheseVeryCloseAndInFrontChunks [0];
+////
+////					}
 //
-//					}
-
-					// ## TRY TO AVOID: making chunks adjacent to noise patches that don't exist
-					// MAY WORK BUT JUST TOO AWKWARD!!
-//					List<NoiseCoord> nCoords;
-//					nCoords = NoisePatch.nudgeNoiseCoordsAdjacentToChunkCoord (chunk.chunkCoord);
-//					foreach(NoiseCoord nudgeNCOO in nCoords) 
-//					{
-//						NoiseCoord ncoo = nudgeNCOO + new NoiseCoord (chunk.chunkCoord);
-//						if (blocks.noisePatches.ContainsKey(ncoo)) {
-//							NoisePatch np = blocks.noisePatches [ncoo];
-//							if (!np.generatedBlockAlready)
-//							{
-//								foundOne = false;
-//								if (!setupThesePatches.Contains (np))
-//									setupThesePatches.Add (np);
-//								break;
-//							}
-//						}
-//						else {
-//							foundOne = false;
-//							NoisePatch np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet (ncoo);
-//							setupThesePatches.Add (np);
-//							break;
-//						}
-//					}
-//					if (!foundOne) {
-//						// send this chunk to the back of the line
-//						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
-//						createTheseVeryCloseAndInFrontChunks.Add (chunk);
-//					}
-					// ##END try to avoid
-
-					if (foundOne)
-					{
-						if (chunk != null) {
-							makeChunksFromOnMainThreadAtCoord (chunk.chunkCoord);
-						}
-						else {
-							throw new Exception ("null chunks in very close list??");
-						}
-						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
-					}
-				}
+//					// ## TRY TO AVOID: making chunks adjacent to noise patches that don't exist
+//					// MAY WORK BUT JUST TOO AWKWARD!!
+////					List<NoiseCoord> nCoords;
+////					nCoords = NoisePatch.nudgeNoiseCoordsAdjacentToChunkCoord (chunk.chunkCoord);
+////					foreach(NoiseCoord nudgeNCOO in nCoords) 
+////					{
+////						NoiseCoord ncoo = nudgeNCOO + new NoiseCoord (chunk.chunkCoord);
+////						if (blocks.noisePatches.ContainsKey(ncoo)) {
+////							NoisePatch np = blocks.noisePatches [ncoo];
+////							if (!np.generatedBlockAlready)
+////							{
+////								foundOne = false;
+////								if (!setupThesePatches.Contains (np))
+////									setupThesePatches.Add (np);
+////								break;
+////							}
+////						}
+////						else {
+////							foundOne = false;
+////							NoisePatch np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet (ncoo);
+////							setupThesePatches.Add (np);
+////							break;
+////						}
+////					}
+////					if (!foundOne) {
+////						// send this chunk to the back of the line
+////						createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
+////						createTheseVeryCloseAndInFrontChunks.Add (chunk);
+////					}
+//					// ##END try to avoid
+//
+//					
+//				}
 //				else if (createTheseChunks.Count > 0) 
 //				{
 //					Chunk chunk = createTheseChunks [0];
@@ -1060,22 +1189,34 @@ public class ChunkManager : MonoBehaviour
 //						createTheseChunks.RemoveAt (0);
 //					}
 //				}
-				else // destroy some chunks 
+//				else if (false) //TEST NEVER DESTROY // destroy some chunks 
+//				{
+//					if (shouldBeDestroyingChunksNow ()) {
+//						if (destroyTheseChunks.Count > 0) {
+//							Chunk chunk = destroyTheseChunks [0];
+//
+//							if (chunk != null) {
+//								//						if (!chunk.chunkCoord.isInsideOfRange (m_wantActiveRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
+//								if (!chunk.chunkCoord.isInsideOfRange (m_dontDestroyRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
+//									chunkMap.destroyChunkAt (chunk.chunkCoord);
+//									activeChunks.Remove (chunk);
+//								} 
+//							}
+//							destroyTheseChunks.RemoveAt (0);
+//						}
+//					}
+//				}
+				
+				if (foundOne)
 				{
-					if (shouldBeDestroyingChunksNow ()) {
-						if (destroyTheseChunks.Count > 0) {
-							Chunk chunk = destroyTheseChunks [0];
-
-							if (chunk != null) {
-								//						if (!chunk.chunkCoord.isInsideOfRange (m_wantActiveRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
-								if (!chunk.chunkCoord.isInsideOfRange (m_dontDestroyRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
-									chunkMap.destroyChunkAt (chunk.chunkCoord);
-									activeChunks.Remove (chunk);
-								} 
-							}
-							destroyTheseChunks.RemoveAt (0);
-						}
+					if (chunk != null) {
+//						makeChunksFromOnMainThreadAtCoord (chunk.chunkCoord);
+						makeChunksFromOnSepThreadAtCoord(chunk.chunkCoord);
 					}
+					else {
+						throw new Exception ("null chunks in very close list??");
+					}
+					createTheseVeryCloseAndInFrontChunks.RemoveAt (0);
 				}
 
 			}
@@ -1170,7 +1311,7 @@ public class ChunkManager : MonoBehaviour
 
 				}
 			}
-			yield return new WaitForSeconds(.3f);
+			yield return new WaitForSeconds(.1f);
 		}
 	}
 
@@ -1181,66 +1322,157 @@ public class ChunkManager : MonoBehaviour
 	bool shouldBeDestroyingChunksNow() {
 		return true;
 	}
-
+	
+	#endregion
+	
+	#region DEBUG LINES
+	
+	void drawDebugCubesForAllCreatedNoisePatches()
+	{
+		// current to be created n patch
+		NoisePatch curTargeted = blocks.noisePatches[currentTargetedForCreationNoiseCo];
+		
+		Color tarCol = curTargeted.generatedBlockAlready ? Color.gray : Color.yellow;
+		tarCol = curTargeted.startedBlockSetup ? new Color(.3f, 1f, .5f, 1f) : tarCol;
+		
+		drawDebugLinesForNoisePatch(currentTargetedForCreationNoiseCo, tarCol);
+		
+		foreach(KeyValuePair<NoiseCoord, NoisePatch> npatch in blocks.noisePatches)
+		{
+			NoiseCoord nco = npatch.Key;
+			if (NoiseCoord.Equal(nco, currentTargetedForCreationNoiseCo) )
+				continue;
+			
+			NoisePatch np = npatch.Value;
+			Color col = np.startedBlockSetup ? Color.magenta : Color.cyan;
+			if (np.generatedBlockAlready)
+				col = Color.green;
+			
+			drawDebugLinesForNoisePatch(nco, col );
+		}
+	}
+	
+	void drawDebugCubesForAllUncreatedChunks()
+	{
+		foreach(Chunk ch in createTheseVeryCloseAndInFrontChunks)
+		{
+			drawDebugForChunkCoord(ch.chunkCoord);
+		}
+	}
+	
+	void drawDebugCubesForAllUncreatedNoisePatches()
+	{
+		foreach(NoisePatch np in setupThesePatches)
+		{
+			drawDebugLinesForNoisePatch(np.coord, Color.green);	
+		}
+	}
+	
 	void drawDebugLinesForBlockAtWorldCoord(Coord woco)
 	{
 		CoRange blockCo = new CoRange (woco, Coord.coordOne ());
 		drawDebugCube (blockCo, true);
 	}
-
+	
+	void drawDebugForChunkCoord(Coord chunkCo)
+	{
+		Coord woco = chunkCo * CHUNKLENGTH;
+		drawDebugCube(woco, new Coord(CHUNKLENGTH, CHUNKHEIGHT, CHUNKLENGTH), Color.red);
+	}
+	
 	void drawDebugLinesForChunkRange(CoRange chunkCoRange)
 	{
 		drawDebugCube (chunkCoRange, false);
 	}
-
+	
+	void drawDebugLinesForNoisePatch(NoiseCoord nco, Color col) 
+	{
+		Coord woco = worldCoordForNoiseCoord(nco) + 3;
+		Coord dims = new Coord(CHUNKLENGTH * NoisePatch.CHUNKDIMENSION, CHUNKHEIGHT, CHUNKLENGTH * NoisePatch.CHUNKDIMENSION) - 3;
+		
+		drawDebugCube(woco, dims, col);
+	}
+	
 	void drawDebugCube(CoRange chunkCoRange, bool drawBlock)
 	{
 		int length = drawBlock ? 1 : (int) CHUNKLENGTH;
 		Coord start = chunkCoRange.start * length;
-		Coord outer = chunkCoRange.outerLimit () * length;
-
+				
 		if (drawBlock)
 		{
-			Vector3 startV = start.toVector3 () - new Vector3 (.5f, .5f, .5f);
-			Vector3 outerV = outer.toVector3 () - new Vector3 (.5f, .5f, .5f);
-
-			//upper box
-			debugLineV (startV, new Vector3 (startV.x, startV.y, outerV.z));
-			debugLineV (startV, new Vector3 (outerV.x , startV.y, startV.z));
-			debugLineV (new Vector3 (outerV.x, startV.y, outerV.z), new Vector3 (startV.x, startV.y, outerV.z));
-			debugLineV (new Vector3 (outerV.x, startV.y, outerV.z), new Vector3 (startV.x , startV.y, startV.z));
-
-			debugLineV (outerV, new Vector3 (startV.x, outerV.y, outerV.z));
-			debugLineV (outerV, new Vector3 (outerV.x , outerV.y, startV.z));
-			debugLineV (new Vector3 (startV.x, outerV.y, startV.z), new Vector3 (startV.x, outerV.y, outerV.z));
-			debugLineV (new Vector3 (startV.x, outerV.y, startV.z), new Vector3 (outerV.x , outerV.y, startV.z));
-
+			drawDebugBlock(start, chunkCoRange.range * length);
 			return;
 		}
+		
+		drawDebugCube(start, chunkCoRange.range * length);
+	}
+	
+	void drawDebugCube(Coord start, Coord dims)
+	{
+		drawDebugCube(start, dims, Color.white);
+	}
+	
+	void drawDebugCube(Coord start, Coord dims, Color col)
+	{
+//		int length = drawBlock ? 1 : (int) CHUNKLENGTH;
+//		Coord start = start; // * length;
+		Coord outer = start + dims; // chunkCoRange.outerLimit () * length;
 
 		//upper box
-		debugLine (start, new Coord (start.x, start.y, outer.z));
-		debugLine (start, new Coord (outer.x , start.y, start.z));
-		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (start.x, start.y, outer.z));
-		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (outer.x , start.y, start.z));
+		debugLine (start, new Coord (start.x, start.y, outer.z), col );
+		debugLine (start, new Coord (outer.x , start.y, start.z), col );
+		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (start.x, start.y, outer.z), col );
+		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (outer.x , start.y, start.z), col );
 
-		debugLine (outer, new Coord (start.x, outer.y, outer.z));
-		debugLine (outer, new Coord (outer.x , outer.y, start.z));
-		debugLine (new Coord (start.x, outer.y, start.z), new Coord (start.x, outer.y, outer.z));
-		debugLine (new Coord (start.x, outer.y, start.z), new Coord (outer.x , outer.y, start.z));
+		debugLine (outer, new Coord (start.x, outer.y, outer.z), col );
+		debugLine (outer, new Coord (outer.x , outer.y, start.z), col );
+		debugLine (new Coord (start.x, outer.y, start.z), new Coord (start.x, outer.y, outer.z), col );
+		debugLine (new Coord (start.x, outer.y, start.z), new Coord (outer.x , outer.y, start.z), col );
+		
+		//diag on top
+		debugLine(new Coord (start.x, outer.y, start.z), outer);
+	}
+	
+	void drawDebugBlock(Coord start, Coord dims) {
+		Vector3 startV = start.toVector3 () - new Vector3 (.5f, .5f, .5f);
+		Coord outer = start + dims;
+		Vector3 outerV = outer.toVector3 () - new Vector3 (.5f, .5f, .5f);
+
+		//upper box
+		debugLineV (startV, new Vector3 (startV.x, startV.y, outerV.z));
+		debugLineV (startV, new Vector3 (outerV.x , startV.y, startV.z));
+		debugLineV (new Vector3 (outerV.x, startV.y, outerV.z), new Vector3 (startV.x, startV.y, outerV.z));
+		debugLineV (new Vector3 (outerV.x, startV.y, outerV.z), new Vector3 (startV.x , startV.y, startV.z));
+
+		debugLineV (outerV, new Vector3 (startV.x, outerV.y, outerV.z));
+		debugLineV (outerV, new Vector3 (outerV.x , outerV.y, startV.z));
+		debugLineV (new Vector3 (startV.x, outerV.y, startV.z), new Vector3 (startV.x, outerV.y, outerV.z));
+		debugLineV (new Vector3 (startV.x, outerV.y, startV.z), new Vector3 (outerV.x , outerV.y, startV.z));
 	}
 
 	void debugLine(Coord aa, Coord bb)
 	{
 		UnityEngine.Debug.DrawLine (aa.toVector3(), bb.toVector3());
 	}
+	
+	void debugLine(Coord aa, Coord bb, Color color)
+	{
+		UnityEngine.Debug.DrawLine (aa.toVector3(), bb.toVector3(), color);
+	}
 
 	void debugLineV(Vector3 aa, Vector3 bb)
 	{
 		UnityEngine.Debug.DrawLine (aa, bb);
 	}
-
+	
+	void debugLineV(Vector3 aa, Vector3 bb, Color color)
+	{
+		UnityEngine.Debug.DrawLine (aa, bb, color);
+	}
+	
 	#endregion
+
+
 
 //	Coord worldDimsInChunkCoords() {
 //		return m_mapDims_blocks / CHUNKLENGTH;
@@ -1274,51 +1506,33 @@ public class ChunkManager : MonoBehaviour
 	// good if we can detect which noise patch the player is closest to
 	// make blocks for that one first? etc.
 
-	void updateSetupPatchesList()
-	{
-		NoiseCoord currentNoiseCo = noiseCoordContainingWorldCoord (new Coord (playerCameraTransform.position));
-
-		if (NoiseCoord.Equal (currentNoiseCo, lastPlayerNoiseCoord))
-			return;
-
-		lastPlayerNoiseCoord = currentNoiseCo;
-
-		foreach(NoiseCoord nco in noiseCoordsSurroundingNoiseCoord(currentNoiseCo))
-		{
-			if (!blocks.noisePatches.ContainsKey (nco)) 
-			{
-				makeNoisePatchIfNotExistsAtNoiseCoord (nco);
-				NoisePatch np = blocks.noisePatches [nco];
-
-				if (!np.generatedBlockAlready) {
-					setupThesePatches.Add (np);
-				}
-			}
-		}
-	}
-
 	IEnumerator updateSetupPatchesListI()
 	{
 		while (true) 
 		{
 			NoiseCoord currentNoiseCo = noiseCoordContainingWorldCoord (new Coord (playerCameraTransform.position));
-
-			if (!NoiseCoord.Equal (currentNoiseCo, lastPlayerNoiseCoord)) 
+			
+			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(1);
+			
+			if (!NoiseCoord.Equal(nco, NoiseCoord.TheErsatzNullNoiseCoord()) ) //  !NoiseCoord.Equal (currentNoiseCo, lastPlayerNoiseCoord)) 
 			{
-
-				lastPlayerNoiseCoord = currentNoiseCo;
-
-				foreach (NoiseCoord nco in noiseCoordsSurroundingNoiseCoord(currentNoiseCo)) {
-					if (!blocks.noisePatches.ContainsKey (nco)) {
-						makeNoisePatchIfNotExistsAtNoiseCoord (nco);
-						NoisePatch np = blocks.noisePatches [nco];
-
-						if (!np.generatedBlockAlready) {
-							setupThesePatches.Add (np);
-						}
-					}
-					yield return new WaitForSeconds (.1f);
-				}
+//				lastPlayerNoiseCoord = currentNoiseCo;
+				
+				currentTargetedForCreationNoiseCo = nco;
+//				foreach (NoiseCoord nco in noiseCoordsSurroundingNoiseCoord(currentNoiseCo)) 
+//				if (!NoiseCoord.Equal(nco, NoiseCoord.TheErsatzNullNoiseCoord()) )
+//				{
+//					if (!blocks.noisePatches.ContainsKey (nco)) 
+//					{
+//					makeNoisePatchIfNotExistsAtNoiseCoord (nco);
+					NoisePatch np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet(nco);//  blocks.noisePatches [nco];
+					setupThesePatches.Add (np);
+//						if (!np.generatedBlockAlready) {
+//							setupThesePatches.Add (np);
+//						}
+//					}
+//					yield return new WaitForSeconds (.05f);
+//				}
 			}
 			yield return new WaitForSeconds (.1f);
 		}
@@ -1337,18 +1551,17 @@ public class ChunkManager : MonoBehaviour
 
 				if (np != null) 
 				{
-					if (!np.generatedNoiseAlready) {
-						np.generateNoiseAndPopulateBlocksAsync ();
+					if (!np.startedBlockSetup) {
+						np.populateBlocksAsync ();
 					}
-//					if (!np.generatedBlockAlready)
-//						np.populateBlocksFromNoise ();
 
-					setupThesePatches.RemoveAt (0);
 				} else {
-					bug ("np was null");
+					throw new Exception("block from set up these patches was null");
 				}
+				
+				setupThesePatches.RemoveAt (0);
 			}
-			yield return new WaitForSeconds (0.3f);
+			yield return new WaitForSeconds (0.05f);
 		}
 	}
 
@@ -1375,10 +1588,163 @@ public class ChunkManager : MonoBehaviour
 			makeNoisePatchIfNotExistsAtNoiseCoord (nco);
 		}
 	}
+	
+	NoiseCoord noiseCoordClosestToPlayerThatDoesNotExist(int RadiusLimit)
+	{
+		return noiseCoordClosestToPlayer(RadiusLimit, false);
+	}
+	
+	NoiseCoord noiseCoordClosestToPlayerThatHasNotStartedSetup(int RadiusLimit)
+	{
+		return noiseCoordClosestToPlayer(RadiusLimit, true);
+	}
+	
+	NoiseCoord noiseCoordClosestToPlayer(int RadiusLimit, bool wantNotSetUp)
+	{
+		Coord playerCoord = playerPosCoord();
+		NoiseCoord playerNCo = noiseCoordContainingWorldCoord(playerCoord);
+				
+		Coord currentNCoWoco = worldCoordForNoiseCoord(playerNCo);
+		
+		Coord relCo = playerCoord - currentNCoWoco;
+		int firstPizzaAngle = closestPizzaAngleForRelativeCoord(relCo, new Coord ((int)(NoisePatch.CHUNKDIMENSION * CHUNKLENGTH)) );
+		int pizzaAngle = firstPizzaAngle;
+		
+		int radius = 1;
+		
+		while(true)
+		{
+			NoiseCoord nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+			
+			nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle + 1) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+			
+			nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle - 1) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+			
+			nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle + 2) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+			
+			nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle - 2) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+			
+			nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle + 3) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+			
+			nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle - 3) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+
+			nextNoiseCo = playerNCo + new NoiseCoord(blockyRadar(pizzaAngle + 4) * radius);
+			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
+				return nextNoiseCo;
+			else if (wantNotSetUp) {
+				NoisePatch np = blocks.noisePatches[nextNoiseCo];
+				if (!np.startedBlockSetup)
+					return nextNoiseCo;
+			}
+
+			radius++;
+			
+			if (radius > RadiusLimit)
+				return NoiseCoord.TheErsatzNullNoiseCoord();
+		}
+
+	}
+	
+	//only returns 0, 2, 4 or 6 (0 == 3 oclock, 2 == 12 o'clock, 4 == 9 o'clock, 6 == 6 o'clock)
+	int closestPizzaAngleForRelativeCoord(Coord relCoord, Coord zoneDimension) {
+		
+		if (relCoord.x > relCoord.z) { //lower right half triangle
+			
+			// this point is also inside the lower left half triangle so must be 6 o'clock
+			if (zoneDimension.x - relCoord.x > relCoord.z) {
+				return 6;
+			} 
+			
+			return 0; // must be in the right side triange 
+		} 
+		
+		if (zoneDimension.x - relCoord.x > relCoord.z) {
+			return 4;
+		}
+		return 2; 
+	}
+	
+	static Coord blockyRadar(int pizzaSliceCount) {
+		// the pos x axis bisects the slice at sliceCount = 0
+		
+		pizzaSliceCount = pizzaSliceCount % 8;
+		
+		if (pizzaSliceCount < 0) {
+			pizzaSliceCount = 8 - pizzaSliceCount;
+		}
+		
+		int x = 0; int z = 0;
+		
+		if (pizzaSliceCount == 7 || pizzaSliceCount <= 1) {
+			x = 1;	
+		} else if (pizzaSliceCount < 6 && pizzaSliceCount > 2) {
+			x = -1;
+		}
+		
+		if (pizzaSliceCount > 0 && pizzaSliceCount < 4) {
+			z = 1;
+		} else if (pizzaSliceCount > 4) {
+			z = -1;
+		}
+		
+		return new Coord(x, 0, z);
+	}
 
 	//MORE EFFICIENT TO MAKE AN ARRAY OF NUDGE COORDS? (TODO:)
 	System.Collections.IEnumerable noiseCoordsSurroundingNoiseCoord(NoiseCoord ncoord)
 	{
+		//sloppy? (return this coord?)
+		yield return ncoord;
+		
 		int nudge = 1;
 		int znudge = 1;
 		yield return new NoiseCoord (ncoord.x + nudge, ncoord.z);
@@ -1408,7 +1774,7 @@ public class ChunkManager : MonoBehaviour
 
 	NoisePatch makeNoisePatchIfNotExistsAtNoiseCoordAndGet(NoiseCoord ncoord) 
 	{
-		if (blocks.noisePatches.ContainsKey (ncoord))
+		if (blocks.noisePatchExistsAtNoiseCoord(ncoord))
 			return blocks.noisePatches [ncoord];
 
 		NoisePatch npatch = new NoisePatch (ncoord, this);
@@ -1419,7 +1785,7 @@ public class ChunkManager : MonoBehaviour
 
 	void makeNoisePatchIfNotExistsAtNoiseCoord(NoiseCoord ncoord) 
 	{
-		if (blocks.noisePatches.ContainsKey (ncoord))
+		if (blocks.noisePatchExistsAtNoiseCoord(ncoord))
 			return;
 
 		NoisePatch npatch = new NoisePatch (ncoord, this);
@@ -1427,7 +1793,7 @@ public class ChunkManager : MonoBehaviour
 	}
 
 	void generateNoiseForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
-		if (!blocks.noisePatches.ContainsKey(ncoord))
+		if (!blocks.noisePatchExistsAtNoiseCoord(ncoord))
 		{
 			throw new System.ArgumentException("no noise patch at this coord", "ncoord");
 		}
@@ -1437,11 +1803,11 @@ public class ChunkManager : MonoBehaviour
 		if (mainThread)
 			np.genNoiseOnMainThread();
 		else 
-			np.generateNoiseAndPopulateBlocksAsync ();
+			np.populateBlocksAsync ();
 	}
 
 	void populateBlocksForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
-		if (!blocks.noisePatches.ContainsKey(ncoord))
+		if (!blocks.noisePatchExistsAtNoiseCoord(ncoord))
 		{
 			throw new System.ArgumentException("no noise patch at this coord", "ncoord");
 		}
@@ -1455,8 +1821,18 @@ public class ChunkManager : MonoBehaviour
 			np.populateBlocksFromNoise ();
 	}
 
-	NoiseCoord noiseCoordContainingWorldCoord(Coord coord) {
-		return noiseCoordContainingChunkCoord (chunkCoordContainingBlockCoord (coord));
+	NoiseCoord noiseCoordContainingWorldCoord(Coord woco) {
+		return blocks.noiseCoordContainingWorldCoord(woco);
+//		return noiseCoordContainingChunkCoord (chunkCoordContainingBlockCoord (woco));
+	}
+	
+	NoiseCoord noiseCoordContainingPlayer() {
+		return noiseCoordContainingWorldCoord(new Coord(playerCameraTransform.position) );	
+	}
+	
+	static Coord worldCoordForNoiseCoord(NoiseCoord nco) {
+		int blocksPerPatch = (int) (NoisePatch.CHUNKDIMENSION * CHUNKLENGTH);
+		return new Coord(nco * blocksPerPatch);
 	}
 
 	NoiseCoord noiseCoordContainingChunkCoord(Coord chcoord)
@@ -1514,12 +1890,7 @@ public class ChunkManager : MonoBehaviour
 	void Start () 
 	{
 		m_libnoiseNetHandler = new LibNoiseNetHandler();
-		Texture2D tex = m_libnoiseNetHandler.SaveTestImage ();
-		File.WriteAllBytes(Application.dataPath + "/../RMFractalSample_300x400.png", tex.EncodeToPNG() );
-		#if TEST_LIBNOISENET
-		return;
-		#endif
-		ridgedMultiFractal = new Graphics.Tools.Noise.Filter.RidgedMultiFractal();
+
 		firstNoisePatchDone = false;
 
 		chunkMap = new ChunkMap (); //new Coord (WORLD_XLENGTH_CHUNKS, WORLD_HEIGHT_CHUNKS, WORLD_ZLENGTH_CHUNKS));
@@ -1528,6 +1899,8 @@ public class ChunkManager : MonoBehaviour
 
 		foreach(KeyValuePair<NoiseCoord, NoisePatch> npatch in blocks.noisePatches)
 		{
+//			break;
+			
 			NoisePatch np = (NoisePatch)npatch.Value;
 			np.coord = npatch.Key;
 			np.updateChunkManager (this);
@@ -1542,23 +1915,23 @@ public class ChunkManager : MonoBehaviour
 		audioSourceCamera = playerCameraTransform.parent.GetComponent<AudioSource> ();
 
 		NoiseCoord initialNoiseCoord = new NoiseCoord (0, 0);
-
-		// save data (check if there is any)
-
-//		if (!blocks.noisePatches.ContainsKey (initialNoiseCoord)) 
-//		{
-			//		makeNewAndSetupPatchAtNoiseCoord (initialNoiseCoord);
-			makeNewAndSetupPatchAtNoiseCoordMainThread (initialNoiseCoord);
-//			NoisePatch firstNoisePatch = blocks.noisePatches [initialNoiseCoord];
-//		}
+		makeNewAndSetupPatchAtNoiseCoordMainThread (initialNoiseCoord);
 
 		int times = 0;
+		while (times < 9) //test?
+		{
+			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
+			bug ("noise co tDE is: " + nco.toString());
+			makeNewAndSetupPatchAtNoiseCoordMainThread(nco);
+			times++;
+		}
+		times = 0;
 		foreach (NoiseCoord ncoord in noiseCoordsSurroundingNoiseCoord(initialNoiseCoord)) 
 		{
 //			if (!blocks.noisePatches.ContainsKey (ncoord))
 			makeNewAndSetupPatchAtNoiseCoordMainThread (ncoord);
 			if (times > 1)
-				break; //test
+				break; //test???
 			times++; //test
 		}
 
@@ -1613,21 +1986,24 @@ public class ChunkManager : MonoBehaviour
 		CoRange nearbyCoRa = nearbyChunkRangeInitialForNoisePatch (blocks.noisePatches [new NoiseCoord (0, 0)]); //  nearbyChunkRangeInitial (spawnPAtChunkCoord);
 
 		buildMapAtRange (nearbyCoRa);
-
+		
+		//TODO: learn about why there's a floating island way up in the sky sometimes...
+		
 		// *want
 		//		StartCoroutine (createChunksFromCreateList ());
 		//		StartCoroutine (destroyChunksFromDestroyList ());
 
-		if (true) {
+		if (true) 
+		{
 			StartCoroutine (updateChunkLists ());
 			StartCoroutine (createAndDestroyChunksFromLists ()); // combined above two
 			//		StartCoroutine (createFurtherAwayChunks ());
 
 			StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
-
+			StartCoroutine (updateSetupPatchesListI ());
+			
 			StartCoroutine (checkAsyncChunksList ());
 
-			StartCoroutine (updateSetupPatchesListI ());
 		}
 
 		placePlayerAtSpawnPoint ();
@@ -1641,10 +2017,16 @@ public class ChunkManager : MonoBehaviour
 	// Update is called once per frame
 	void Update () 
 	{
-		#if TEST_LIBNOISENET
-		return;
-		#endif
+//		#if TEST_LIBNOISENET
+//		return;
+//		#endif
 		//**want
+		
+		drawDebugCubesForAllCreatedNoisePatches();
+		drawDebugCubesForAllUncreatedChunks();
+//		drawDebugCubesForAllUncreatedNoisePatches();
+//		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));
+		
 //		updateChunkLists ();
 
 //		updateSetupPatchesList ();
@@ -1700,1212 +2082,6 @@ public class ChunkManager : MonoBehaviour
 
 }
 
-//courtesy of: http://answers.unity3d.com/questions/357033/unity3d-and-c-coroutines-vs-threading.html
-[Serializable]
-public class ThreadedJob : ISerializable
-{
-	private bool m_IsDone = false;
-	private object m_Handle = new object();
-	private System.Threading.Thread m_Thread = null;
-
-	public ThreadedJob () 
-	{
-
-	}
-
-	public bool IsDone
-	{
-		get
-		{
-			bool tmp;
-			lock (m_Handle)
-			{
-				tmp = m_IsDone;
-			}
-			return tmp;
-		}
-		set
-		{
-			lock (m_Handle)
-			{
-				m_IsDone = value;
-			}
-		}
-	}
-
-	public virtual void Start()
-	{
-		m_Thread = new System.Threading.Thread(Run);
-		m_Thread.Start();
-	}
-	public virtual void Abort()
-	{
-		m_Thread.Abort();
-	}
-
-	protected virtual void ThreadFunction() { }
-
-	protected virtual void OnFinished() { }
-
-	public virtual bool Update()	
-	{
-		if (IsDone)
-		{
-			OnFinished();
-			return true;
-		}
-		return false;
-	}
-	private void Run()
-	{
-		ThreadFunction();
-		IsDone = true;
-	}
-
-	#region Serializable interface
-
-	protected virtual void doGetObject (SerializationInfo info, StreamingContext context) { }
-
-	// awkardly, we must implement iSerializable, to AVOID doing any serialization in ThreadedJob—or so it seems.
-	// 'doGetObject()' gets called on NoisePatch which actually does the serializing
-	void ISerializable.GetObjectData(SerializationInfo oInfo, StreamingContext oContext)
-	{
-		this.doGetObject (oInfo, oContext);
-	}
-
-	// The special constructor is used to deserialize values. 
-	public ThreadedJob(SerializationInfo info, StreamingContext context)
-	{
-
-	}
-	#endregion
-}
-
-public class ChunkMap
-{
-	Dictionary<Coord, Chunk> chunks;
-
-	public ChunkMap()
-	{
-		chunks = new Dictionary<Coord, Chunk> ();
-	}
-
-	public void addChunkAt(Chunk the_chunk, Coord c)
-	{
-		if (chunks.ContainsKey(c))
-		{
-			destroyChunkAt (c);
-			chunks [c] = the_chunk;	
-			return;
-		}
-		chunks.Add (c, the_chunk);
-	}
-
-	public void destroyChunkAt(Coord c) {
-
-		if (!chunks.ContainsKey(c))
-			return;
-
-		Chunk ch = chunks[c];
-		if (ch != null) {
-			destroyChunkMeshOfChunk (ch);
-			ch.isActive = false;
-		}
-	}
-
-	void destroyChunkMeshOfChunk(Chunk ch) 
-	{
-		GameObject chObj = ch.meshHoldingGameObject; 
-		GameObject.Destroy (chObj);
-		ch.destroyAndSetGameObjectToNull ();
-	}
-
-	public Chunk chunkAt(int ii, int jj, int kk){
-		return chunkAt (new Coord (ii, kk, jj));
-	}
-
-	public Chunk chunkAt(Coord co) {
-		if (!chunks.ContainsKey(co))
-		{
-			return null;
-		}
-
-		return chunks [co]; 
-	}
-
-	public Chunk chunkAtOrNullIfUnready(int ii, int jj, int kk) {
-		return chunkAtOrNullIfUnready (new Coord (ii, kk, jj));
-	}
-
-	public Chunk chunkAtOrNullIfUnready(Coord coo) 
-	{
-		Chunk chh = chunkAt (coo);
-
-		if (chh == null) { //TODO: change this logic later...
-			return null;
-		}
-
-		return chh;
-	}
-
-	public bool coIsOnMap(Coord co) {
-		return chunks.ContainsKey (co);
-	}
-
-	public List<Chunk> nonNullChunksInCoRange(CoRange _corange) {
-		return chunksInCoRange (_corange, true);
-	}
-
-	public List<Chunk> chunksInCoRange(CoRange _corange, bool excludeNullChunks) {
-		List<Chunk> retChunks = new List<Chunk> ();
-		if (!chunks.ContainsKey(_corange.start))
-			return retChunks;
-
-		Coord start = _corange.start;
-		Coord range = _corange.range;
-		int i = start.x;
-		for (; i < start.x + range.x; ++i) {
-
-			int j = (int) start.y;
-			for (; j < start.y + range.y; ++j) {
-
-				int k = start.z;
-				for (; k < start.z + range.z; ++k) {
-					Chunk chh = chunkAt (i, j, k);
-					if (!excludeNullChunks || ( chh != null )) {
-						retChunks.Add (chh);
-					}
-				}
-			}
-		}
-		return retChunks;
-	}
-
-	void bug(string str) {
-		UnityEngine.Debug.Log (str);
-	}
-
-}
-
-public class BlockCollection
-{
-	public Dictionary<NoiseCoord, NoisePatch> noisePatches = new Dictionary<NoiseCoord, NoisePatch>();
-	private static Coord BLOCKSPERNOISEPATCH = NoisePatch.PATCHDIMENSIONSCHUNKS * new Coord((int)ChunkManager.CHUNKLENGTH, 
-	                                                                                                   (int) ChunkManager.CHUNKHEIGHT, 
-	                                                                                                   (int)ChunkManager.CHUNKLENGTH);
-	private const string NOISE_PATCHES_SAVE_NAME = "SavedNoisePatches";
-
-	public BlockCollection () 
-	{
-	}
-
-	public void getSavedNoisePatches () 
-	{
-//		PlayerPrefs.DeleteAll ();
-		//Get the data
-		var data = PlayerPrefs.GetString(NOISE_PATCHES_SAVE_NAME);
-
-		//If not blank then load it
-		if(!string.IsNullOrEmpty(data))
-		{
-			//Binary formatter for loading back
-			var b = new BinaryFormatter();
-			//Create a memory stream with the data
-			var m = new MemoryStream(Convert.FromBase64String(data));
-				noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
-
-		} 
-	}
-
-	public void saveNoisePatchesToPlayerPrefs() 
-	{
-		var b = new BinaryFormatter();
-		var m = new MemoryStream();
-		b.Serialize(m, noisePatches);
-
-		PlayerPrefs.SetString(NOISE_PATCHES_SAVE_NAME, 
-			Convert.ToBase64String(
-				m.GetBuffer()
-			)
-		);
-	}
-
-	public Block this[int xx, int yy, int zz]
-	{
-		get
-		{
-			return this [new Coord (xx, yy, zz)];
-		}
-		set
-		{
-			this [new Coord (xx, yy, zz)] = value;
-		}
-	}
-
-
-	public Block this[Coord woco]
-	{
-		get 
-		{
-			NoiseCoord nco = noiseCoordForWorldCoord (woco);
-			if (!noisePatches.ContainsKey(nco))
-			{
-				return null;
-			}
-			NoisePatch np = noisePatches [nco];
-
-			return np.blockAtWorldBlockCoord (woco);
-		}
-		set
-		{
-			NoisePatch np = noisePatches [noiseCoordForWorldCoord (woco)];
-			np.setBlockAtWorldCoord (value, woco);
-		}
-	}
-
-	#if TERRAIN_TEST
-	public Texture2D textureForTerrainAtXEqualsZero()
-	{
-		List<Color> colorData = new List<Color> ();
-
-		Color[][] colorAr = new Color[ChunkManager.CHUNKHEIGHT] [];
-
-		for (int i  = 0; i < colorAr.Length; ++i) {
-			colorAr [i] = new Color[ChunkManager.CHUNKLENGTH * NoisePatch.CHUNKDIMENSION];
-		}
-
-		int lowestZCoord = 0;
-		int highestZCoord = 0;
-
-		int patchCount = 0;
-
-		foreach(KeyValuePair<NoiseCoord, NoisePatch> npatch in noisePatches)
-		{
-			NoiseCoord nco = npatch.Key;
-
-			if (nco.x != 0)
-				continue;
-
-			lowestZCoord = nco.z < lowestZCoord ? nco.z : lowestZCoord;
-			highestZCoord = nco.z > highestZCoord ? nco.z : highestZCoord;
-		}
-
-		//get patch count
-		for (int zi = lowestZCoord; zi <= highestZCoord; zi++ ) {
-			NoiseCoord nco = new NoiseCoord (0, zi);
-			if (!noisePatches.ContainsKey(nco)) {
-				continue;
-			}
-			NoisePatch np = noisePatches [nco];
-			if (np.textureSlice != null) {
-				patchCount++;
-
-			}
-		}
-
-		bug ("patch count was: " + patchCount);
-		int patchWidth = (int)(ChunkManager.CHUNKLENGTH * NoisePatch.CHUNKDIMENSION);
-		int tex2DWidth = (int)patchWidth * patchCount; // (ChunkManager.CHUNKLENGTH * patchCount * NoisePatch.CHUNKDIMENSION);
-		Texture2D result = new Texture2D (tex2DWidth, (int)(ChunkManager.CHUNKHEIGHT));
-
-		int iterations = 0;
-
-		for (int zi = lowestZCoord; zi <= highestZCoord; zi++, iterations++ ) {
-			NoiseCoord nco = new NoiseCoord (0, zi);
-			if (!noisePatches.ContainsKey(nco)) {
-				continue;
-			}
-			NoisePatch np = noisePatches [nco];
-			if (np.textureSlice != null) {
-//				colorData.AddRange (np.textureSlice);
-
-				int texSliceWidth = np.textureSlice.GetLength (1);
-
-				for (int j = 0; j < np.textureSlice.GetLength(0); ++j) {
-					for (int k = 0; k < texSliceWidth; ++k) {
-						result.SetPixel (k + patchWidth * iterations, j, np.textureSlice [j, k]);
-					}
-
-				}
-
-			}
-		}
-
-//		result.SetPixels(colorData.ToArray());
-		return result;
-	}
-	#endif
-
-	public NoisePatch noisePatchAtWorldCoord (Coord woco) {
-		NoiseCoord nco = noiseCoordForWorldCoord (woco);
-		if (!noisePatches.ContainsKey(nco)) 
-			return null;
-		return noisePatches [nco];
-	}
-
-//	public Block specialGetBlockForTesting(Coord woco) 
-//	{
-//
-//		NoiseCoord nco = noiseCoordForWorldCoord (woco);
-//		bug ("special get block NOISE coord: " + nco.toString ());
-//
-//		if (!noisePatches.ContainsKey(nco))
-//		{
-////			throw new System.ArgumentException ("noise co not in the dictionary: " + nco.toString ());
-//			return null;
-//		}
-//
-//		NoisePatch np = noisePatches [nco];
-//
-//		Coord relCo = np.patchRelativeBlockCoordForWorldBlockCoord (woco);
-//		bug ("special get block at world co at patch relative coo: " + relCo.toString ());
-//
-//		return np.blockAtWorldBlockCoord (woco);
-//
-//	}
-
-	void bug (string str) {
-		UnityEngine.Debug.Log (str);
-	}
-
-	private NoiseCoord noiseCoordForWorldCoord(Coord woco){
-		woco =  woco - (woco.booleanNegative () * (BLOCKSPERNOISEPATCH  - 1)) ; // (shift neg coords by -1)
-		return new NoiseCoord (woco / BLOCKSPERNOISEPATCH);
-	}
-
-}
-
-[Serializable]
-public struct NoiseCoord
-{
-	public int x; 
-	public int z;
-
-	public NoiseCoord(int xx, int zz) {
-		x = xx;
-		z = zz;
-	}
-
-	public NoiseCoord(Coord cc) {
-		x = cc.x;
-		z = cc.z;
-	}
-
-	public NoiseCoord (ChunkCoord cc) {
-		this = new NoiseCoord (new Coord (cc));
-	}
-
-	public string toString() {
-		return "Noise Coord :) x: " + x + " z: " + z;
-	}
-
-	public static bool Equal(NoiseCoord aa, NoiseCoord bb) {
-		return (aa.x == bb.x) && (aa.z == bb.z);
-	}
-
-	public static NoiseCoord operator + (NoiseCoord aa, NoiseCoord bb) {
-		return new NoiseCoord(aa.x + bb.x, aa.z + bb.z); 
-	}
-}
-
-[Serializable]
-public class NoisePatch : ThreadedJob
-{
-	public const int CHUNKDIMENSION = 4;// new Coord(4,1,4);
-	public const int CHUNKHEIGHTDIMENSION = 1;
-	public static Coord PATCHDIMENSIONSCHUNKS = new Coord (CHUNKDIMENSION, CHUNKHEIGHTDIMENSION, CHUNKDIMENSION);
-
-	private static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
-	private int BLOCKSPERPATCHLENGTH;
-
-	private static Coord patchDimensions =new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
-					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
-					CHUNKLENGTH * CHUNKDIMENSION);
-//	public Block[,,] blocks;
-	public Block[,,] blocks { get; set;}
-//	public NoiseCoord coord;
-	public NoiseCoord coord {get; set;}
-
-	public bool generatedNoiseAlready {get; set;}
-	public bool generatedBlockAlready {get; set;}
-
-	private ChunkManager m_chunkManager;
-
-	private SavableBlock[,,] m_RSavedBlocks;
-	public List<SavableBlock> savedBlocks { get; set;}
-
-	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
-
-	#if TERRAIN_TEST
-//	public Color[] textureSlice;
-	public Color[,] textureSlice = new Color[patchDimensions.y, patchDimensions.z];
-	#endif
-
-	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
-	{
-		coord = _noiseCo;
-		m_chunkManager = _chunkMan;
-
-		otherConstructorStuff ();
-	}
-
-	private void otherConstructorStuff() {
-		savedBlocks = new List<SavableBlock> ();
-
-		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
-		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
-
-		BLOCKSPERPATCHLENGTH = patchDimensions.x;
-	}
-
-	public void updateChunkManager(ChunkManager _chunkMan) {
-		m_chunkManager = _chunkMan;
-	}
-
-	public Block blockAtPatchCoord(Coord _worldCo) {
-		return null;
-	}
-
-	public bool coordIsInBlocksArray(Coord indexCo) {
-		if (!indexCo.isIndexSafe(patchDimensions)) //debug purposes
-		{
-			bug ("coord out of array bounds for this noise patch: coord: " + indexCo.toString() + " array bounds: " + patchDimensions.toString ());
-			return false;
-		}
-
-		return indexCo.isIndexSafe (patchDimensions);
-
-	}
-
-	#region Serialization
-	// Implement this method to serialize data. The method is called  
-	// on serialization. 
-	protected override void doGetObject(SerializationInfo info, StreamingContext context)
-	{
-		info.AddValue ("NoiseCoord", coord, typeof(NoiseCoord));
-		updateSavableBlockList ();
-		info.AddValue ("SavedBlocks", savedBlocks, typeof(List<SavableBlock>));
-	}
-//
-//	protected override void doSerializeConstructor(SerializationInfo info, StreamingContext context)
-//	{
-//		//useless?
-//	}
-
-	public NoisePatch(SerializationInfo info, StreamingContext context)
-	{
-		otherConstructorStuff ();
-
-		coord = (NoiseCoord) info.GetValue("NoiseCoord", typeof(NoiseCoord));
-		savedBlocks = (List<SavableBlock>) info.GetValue("SavedBlocks", typeof(List<SavableBlock>));
-		updateSavableAndNormalBlocksArray ();
-		generatedBlockAlready = false;
-		generatedNoiseAlready = false;
-	}
-
-	private void addSavableBlock(Block _b, Coord patchRelCo) {
-		m_RSavedBlocks [patchRelCo.x, patchRelCo.y, patchRelCo.z] = new SavableBlock (_b.type, patchRelCo);
-	}
-
-	private void updateSavableBlockList() 
-	{
-		savedBlocks.Clear ();
-
-		int x_end = m_RSavedBlocks.GetLength (0);
-		int y_end = m_RSavedBlocks.GetLength (1);
-		int z_end = m_RSavedBlocks.GetLength (2);
-
-		int xx = 0;
-		for (; xx < x_end; xx++) {
-			int zz = 0;
-			for (; zz < z_end; zz++) {
-				int yy = 0; // (int) ccoord.y;
-				for (; yy < y_end; yy++) 
-				{
-					if (m_RSavedBlocks[xx,yy,zz] != null) {
-						savedBlocks.Add (m_RSavedBlocks [xx, yy, zz]);
-					}
-				}
-			}
-		}
-
-	}// end func
-
-	private void updateSavableAndNormalBlocksArray() {
-		foreach(SavableBlock sb in savedBlocks) {
-
-			//check index??
-			m_RSavedBlocks [sb.coord.x, sb.coord.y, sb.coord.z] = sb;
-
-			if (sb.coord.isIndexSafe(patchDimensions))
-				blocks [sb.coord.x, sb.coord.y, sb.coord.z] = new Block(sb.type);
-		}
-	}
-
-	#endregion
-
-	#region implement threaded job funcs
-
-	protected override void ThreadFunction()
-	{
-		// populate arrays..
-		doGenerateNoisePatch (); // WHAT THIS WORKS??? (we thought it would crash to have one noise handler doing multiple jobs on dif threads)
-		doPopulateBlocksFromNoise ();
-	}
-
-	protected override void OnFinished()
-	{
-		generatedBlockAlready = true;
-		m_chunkManager.noisePatchFinishedSetup (this);
-	}
-
-	#endregion
-
-
-	public CoRange coRangeChunks() {
-		Coord start = new Coord (coord.x, 0, coord.z);
-		Coord range = new Coord (CHUNKDIMENSION, CHUNKHEIGHTDIMENSION, CHUNKDIMENSION);
-		return new CoRange (start, range);
-	}
-
-
-	private static Coord patchRelativeChunkCoordForChunkCoord(Coord chunkCo) 
-	{
-		// pos chunk coords are 'array index friendly' in their current state, because they start at 0,0,0 .
-		// not so neg chunk coords.
-		// neg chunk coords start at -1 (globally) so we have to shift them by pos one (-1 becomes 0)
-		// and then flip the array index that they then indicate (0 is the 4th elem in patch at -1,1. so 0 -> (chunkDim - 1 - 0) -> 3
-		// put another way: chunk co (-1,0,0) is at patch Rel Co (3, 0, 0) (for a 4x4 patch whose x,z lower left corner == the xz ll
-		// corner of chunk at co (-4,0,0) )
-
-		// use booleanNeg func. as a mask to massage neg chunk coords
-		Coord boolNeg = chunkCo.booleanNegative ();
-		chunkCo = chunkCo + boolNeg; // e.g. x at -7 (+1) becomes -6
-		chunkCo = chunkCo % PATCHDIMENSIONSCHUNKS; //  CHUNKDIMENSION; (NOTE: SWAPPED OUT CHDIMS FOR NEW TALL CHUNKS) // x becomes -2
-
-		// - 2 (plus chunkDim) becomes 2 (minus boolNeg) becomes 1 
-		// then take a mod again because positive chunk dims will have gone out of bounds
-		// then multiply by chunklength (blocks per chunk is a dimension) to get the rel block coord of the chunk (i.e. 
-		// the coord of its 'lower left bottom' block -- i.e. block at the chunk's 0,0,0 coord).
-		return ((chunkCo + PATCHDIMENSIONSCHUNKS - boolNeg ) % PATCHDIMENSIONSCHUNKS); //massage negative coords
-	}
-
-	private static Coord patchRelativeBlockCoordForChunkCoord(Coord chunkCo) 
-	{
-		return patchRelativeChunkCoordForChunkCoord(chunkCo) * CHUNKLENGTH; //massage negative coords
-	}
-
-	private static Coord patchRelativeBlockCoordForWorldBlockCoord(Coord woco) 
-	{
-		// this function parallels the patchRelBlockCoord function above
-
-		// example woco = (-1,0,0)
-		Coord boolNeg = woco.booleanNegative ();
-		woco = woco + boolNeg; // x at -1 becomes 0
-		woco = woco % patchDimensions; //  BLOCKSPERPATCHLENGTH; // 0 -> 0
-
-		// 0 -> (BPPL = 64) 64 -> (minus booleanNeg) 63 (mod again to put pos coords back where they belong)
-		return ((woco + patchDimensions - boolNeg)) % patchDimensions; // BLOCKSPERPATCHLENGTH;
-	}
-
-
-//	//really make private.. public for testing // OLD
-//	public Coord patchRelativeBlockCoordForWorldBlockCoord(Coord woco) 
-//	{
-//		// this function parallels the patchRelBlockCoord function above
-//
-//		// example woco = (-1,0,0)
-//		Coord boolNeg = woco.booleanNegative ();
-//		woco = woco + boolNeg; // x at -1 becomes 0
-//		woco = woco % BLOCKSPERPATCHLENGTH; // 0 -> 0
-//
-//		// 0 -> (BPPL = 64) 64 -> (minus booleanNeg) 63 (mod again to put pos coords back where they belong)
-//		return ((woco + BLOCKSPERPATCHLENGTH - boolNeg)) % BLOCKSPERPATCHLENGTH;
-//	}
-
-
-	public Block blockAtChunkCoordOffset(Coord chunkCo, Coord offset) 
-	{
-		Coord index = NoisePatch.patchRelativeBlockCoordForChunkCoord (chunkCo) + offset; 
-
-		if (!index.isIndexSafe(patchDimensions)) 
-		{
-			return m_chunkManager.blockAtChunkCoordOffset (chunkCo, offset); // look elsewhere
-		}
-
-		if (!generatedBlockAlready)
-			return null;
-
-		return blocks [index.x, index.y, index.z];
-	}
-
-	//FIND NEIGHBORS TOUCHING SIDES
-	public static List<NoiseCoord> nudgeNoiseCoordsAdjacentToChunkCoord(Coord chunkCo) 
-	{
-		List<NoiseCoord> noiseCoords = new List<NoiseCoord> ();
-		Coord relCo = NoisePatch.patchRelativeChunkCoordForChunkCoord (chunkCo);
-
-		if (relCo.x == PATCHDIMENSIONSCHUNKS.x - 1)
-			noiseCoords.Add (new NoiseCoord (1, 0));
-		if (relCo.x == 0)
-			noiseCoords.Add (new NoiseCoord (-1, 0));
-		if (relCo.z == PATCHDIMENSIONSCHUNKS.z - 1)
-			noiseCoords.Add (new NoiseCoord (0, 1));
-		if (relCo.z == 0)
-			noiseCoords.Add (new NoiseCoord (0, -1));
-
-		return noiseCoords;
-	}
-
-	
-	public Block blockAtWorldBlockCoord(Coord woco)
-	{
-		Coord relCo = patchRelativeBlockCoordForWorldBlockCoord (woco);
-		return blocks[relCo.x, relCo.y, relCo.z];
-	}
-
-	public void setBlockAtWorldCoord(Block bb, Coord woco) {
-		Coord relCo = patchRelativeBlockCoordForWorldBlockCoord (woco);
-		blocks [relCo.x, relCo.y, relCo.z] = bb;
-
-		//save any set block
-		addSavableBlock (bb, relCo);
-
-		updateYSurfaceMapWithBlockAndRelCoord (bb, relCo);
-	}
-
-	private void debugList(List<int> list) {
-		string str = "";
-		foreach(int i in list) {
-			str = str + ", " + i;
-		}
-		bug("A list: " + str);
-	}
-	
-	private void updateYSurfaceMapWithBlockAndRelCoord(Block bb, Coord relCo) 
-	{
-		List<int> heights = ySurfaceMap [relCo.x * patchDimensions.x + relCo.z];
-
-		bool isAiryBlock = bb.type == BlockType.Air; //CONDITION MIGHT NEED TO CHANGE LATER. HENCE 'AIRY'
-
-		if (heights.Count == 1) 
-		{
-			if (isAiryBlock) {
-				if (heights[0] == relCo.y + 1) {
-					heights [0] = relCo.y;
-				} else {
-					heights.Insert (0, relCo.y);
-					heights.Insert (0, relCo.y);
-				}
-			} 
-			else //SOLID BLOCK
-			{
-				if (heights[0] == relCo.y) {
-					heights [0] += 1;
-				} else {
-					if (heights[0] > relCo.y) 
-						throw new Exception ("we are surprised. how can we add a solid block to a solid column area?");
-					
-					heights.Add (relCo.y - 1);
-					heights.Add (relCo.y + 1);
-				}
-			}
-			return;
-		}
-
-		int i = 0;
-		while (i < heights.Count) {
-			if (heights [i] > relCo.y)
-				break;
-			i++;
-		}
-
-
-		if (isAiryBlock) 
-		{
-			if (i == 0) {
-				if (heights [i] == relCo.y + 1 && heights [i + 1] == relCo.y + 1) {
-					heights [i] = relCo.y;
-					return;
-				}
-			}
-
-			//CONNECTED TWO AIR COLUMNS?
-			if (i > 0) {
-				if (heights [i] == relCo.y + 1 && heights [i - 1] == relCo.y - 1) {
-					heights.RemoveAt (i - 1);
-					heights.RemoveAt (i - 1);
-					return;
-				}
-			}
-
-			if (heights[i] == relCo.y + 1) {
-				heights [i] = relCo.y;
-				return;
-			}
-			if (heights[i -1] == relCo.y - 1) {
-				heights [i - 1] = relCo.y;
-				return;
-			}
-
-			//MADE A GAP IN A SOLID COLUMN
-			heights.Insert (i - 1, relCo.y);
-			heights.Insert (i - 1, relCo.y);
-		} 
-		else // SOLID BLOCK
-		{
-			if (i > 1) //SURELY IT IS, UNLESS HEIGHTS IS EMPTY! (WE KNOW IT'S NOT EQ. TO 1 AT THIS PT)
-			{ 
-				//FILLED A GAP TO MAKE A SOLID COLUMN?
-				if (heights[i - 1] == relCo.y && heights[i -2] == relCo.y) {
-					heights.RemoveAt (i - 2);
-					heights.RemoveAt (i - 2);
-					return;
-				}
-
-				if (heights[i - 1] == relCo.y) {
-					heights [i - 1] += 1;
-					return;
-				}
-
-				if (heights[i - 2] == relCo.y) {
-					heights [i - 2] += 1;
-					return;
-				}
-
-				//BLOCK WAS INSERTED INTO AN AIR COLUMN
-				heights.Insert (i, relCo.y + 1);
-				heights.Insert (i, relCo.y - 1);
-
-				// WEIRD CASE: FILLED A GAP TO MAKE A COLUMN THAT NOW SPANS 0 TO WORLD MAX HEIGHT (HEIGHT[0] == MAX HEIGHT??)
-			}
-		}
-	}
-
-	void bug(string str) {
-		UnityEngine.Debug.Log (str);
-	}
-
-	#region Surface Maps
-
-	public List<int>[] ySurfaceMapForChunk(Chunk chunk) 
-	{
-		List<List<int>> retList = new List<List<int>> ();
-		Coord patchRel = patchRelativeBlockCoordForChunkCoord (chunk.chunkCoord);
-
-		int startIndex = patchRel.x * patchDimensions.x + patchRel.z;
-		int i = 0;
-		for(; i < CHUNKLENGTH; ++i) 
-		{
-			int startRange = startIndex + patchDimensions.x * i;
-			retList.AddRange ( ySurfaceMap.Skip(startRange).Take(CHUNKLENGTH));
-		}
-
-		return retList.ToArray ();
-	}
-
-	#endregion
-
-	void resetAlreadyDoneFlags () {
-		generatedNoiseAlready = false;
-		generatedBlockAlready = false;
-	}
-
-	public void generateNoiseAndPopulateBlocksAsync()
-	{
-//		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
-//		generatedNoiseAlready = true;
-		this.Start ();
-	}
-
-	public void genNoiseOnMainThread() {
-		doGenerateNoisePatch();
-	}
-
-	public void populateBlocksOnMainThread() { //TODO: very confusing. clarify the use of this...
-		doGenerateNoisePatch();
-	}
-
-	public void genNoiseAndPopulateBlocksOnMainThread() {
-		doGenerateNoisePatch ();
-		doPopulateBlocksFromNoise ();
-	}
-
-	public void doGenerateNoisePatch()
-	{
-		if (generatedNoiseAlready)
-			return;
-
-		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
-
-		m_chunkManager.noiseHandler.GenerateAltAtNoiseCoord (coord);
-
-		generatedNoiseAlready = true;
-	}
-
-	public void populateBlocksFromNoise()
-	{
-//		Coord start = new Coord (0);
-//		Coord range = patchDimensions;
-//		populateBlocksFromNoise (start, range);
-//		this.Start ();
-	}
-
-	private void doPopulateBlocksFromNoise()
-	{
-		if (generatedBlockAlready)
-			return;
-
-		Coord start = new Coord (0);
-		Coord range = patchDimensions;
-		populateBlocksFromNoise (start, range);
-	}
-
-//	private void populateBlocksFromNoise(Coord start, Coord range)
-//	{
-//		if (generatedBlockAlready)
-//			return;
-//
-//		// put saved blocks in first...
-////		updateBlocksArrayWithSavableBlocksList ();
-//		//...
-//		int x_start = (int)( start.x);
-//		int z_start = (int)( start.z);
-//		int y_start = (int)( start.y); 
-//
-//		int x_end = (int)(x_start + range.x);
-//		int y_end = (int)(y_start + range.y);
-//		int z_end = (int)(z_start + range.z);
-//
-//		Block curBlock = null;
-//		Block prevYBlock = null;
-//
-//
-//		int xx = x_start;
-//		for (; xx < x_end ; xx++ ) 
-//		{
-//			int zz = z_start;
-//			for (; zz < z_end; zz++ ) 
-//			{
-//				float noise_val =  m_chunkManager.noiseHandler [xx, zz];
-//				float alt_noise_val = m_chunkManager.noiseHandler.getAltNoise (xx, zz); // .75 for testing wth checker
-//				//TODO: use another section of the noiseMap to make stuff more asymmetrical (along with a modulo perhaps?)
-//				//get the other section based off of (say) (xx + alt_noise_val) % patchD.x
-//
-//				List<int> yHeights = new List<int> ();
-//
-//				int yy = y_start; // (int) ccoord.y;
-//				for (; yy < y_end; yy++) 
-//				{
-//
-//					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
-//					{
-//						BlockType btype = BlockType.Air;
-//
-////						int noiseAsWorldHeight = (int)(Mathf.Clamp(noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); // * (zz/32.0f) * (xx/64.0f));
-////						int altNoiseWorldHeight = (int)(Mathf.Clamp(alt_noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); 
-//
-//						int noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * .1f); // * (zz/32.0f) * (xx/64.0f));
-//						int altNoiseWorldHeight = (int)((alt_noise_val * .5f + .5f) * patchDimensions.y * .1f); 
-//						int surface_nudge = (int)(patchDimensions.y * .05f); // (int)((Mathf.Abs (altNoiseWorldHeight) + noiseAsWorldHeight) * .05f);
-//
-//						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
-//						{ 
-//							if (yy == 0) {
-//								btype = BlockType.BedRock;
-//							} else if (noiseAsWorldHeight + surface_nudge > yy && altNoiseWorldHeight < yy) {
-//								btype = BlockType.Grass;
-//							} else if (yy < altNoiseWorldHeight - noiseAsWorldHeight * .4) {
-//								btype = BlockType.Stone;
-////								bool isCaveZone = noiseAsWorldHeight * 1.4f + patchDimensions.y * .2f > altNoiseWorldHeight + yy * 4.5f;
-////								bool isCaveZone = noise_val > alt_noise_val;
-////								bool isCaveZone = 0 < alt_noise_val;
-////								if (isCaveZone) 
-////								{
-////
-////									bool yLess = false; // yy - (yy)/patchDimensions.y < altNoiseWorldHeight - noiseAsWorldHeight * .1f;
-////									if (yy > altNoiseWorldHeight || yLess) 
-////									{
-////
-////										if (yLess)
-////											btype = BlockType.Sand; // silly
-////										else
-////											btype = BlockType.Stone;
-////
-////										//									if (yy < CHUNKLENGTH)
-////										//										btype = BlockType.Grass;
-////										//									else if (yy < CHUNKLENGTH * 2)
-////										//										btype = BlockType.Sand;
-////										//									else if (yy < CHUNKLENGTH * 3)
-////										//										btype = BlockType.Dirt;
-////										//									else
-////										//										btype = BlockType.Stone;
-////									}
-////									else 
-////									{
-////										btype = BlockType.Air;
-////									}
-////								}
-////								else //NO CAVES
-////								{
-////									btype = BlockType.Grass;
-////								}
-//							}
-//						}
-//						
-//						blocks [xx, yy, zz] = new Block (btype);
-//					}
-//
-//					curBlock = blocks [xx, yy, zz];
-//
-//					// Y SURFACE MAP
-//					if (yy > 0) {
-//						prevYBlock = blocks [xx, yy - 1, zz];
-//						if (prevYBlock.type != curBlock.type) {
-//							if (curBlock.type == BlockType.Air) {
-//								yHeights.Add (yy);
-//							} 
-//							else if (prevYBlock.type == BlockType.Air) {
-//								yHeights.Add (yy - 1);
-//							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
-//						}
-//					}
-//
-//				} // end for yy
-//				if (yHeights.Count == 0)
-//					yHeights = null;
-//				ySurfaceMap [xx * patchDimensions.x + zz] = yHeights;
-//
-//			} // end for zz
-//
-//		} // end for xx
-//
-//		generatedBlockAlready = true;
-//	}
-//
-//
-	// NEW with peturbing
-	private void populateBlocksFromNoise(Coord start, Coord range)
-	{
-		if (generatedBlockAlready)
-			return;
-
-		// put saved blocks in first...
-//		updateBlocksArrayWithSavableBlocksList ();
-		//...
-		int x_start = (int)( start.x);
-		int z_start = (int)( start.z);
-		int y_start = (int)( start.y); 
-
-		int x_end = (int)(x_start + range.x);
-		int y_end = (int)(y_start + range.y);
-		int z_end = (int)(z_start + range.z);
-
-		Block curBlock = null;
-		Block prevYBlock = null;
-
-		int surface_nudge = (int)(patchDimensions.y * .4f); 
-
-//		#if TERRAIN_TEST
-//		textureSlice = new Color[range.z, range.y];
-//		#endif
-
-		int xx = x_start;
-		for (; xx < x_end ; xx++ ) 
-		{
-			int zz = z_start;
-			for (; zz < z_end; zz++ ) 
-			{
-//				float alt_noise_val = m_chunkManager.noiseHandler.getAltNoise (xx, zz);
-
-				// use alt noise to nudge xx and zz a little, for possible overhangs
-
-				float noise_val;
-
-
-				
-				// we really might want to use another noise map that can get an arbitrary number
-				// i.e. use a noise func more directly??...
-
-				 // .75 for testing wth checker
-				//TODO: use another section of the noiseMap to make stuff more asymmetrical (along with a modulo perhaps?)
-				//get the other section based off of (say) (xx + alt_noise_val) % patchD.x
-
-				List<int> yHeights = new List<int> ();
-
-				int yy = y_start; // (int) ccoord.y;
-				for (; yy < y_end; yy++) 
-				{
-
-					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
-					{
-						BlockType btype = BlockType.Air;
-						float cave_noise_val = getSimplexNoise (xx, yy, zz); //getRMFNoise (xx, yy, zz); 
-
-						bool cave_here = caveIsHere (cave_noise_val, yy, surface_nudge); 
-//						int noiseAsWorldHeight = (int)(Mathf.Clamp(noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); // * (zz/32.0f) * (xx/64.0f));
-//						int altNoiseWorldHeight = (int)(Mathf.Clamp(alt_noise_val * .5f + .5f, 0f, 1f) * patchDimensions.y * .1f); 
-
-//						float alt_noise_at_yz = m_chunkManager.noiseHandler.getAltNoise (noiseCoordSafeValue (yy * (patchDimensions.x/patchDimensions.y) ), zz);
-						float alt_noise_at_yz = m_chunkManager.noiseHandler.getAltNoise (yy % patchDimensions.x , zz);
-						int xzNudge = (int)(10 * alt_noise_at_yz * .6f * Mathf.Max (1f, (float)(.5f + yy / y_end)));
-
-						// TODO: do we want to just calculate the noise more directly? (direct from a noise func?)
-						// can still arrange to cache the results if we think we need to.
-						// because needing noiseCoordsafe is cramping our style a bit...
-						noise_val = m_chunkManager.noiseHandler [noiseCoordSafeValue(xx + xzNudge), zz];
-
-//						float noise_val = m_chunkManager.noiseHandler [xx,zz];
-//						float noise_val = m_chunkManager.noiseHandler [noiseCoordSafeValue(xx + xzNudge), noiseCoordSafeValue(zz + xzNudge)];
-
-						int noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * .2f); // * (zz/32.0f) * (xx/64.0f));
-//						int altNoiseWorldHeight = (int)((alt_noise_val * .5f + .5f) * patchDimensions.y * .1f); 
-
-
-						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
-						{ 
-							if (yy == 0) {
-								btype = BlockType.BedRock;
-							} else if (!cave_here && noiseAsWorldHeight + surface_nudge > yy) {
-//							} else if (noiseAsWorldHeight + surface_nudge > yy) {
-								btype = BlockType.Grass;
-							}
-						}
-
-						blocks [xx, yy, zz] = new Block (btype);
-
-					}
-
-					curBlock = blocks [xx, yy, zz];
-
-
-
-					// Y SURFACE MAP
-					if (yy > 0) {
-						prevYBlock = blocks [xx, yy - 1, zz];
-						if (prevYBlock.type != curBlock.type) {
-							if (curBlock.type == BlockType.Air) {
-								yHeights.Add (yy);
-							} 
-							else if (prevYBlock.type == BlockType.Air) {
-								yHeights.Add (yy - 1);
-							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
-						}
-					}
-
-				} // end for yy
-				if (yHeights.Count == 0)
-					yHeights = null;
-				ySurfaceMap [xx * patchDimensions.x + zz] = yHeights;
-
-			} // end for zz
-
-		} // end for xx
-
-		#if TERRAIN_TEST
-		textureSlice = GetTexture ();
-		#endif
-
-		generatedBlockAlready = true;
-	}
-
-	private static bool caveIsHere(float cave_noise_val,int yy, int surfaceNudge) {
-		float yLevel = yy - surfaceNudge;
-//		float filter_value =   (float)((yy) /(float) patchDimensions.y); 
-		float filter_value =   (float)((yLevel) /(float) surfaceNudge * 2.0f); 
-//		filter_value *= filter_value;
-		return cave_noise_val > filter_value;
-	}
-
-	private float getSimplexNoise(int xx, int yy, int zz) {
-		return SimplexNoise.Noise.Generate ((float)((patchDimensions.x * coord.x + xx) / (float)patchDimensions.x), (float)yy / (float)patchDimensions.y, (float)((patchDimensions.z * coord.z + zz)/(float)patchDimensions.z)); 
-	}
-
-	private float getRMFNoise(int xx, int yy, int zz) {
-		return m_chunkManager.ridgedMultiFractal.GetValue ((float)((patchDimensions.x * coord.x + xx) / (float)patchDimensions.x), (float)yy / (float)patchDimensions.y, (float)((patchDimensions.z * coord.z + zz)/(float)patchDimensions.z)); 
-	}
-
-	private static float scaleNegOneOneFloatsToRange(float value, float _range ) {
-		return value * _range;
-	}
-
-	private static int noiseCoordSafeValue(int value) {
-		if (value < 0)
-			return 0;
-		if (value >= patchDimensions.x)
-			return patchDimensions.x - 1;
-
-		return value;
-	}
-
-	#region get texture
-
-	public Color[,] GetTexture()
-	{
-		return this.GetTexture(LibNoise.Unity.Gradient.Grayscale);
-	}
-
-	/// <summary>
-	/// Creates a texture map for the current content of the noise map.
-	/// </summary>
-	/// <param name="device">The graphics device to use.</param>
-	/// <param name="gradient">The gradient to color the texture map with.</param>
-	/// <returns>The created texture map.</returns>
-	public Color[,] GetTexture(LibNoise.Unity.Gradient gradient)
-	{
-		return this.GetTexture(ref gradient, patchDimensions.z, patchDimensions.y);
-	}
-
-	public Color[,] GetTexture(ref LibNoise.Unity.Gradient gradient, int texWidth, int texHeight)
-	{
-//		Texture2D result = new Texture2D(texWidth, texHeight);
-//		Color[] data = new Color[texWidth * texHeight];
-		Color[,] data = new Color[texHeight ,texWidth];
-		int id = 0;
-
-		int texFour = texHeight / 4;
-
-		for (int y = 0; y < texFour * 4 ; y++)
-		{
-			for (int z = 0; z < texWidth; z++, id++)
-			{
-//		for (int z = 0; z < texWidth; z++)
-//		{
-//			for (int y = 0; y < texFour * 4 ; y++, id++)
-//			{
-				Block b = blocks [0, y, z];
-
-//				float d =  
-					//y % 4 == 0 ? 1f : (float)(x / texWidth);  // (float)(y / texHeight); // .75f; // 0.0f;
-//				if (!float.IsNaN(this.m_borderValue) && (x == 0 || x == this.m_width - 1 || y == 0 || y == this.m_height - 1))
-//				{
-//					d = this.m_borderValue;
-//				}
-//				else
-//				{
-//					d = this.m_data[x, y];
-//				}
-				data [y,z] = b.type == BlockType.Air ? Color.black : Color.white;  // new Color (d, d, d, 1f);// gradient[d];
-			}
-		}
-
-		return data;
-		//result.SetData<Color>(data);
-		//Debug.Log("Setting pixels");
-//		result.SetPixels(data);
-//		return result;
-	}
-
-	#endregion
-
-	private static int shiftCoordBy(int coordMaxValue, float scale) {
-		return (int)(coordMaxValue * scale);
-	}
-
-}
-
-
-
 [Serializable]
 public class SavableBlock : Block
 {
@@ -2917,355 +2093,6 @@ public class SavableBlock : Block
 	}
 }
 
-public struct CavePoint
-{
-
-}
-
-[Serializable]
-public struct Coord
-{
-	public int x, y, z;
-
-	public Coord(int xx, int yy, int zz) 
-	{
-		x = xx; y = yy; z = zz;
-	}
-
-	public Coord(int val) 
-	{
-		x = val; y = val; z = val;
-	}
-
-	public Coord(uint xx, uint yy, uint zz) 
-	{
-		x = (int) xx; y =(int) yy; z = (int)zz;
-	}
-
-	public Coord (ChunkCoord cc) {
-		x = (int) cc.x; y = (int) cc.y; z = (int) cc.z;
-	}
-
-	public Coord(Vector3 vv)
-	{
-		//		this = new Coord (vv.x , vv.y, vv.z);
-		this = new Coord (vv.x + .5, vv.y + .5, vv.z + .5);
-	}
-
-	public Coord(long  xx, long  yy, long zz) 
-	{
-		x = (int) xx; y =(int) yy; z = (int)zz;
-	}
-
-	public Coord(double   xx, double  yy, double zz) 
-	{
-		x = (int) xx; y =(int) yy; z = (int)zz;
-	}
-
-	public Coord(float   xx, float  yy, float zz) 
-	{
-		x = (int) xx; y =(int) yy; z = (int)zz;
-	}
-
-	public Coord(int xx, uint yy, int zz) 
-	{
-		x = (int) xx; y =(int) yy; z = (int)zz;
-	}
-
-	public static Coord coordZero() {
-		return new Coord (0, 0, 0);
-	}
-
-	public static Coord coordOne() {
-		return new Coord (1, 1, 1);
-	}
-
-	public static bool greaterThan( Coord aa, Coord bb) {
-		return aa.x > bb.x && aa.y > bb.y && aa.z > bb.z;
-	}
-
-	public static bool greaterThanOrEqual( Coord aa, Coord bb) {
-		return aa.x >= bb.x && aa.y >= bb.y && aa.z >= bb.z;
-	}
-
-	public static Coord operator *(Coord aa, Coord bb) {
-		return new Coord (aa.x * bb.x, aa.y * bb.y, aa.z * bb.z);
-	}
-
-	public static Coord operator /(Coord aa, Coord bb) {
-		return new Coord (aa.x / (float) bb.x, aa.y /(float) bb.y, aa.z /(float) bb.z);
-	}
-
-	public static Coord operator +(Coord aa, Coord bb) {
-		return new Coord (aa.x + bb.x, aa.y + bb.y, aa.z + bb.z);
-	}
-
-	public static Coord operator -(Coord aa, Coord bb) {
-		return new Coord (aa.x - bb.x, aa.y - bb.y, aa.z - bb.z);
-	}
-
-	public static Coord operator -(Coord aa, int  bb) {
-		return new Coord (aa.x - bb, aa.y - bb, aa.z - bb );
-	}
-
-	public static Coord operator *(Coord aa, float bb) {
-		return new Coord (aa.x * bb , aa.y * bb , aa.z * bb );
-	}
-
-	public static Coord operator /(Coord aa, float  bb) {
-		return new Coord (aa.x / bb , aa.y / bb , aa.z / bb ); // TODO: what happens when we div by zero???
-	}
-
-	public static Coord operator %(Coord aa, float  bb) {
-		return new Coord (aa.x % bb , aa.y % bb , aa.z % bb );
-	}
-
-	public static Coord operator %(Coord aa, int  bb) {
-		return new Coord (aa.x % bb , aa.y % bb , aa.z % bb );
-	}
-
-	public static Coord operator % (Coord aa, Coord bb) {
-		return new Coord (aa.x % bb.x , aa.y % bb.y , aa.z % bb.z );
-	}
-
-	public static Coord operator +(Coord aa, float  bb) {
-		return new Coord (aa.x + bb , aa.y + bb , aa.z + bb );
-	}
-
-	public static Coord operator -(Coord aa, float bb) {
-		return new Coord (aa.x - bb, aa.y - bb , aa.z - bb );
-	}
-
-	public bool equalTo(Coord other) {
-		return this.x == other.x && this.y == other.y && this.z == other.z;
-	}
-
-	public bool isIndexSafe( Coord arraySizes ) {
-		return (Coord.greaterThan (arraySizes, this)) && (Coord.greaterThanOrEqual (this, coordZero ()));
-	}
-
-	public Coord makeIndexSafe( Coord arraySizes) {
-		return this.makeRangeSafe (new CoRange (Coord.coordZero(), arraySizes));
-	}
-
-	public Coord makeRangeSafe(CoRange _coRa) {
-		Coord retCo = Coord.Max (this, _coRa.start);
-		Coord outerMinus = _coRa.outerLimit () - 1;
-		return Coord.Min (this, outerMinus);
-	}
-
-	public bool isInsideOfRange(CoRange coRange)
-	{
-		Coord outerLimit = coRange.outerLimit();
-		return (Coord.greaterThanOrEqual (this, coRange.start)) && (Coord.greaterThan (outerLimit, this));
-
-
-		//		return this.isInsideOfRange (coRange.start, coRange.range);
-	}
-
-	public bool isInsideOfRangeInclusive(CoRange coRange)
-	{
-		Coord outerLimit = coRange.outerLimit();
-		return (Coord.greaterThanOrEqual (this, coRange.start)) && (Coord.greaterThanOrEqual (outerLimit, this));
-
-	}
-
-	public static Coord Min (Coord oneone, Coord twotwo)
-	{
-		return new Coord ((oneone.x < twotwo.x ? oneone.x : twotwo.x), (oneone.y < twotwo.y ? oneone.y : twotwo.y), (oneone.z < twotwo.z ? oneone.z : twotwo.z));
-	}
-
-	public static Coord Max (Coord oneone, Coord twotwo)
-	{
-		return new Coord ((oneone.x > twotwo.x ? oneone.x : twotwo.x), (oneone.y > twotwo.y ? oneone.y : twotwo.y), (oneone.z > twotwo.z ? oneone.z : twotwo.z));
-	}
-
-	public Coord onlyPositive ()
-	{
-		return new Coord ((this.x < 0 ? 0 : this.x), (this.y < 0 ? 0 : this.y ), (this.z < 0 ? 0 : this.z));
-	}
-
-	public Coord onlyNegative()
-	{
-		return new Coord ((this.x >= 0 ? 0 : this.x), (this.y >= 0 ? 0 : this.y ), (this.z >= 0 ? 0 : this.z));
-	}
-
-	public Coord booleanPositive()
-	{
-		return new Coord ((this.x < 0 ? 0 : 1), (this.y < 0 ? 0 : 1 ), (this.z < 0 ? 0 : 1));
-	}
-
-	public Coord booleanNegative()
-	{
-		return new Coord ((this.x >= 0 ? 0 : 1), (this.y >= 0 ? 0 : 1), (this.z >= 0 ? 0 : 1));
-	}
-
-	public Coord negNegOnePosPosOne()
-	{
-		return new Coord ((this.x > 0 ? 1 : -1), (this.y > 0 ? 1 : -1), (this.z > 0 ? 1 : -1));
-	}
-
-	//	public bool isInsideOfRange(Coord start, Coord range)
-	//	{
-	//		CoRange corange = new CoRange (start, range);
-	//		return this.isInsideOfRange (corange);
-	//
-	////
-	////		Coord outerLimit = start + range;
-	////		return (Coord.greaterThanOrEqual (this, start)) && (Coord.greaterThan (outerLimit, this));
-	//	}
-
-	public string toString() 
-	{
-		return "X: " + x + " Y: " + y + " Z: " + z;
-	}
-	public Vector3 toVector3()
-	{
-		return new Vector3 ((float)x, (float)y, (float)z);
-	}
-
-	public static Vector3 GeomCenterOfBLock(Coord cc) {
-		Coord negPos = cc.negNegOnePosPosOne ();
-		return cc.toVector3 () + negPos.toVector3 () * .5f;
-	}
-
-	public static int Volume(Coord cc) {
-		return (cc.x * cc.y * cc.z);
-	}
-}
-
-public struct CoRange
-{
-	public Coord start;
-	public Coord range;
-
-	public CoRange( Coord st, Coord ra ) {
-		this.start = st;
-		this.range = ra;
-	}
-
-	public CoRange( Coord st, int ra ) {
-		this.start = st;
-		this.range = new Coord (ra);
-	}
-
-	public Coord outerLimit()
-	{
-		return this.start + this.range;
-	}
-
-	public string toString() {
-		return "Range: start: " + this.start.toString () + " range: " + this.range.toString () + " outer limit: " + this.outerLimit().toString();
-	}
-
-	public CoRange makeRangeSafeCoRange(CoRange mapDims) {
-		CoRange retCo = this;
-		retCo.start = Coord.Max (retCo.start, mapDims.start);
-		retCo.range = Coord.Min (retCo.range, mapDims.range);
-		return retCo;
-	}
-
-	public CoRange makeIndexSafeCoRange(Coord mapDims) {
-		return this.makeRangeSafeCoRange (new CoRange (Coord.coordZero (), mapDims));
-	}
-
-	public static bool Contains(CoRange container, CoRange contained) {
-		bool startIsLess = Coord.greaterThanOrEqual (contained.start, container.start);
-		return Coord.greaterThan (container.outerLimit(), contained.outerLimit());
-	}
-}
-
-public struct ChunkCoord
-{
-	public int x,z;
-	public uint y;
-
-	public ChunkCoord(int xx, uint yy, int zz)
-	{
-		x = xx;
-		z = zz;
-		y = yy;
-	}
-
-	public ChunkCoord (int length) {
-		this = new ChunkCoord (length, (uint)length, length);
-	}
-
-	public ChunkCoord( Coord cc) {
-		x = (int)cc.x;
-		y = (uint)cc.y;
-		z = (int)cc.z;
-	}
-
-	public static ChunkCoord chunkCoordZero()
-	{
-		return new ChunkCoord (0, 0, 0);
-	}
-
-	public static ChunkCoord chunkCoordOne()
-	{
-		return new ChunkCoord (1, 1, 1);
-	}
-
-
-	public static ChunkCoord operator + (ChunkCoord a, ChunkCoord b)
-	{
-		return new ChunkCoord (a.x + b.x, a.y + b.y, a.z + b.z);
-	}
-
-	public static ChunkCoord operator - (ChunkCoord a, ChunkCoord b)
-	{
-		return new ChunkCoord (a.x - b.x, a.y - b.y, a.z - b.z);
-	}
-
-	public static ChunkCoord operator * (ChunkCoord a, int  b)
-	{
-		return new ChunkCoord (a.x * b, (uint)(a.y * b), a.z * b);
-	}
-
-	public static bool greaterThan(ChunkCoord a, ChunkCoord b)
-	{
-		return a.x > b.x && a.y > b.y && a.z > b.z;	
-	}
-
-	public static bool greaterOrEqual(ChunkCoord a, ChunkCoord b)
-	{
-		return a.x >= b.x && a.y >= b.y && a.z >= b.z;	
-	}
-
-	public static ChunkCoord XPosUnitChunk()
-	{
-		return new ChunkCoord (1, 0, 0);
-	}
-
-	public static ChunkCoord YPosUnitChunk()
-	{
-		return new ChunkCoord (0, 1, 0);
-	}
-
-	public static ChunkCoord ZPosUnitChunk()
-	{
-		return new ChunkCoord (0, 0, 1);
-	}
-
-}
-
-public struct ChunkRange
-{
-	ChunkCoord start;
-	ChunkCoord range;
-
-	public ChunkRange(ChunkCoord st, ChunkCoord ra)
-	{
-		start = st; range = ra;
-	}
-
-	public ChunkRange(ChunkCoord st, int length)
-	{
-		start = st; 
-		range = new ChunkCoord (length);
-	}
-}
 
 public enum BlockType
 {

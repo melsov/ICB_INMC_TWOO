@@ -1,0 +1,593 @@
+﻿using UnityEngine;
+using System.Collections;
+
+using System.ComponentModel;
+using System.Threading;
+using System.Collections.Specialized;
+using System.Runtime.Serialization;
+using System.Runtime.InteropServices;
+
+
+using System.IO;
+using System;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography;
+using System.Runtime.ConstrainedExecution;
+using System.Diagnostics;
+
+using System.Runtime.Serialization.Formatters.Binary;
+
+public struct CavePoint
+{
+
+}
+
+[Serializable]
+public struct Coord
+{
+	public int x, y, z;
+
+	public Coord(int xx, int yy, int zz) 
+	{
+		x = xx; y = yy; z = zz;
+	}
+
+	public Coord(int val) 
+	{
+		x = val; y = val; z = val;
+	}
+
+	public Coord(uint xx, uint yy, uint zz) 
+	{
+		x = (int) xx; y =(int) yy; z = (int)zz;
+	}
+	
+	public Coord(NoiseCoord nco) {
+		x = nco.x; y = 0; z = nco.z;
+	}
+
+	public Coord (ChunkCoord cc) {
+		x = (int) cc.x; y = (int) cc.y; z = (int) cc.z;
+	}
+
+	public Coord(Vector3 vv)
+	{
+		//		this = new Coord (vv.x , vv.y, vv.z);
+		this = new Coord (vv.x + .5, vv.y + .5, vv.z + .5);
+	}
+
+	public Coord(long  xx, long  yy, long zz) 
+	{
+		x = (int) xx; y =(int) yy; z = (int)zz;
+	}
+
+	public Coord(double   xx, double  yy, double zz) 
+	{
+		x = (int) xx; y =(int) yy; z = (int)zz;
+	}
+
+	public Coord(float   xx, float  yy, float zz) 
+	{
+		x = (int) xx; y =(int) yy; z = (int)zz;
+	}
+
+	public Coord(int xx, uint yy, int zz) 
+	{
+		x = (int) xx; y =(int) yy; z = (int)zz;
+	}
+
+	public static Coord coordZero() {
+		return new Coord (0, 0, 0);
+	}
+
+	public static Coord coordOne() {
+		return new Coord (1, 1, 1);
+	}
+
+	public static bool greaterThan( Coord aa, Coord bb) {
+		return aa.x > bb.x && aa.y > bb.y && aa.z > bb.z;
+	}
+
+	public static bool greaterThanOrEqual( Coord aa, Coord bb) {
+		return aa.x >= bb.x && aa.y >= bb.y && aa.z >= bb.z;
+	}
+
+	public static Coord operator *(Coord aa, Coord bb) {
+		return new Coord (aa.x * bb.x, aa.y * bb.y, aa.z * bb.z);
+	}
+
+	public static Coord operator /(Coord aa, Coord bb) {
+		return new Coord (aa.x / (float) bb.x, aa.y /(float) bb.y, aa.z /(float) bb.z);
+	}
+
+	public static Coord operator +(Coord aa, Coord bb) {
+		return new Coord (aa.x + bb.x, aa.y + bb.y, aa.z + bb.z);
+	}
+
+	public static Coord operator -(Coord aa, Coord bb) {
+		return new Coord (aa.x - bb.x, aa.y - bb.y, aa.z - bb.z);
+	}
+
+	public static Coord operator -(Coord aa, int  bb) {
+		return new Coord (aa.x - bb, aa.y - bb, aa.z - bb );
+	}
+
+	public static Coord operator *(Coord aa, float bb) {
+		return new Coord (aa.x * bb , aa.y * bb , aa.z * bb );
+	}
+
+	public static Coord operator /(Coord aa, float  bb) {
+		return new Coord (aa.x / bb , aa.y / bb , aa.z / bb ); // TODO: what happens when we div by zero???
+	}
+
+	public static Coord operator %(Coord aa, float  bb) {
+		return new Coord (aa.x % bb , aa.y % bb , aa.z % bb );
+	}
+
+	public static Coord operator %(Coord aa, int  bb) {
+		return new Coord (aa.x % bb , aa.y % bb , aa.z % bb );
+	}
+
+	public static Coord operator % (Coord aa, Coord bb) {
+		return new Coord (aa.x % bb.x , aa.y % bb.y , aa.z % bb.z );
+	}
+
+	public static Coord operator +(Coord aa, float  bb) {
+		return new Coord (aa.x + bb , aa.y + bb , aa.z + bb );
+	}
+
+	public static Coord operator -(Coord aa, float bb) {
+		return new Coord (aa.x - bb, aa.y - bb , aa.z - bb );
+	}
+
+	public bool equalTo(Coord other) {
+		return this.x == other.x && this.y == other.y && this.z == other.z;
+	}
+
+	public bool isIndexSafe( Coord arraySizes ) {
+		return (Coord.greaterThan (arraySizes, this)) && (Coord.greaterThanOrEqual (this, coordZero ()));
+	}
+
+	public Coord makeIndexSafe( Coord arraySizes) {
+		return this.makeRangeSafe (new CoRange (Coord.coordZero(), arraySizes));
+	}
+
+	public Coord makeRangeSafe(CoRange _coRa) {
+		Coord retCo = Coord.Max (this, _coRa.start);
+		Coord outerMinus = _coRa.outerLimit () - 1;
+		return Coord.Min (this, outerMinus);
+	}
+
+	public bool isInsideOfRange(CoRange coRange)
+	{
+		Coord outerLimit = coRange.outerLimit();
+		return (Coord.greaterThanOrEqual (this, coRange.start)) && (Coord.greaterThan (outerLimit, this));
+
+
+		//		return this.isInsideOfRange (coRange.start, coRange.range);
+	}
+
+	public bool isInsideOfRangeInclusive(CoRange coRange)
+	{
+		Coord outerLimit = coRange.outerLimit();
+		return (Coord.greaterThanOrEqual (this, coRange.start)) && (Coord.greaterThanOrEqual (outerLimit, this));
+
+	}
+
+	public static Coord Min (Coord oneone, Coord twotwo)
+	{
+		return new Coord ((oneone.x < twotwo.x ? oneone.x : twotwo.x), (oneone.y < twotwo.y ? oneone.y : twotwo.y), (oneone.z < twotwo.z ? oneone.z : twotwo.z));
+	}
+
+	public static Coord Max (Coord oneone, Coord twotwo)
+	{
+		return new Coord ((oneone.x > twotwo.x ? oneone.x : twotwo.x), (oneone.y > twotwo.y ? oneone.y : twotwo.y), (oneone.z > twotwo.z ? oneone.z : twotwo.z));
+	}
+
+	public Coord onlyPositive ()
+	{
+		return new Coord ((this.x < 0 ? 0 : this.x), (this.y < 0 ? 0 : this.y ), (this.z < 0 ? 0 : this.z));
+	}
+
+	public Coord onlyNegative()
+	{
+		return new Coord ((this.x >= 0 ? 0 : this.x), (this.y >= 0 ? 0 : this.y ), (this.z >= 0 ? 0 : this.z));
+	}
+
+	public Coord booleanPositive()
+	{
+		return new Coord ((this.x < 0 ? 0 : 1), (this.y < 0 ? 0 : 1 ), (this.z < 0 ? 0 : 1));
+	}
+
+	public Coord booleanNegative()
+	{
+		return new Coord ((this.x >= 0 ? 0 : 1), (this.y >= 0 ? 0 : 1), (this.z >= 0 ? 0 : 1));
+	}
+
+	public Coord negNegOnePosPosOne()
+	{
+		return new Coord ((this.x > 0 ? 1 : -1), (this.y > 0 ? 1 : -1), (this.z > 0 ? 1 : -1));
+	}
+	
+	public static Coord FlipXZ(Coord flipMe) 
+	{
+		return new Coord(flipMe.z, flipMe.y, flipMe.x);	
+	}
+
+	//	public bool isInsideOfRange(Coord start, Coord range)
+	//	{
+	//		CoRange corange = new CoRange (start, range);
+	//		return this.isInsideOfRange (corange);
+	//
+	////
+	////		Coord outerLimit = start + range;
+	////		return (Coord.greaterThanOrEqual (this, start)) && (Coord.greaterThan (outerLimit, this));
+	//	}
+
+	public string toString() 
+	{
+		return "X: " + x + " Y: " + y + " Z: " + z;
+	}
+	public Vector3 toVector3()
+	{
+		return new Vector3 ((float)x, (float)y, (float)z);
+	}
+
+	public static Vector3 GeomCenterOfBLock(Coord cc) {
+		Coord negPos = cc.negNegOnePosPosOne ();
+		return cc.toVector3 () + negPos.toVector3 () * .5f;
+	}
+
+	public static int Volume(Coord cc) {
+		return (cc.x * cc.y * cc.z);
+	}
+}
+
+public struct CoRange
+{
+	public Coord start;
+	public Coord range;
+
+	public CoRange( Coord st, Coord ra ) {
+		this.start = st;
+		this.range = ra;
+	}
+
+	public CoRange( Coord st, int ra ) {
+		this.start = st;
+		this.range = new Coord (ra);
+	}
+
+	public Coord outerLimit()
+	{
+		return this.start + this.range;
+	}
+
+	public string toString() {
+		return "Range: start: " + this.start.toString () + " range: " + this.range.toString () + " outer limit: " + this.outerLimit().toString();
+	}
+
+	public CoRange makeRangeSafeCoRange(CoRange mapDims) {
+		CoRange retCo = this;
+		retCo.start = Coord.Max (retCo.start, mapDims.start);
+		retCo.range = Coord.Min (retCo.range, mapDims.range);
+		return retCo;
+	}
+
+	public CoRange makeIndexSafeCoRange(Coord mapDims) {
+		return this.makeRangeSafeCoRange (new CoRange (Coord.coordZero (), mapDims));
+	}
+
+	public static bool Contains(CoRange container, CoRange contained) {
+		bool startIsLess = Coord.greaterThanOrEqual (contained.start, container.start);
+		return Coord.greaterThan (container.outerLimit(), contained.outerLimit());
+	}
+}
+
+public struct ChunkCoord
+{
+	public int x,z;
+	public uint y;
+
+	public ChunkCoord(int xx, uint yy, int zz)
+	{
+		x = xx;
+		z = zz;
+		y = yy;
+	}
+
+	public ChunkCoord (int length) {
+		this = new ChunkCoord (length, (uint)length, length);
+	}
+
+	public ChunkCoord( Coord cc) {
+		x = (int)cc.x;
+		y = (uint)cc.y;
+		z = (int)cc.z;
+	}
+
+	public static ChunkCoord chunkCoordZero()
+	{
+		return new ChunkCoord (0, 0, 0);
+	}
+
+	public static ChunkCoord chunkCoordOne()
+	{
+		return new ChunkCoord (1, 1, 1);
+	}
+
+
+	public static ChunkCoord operator + (ChunkCoord a, ChunkCoord b)
+	{
+		return new ChunkCoord (a.x + b.x, a.y + b.y, a.z + b.z);
+	}
+
+	public static ChunkCoord operator - (ChunkCoord a, ChunkCoord b)
+	{
+		return new ChunkCoord (a.x - b.x, a.y - b.y, a.z - b.z);
+	}
+
+	public static ChunkCoord operator * (ChunkCoord a, int  b)
+	{
+		return new ChunkCoord (a.x * b, (uint)(a.y * b), a.z * b);
+	}
+
+	public static bool greaterThan(ChunkCoord a, ChunkCoord b)
+	{
+		return a.x > b.x && a.y > b.y && a.z > b.z;	
+	}
+
+	public static bool greaterOrEqual(ChunkCoord a, ChunkCoord b)
+	{
+		return a.x >= b.x && a.y >= b.y && a.z >= b.z;	
+	}
+
+	public static ChunkCoord XPosUnitChunk()
+	{
+		return new ChunkCoord (1, 0, 0);
+	}
+
+	public static ChunkCoord YPosUnitChunk()
+	{
+		return new ChunkCoord (0, 1, 0);
+	}
+
+	public static ChunkCoord ZPosUnitChunk()
+	{
+		return new ChunkCoord (0, 0, 1);
+	}
+
+}
+
+public struct ChunkRange
+{
+	ChunkCoord start;
+	ChunkCoord range;
+
+	public ChunkRange(ChunkCoord st, ChunkCoord ra)
+	{
+		start = st; range = ra;
+	}
+
+	public ChunkRange(ChunkCoord st, int length)
+	{
+		start = st; 
+		range = new ChunkCoord (length);
+	}
+}
+
+[Serializable]
+public struct NoiseCoord
+{
+	public int x; 
+	public int z;
+
+	public NoiseCoord(int xx, int zz) {
+		x = xx;
+		z = zz;
+	}
+
+	public NoiseCoord(Coord cc) {
+		x = cc.x;
+		z = cc.z;
+	}
+
+	public NoiseCoord (ChunkCoord cc) {
+		this = new NoiseCoord (new Coord (cc));
+	}
+	
+	public static NoiseCoord TheErsatzNullNoiseCoord() {
+		return new NoiseCoord(-99999, 9994);
+	}
+		
+
+	public string toString() {
+		return "Noise Coord :) x: " + x + " z: " + z;
+	}
+
+	public static bool Equal(NoiseCoord aa, NoiseCoord bb) {
+		return (aa.x == bb.x) && (aa.z == bb.z);
+	}
+
+	public static NoiseCoord operator + (NoiseCoord aa, NoiseCoord bb) {
+		return new NoiseCoord(aa.x + bb.x, aa.z + bb.z); 
+	}
+	
+	public static NoiseCoord operator * (NoiseCoord aa, NoiseCoord bb) {
+		return new NoiseCoord(aa.x * bb.x, aa.z * bb.z); 
+	}
+	
+	public static NoiseCoord operator * (NoiseCoord aa, int bb) {
+		return new NoiseCoord(aa.x * bb, aa.z * bb); 
+	}
+}
+
+
+public struct dvektor
+{
+	public int x,y,z;
+
+	public dvektor(int xx, int yy, int zz) 
+	{
+		x = xx;
+		y = yy;
+		z = zz;
+	}
+
+	public dvektor(float  xx, float yy, float zz) 
+	{
+		x = (int) xx;
+		y = (int)yy;
+		z = (int)zz;
+	}
+
+	public dvektor (ChunkIndex ci)
+	{
+		this = new dvektor (ci.x, ci.y, ci.z);
+	}
+
+	public static dvektor dvekXPositive ()
+	{
+		return new dvektor (1, 0, 0);
+	}
+
+	public static dvektor dvekYPositive()
+	{
+		return new dvektor (0, 1, 0);
+	}
+
+	public static dvektor dvekZPositive()
+	{
+		return new  dvektor (0, 0, 1);
+	}
+
+	public static dvektor dvekXNegative ()
+	{
+		return new dvektor (1, 0, 0) * -1;
+	}
+
+	public static dvektor dvekYNegative()
+	{
+		return new dvektor (0, 1, 0) * -1;
+	}
+
+	public static dvektor dvekZNegative()
+	{
+		return new  dvektor (0, 0, 1) * -1;
+	}
+
+	public static dvektor OppositeDirection(dvektor d) {
+		return d * -1.0f;
+	}
+
+	public static dvektor operator* (dvektor a, float b) {
+		return new dvektor (a.x * b, a.y * b, a.z * b);
+	}
+
+	public static dvektor operator* (dvektor a, dvektor bb) {
+		return new dvektor (a.x * bb.x, a.y * bb.y, a.z * bb.z);
+	}
+
+	public static dvektor operator+ (dvektor a, int b) {
+		return new dvektor (a.x + b, a.y + b, a.z + b);
+	}
+
+	public dvektor (Direction d)
+	{
+		switch (d) 
+		{
+		case(Direction.xpos):
+			this = dvekXPositive ();
+			break;
+		case(Direction.xneg):
+			this = dvekXNegative ();
+			break;
+		case(Direction.ypos):
+			this = dvekYPositive ();
+			break;
+		case(Direction.yneg):
+			this = dvekYNegative ();
+			break;
+		case(Direction.zpos):
+			this = dvekZPositive ();
+			break;
+		default: // zneg
+			this = dvekZNegative ();
+			break;
+		}
+	}
+
+	public static dvektor Inverse( dvektor aa) {
+		int total = aa.x + aa.y + aa.z;
+		dvektor retv = aa + (-total);
+		return retv * -1;
+	}
+
+	public static dvektor Abs( dvektor aa) {
+		return aa * aa;
+	}
+
+	public int total() {
+		return x + y + z;
+	}
+
+}
+
+//ChunkIndex (TODO: change name, too easy to confuse with ChunkCoord)
+//Chunk indices are meant to hold internal block coords within chunks. (i.e. between x,y,z between integers 0 and 15 for 16 length chunks)
+public struct ChunkIndex
+{
+	public int x,y,z;
+
+	public ChunkIndex(uint xx, uint yy, uint zz) {
+		x = (int) xx;
+		y = (int) yy;
+		z = (int) zz;
+	}
+
+	public ChunkIndex(int xx, int yy, int zz) {
+		x = (int) xx;
+		y = (int) yy;
+		z = (int) zz;
+	}
+
+	public ChunkIndex(dvektor d) {
+		x = (int)d.x;
+		y = (int)d.y;
+		z = (int)d.z;
+	}
+
+	public static ChunkIndex ChunkIndexNextToIndex(ChunkIndex ci, Direction dir)
+	{
+		int idir = (int)dir;
+		int which_way = (idir % 2) == 1 ? -1 : 1;
+		int xx, yy, zz;
+		xx = yy = zz = 0;
+		if (dir < Direction.ypos)
+			xx = which_way;
+		else if (dir < Direction.zpos)
+			yy = which_way;
+		else
+			zz = which_way;
+
+		return new ChunkIndex ((int)(ci.x + xx), (int)( ci.y + yy),(int)( ci.z + zz));
+	}
+
+	public static ChunkIndex operator *(ChunkIndex aa, ChunkIndex bb) {
+		return new ChunkIndex (aa.x * bb.x, aa.y * bb.y, aa.z * bb.z);
+	}
+
+	public static ChunkIndex operator *(ChunkIndex aa, float bb) {
+		return new ChunkIndex ((int)(aa.x * bb),(int) (aa.y * bb),(int) (aa.z * bb));
+	}
+
+	public static ChunkIndex operator +(ChunkIndex aa, ChunkIndex bb) {
+		return new ChunkIndex (aa.x + bb.x, aa.y + bb.y, aa.z + bb.z);
+	}
+
+	public string toString(){
+		return "Chunk Index: x: " + x + " y: " + y + " z: " + z;
+	}
+
+
+}

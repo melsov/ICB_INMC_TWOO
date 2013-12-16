@@ -1,3 +1,4 @@
+//#define ONLY_Y_FACES
 //#define TESTRENDER
 
 using UnityEngine;
@@ -26,174 +27,7 @@ using System.Collections.Generic;
 using System;
 
 
-public struct dvektor
-{
-	public int x,y,z;
 
-	public dvektor(int xx, int yy, int zz) 
-	{
-		x = xx;
-		y = yy;
-		z = zz;
-	}
-
-	public dvektor(float  xx, float yy, float zz) 
-	{
-		x = (int) xx;
-		y = (int)yy;
-		z = (int)zz;
-	}
-
-	public dvektor (ChunkIndex ci)
-	{
-		this = new dvektor (ci.x, ci.y, ci.z);
-	}
-
-	public static dvektor dvekXPositive ()
-	{
-		return new dvektor (1, 0, 0);
-	}
-
-	public static dvektor dvekYPositive()
-	{
-		return new dvektor (0, 1, 0);
-	}
-
-	public static dvektor dvekZPositive()
-	{
-		return new  dvektor (0, 0, 1);
-	}
-
-	public static dvektor dvekXNegative ()
-	{
-		return new dvektor (1, 0, 0) * -1;
-	}
-
-	public static dvektor dvekYNegative()
-	{
-		return new dvektor (0, 1, 0) * -1;
-	}
-
-	public static dvektor dvekZNegative()
-	{
-		return new  dvektor (0, 0, 1) * -1;
-	}
-
-	public static dvektor OppositeDirection(dvektor d) {
-		return d * -1.0f;
-	}
-
-	public static dvektor operator* (dvektor a, float b) {
-		return new dvektor (a.x * b, a.y * b, a.z * b);
-	}
-
-	public static dvektor operator* (dvektor a, dvektor bb) {
-		return new dvektor (a.x * bb.x, a.y * bb.y, a.z * bb.z);
-	}
-
-	public static dvektor operator+ (dvektor a, int b) {
-		return new dvektor (a.x + b, a.y + b, a.z + b);
-	}
-
-	public dvektor (Direction d)
-	{
-		switch (d) 
-		{
-		case(Direction.xpos):
-			this = dvekXPositive ();
-			break;
-		case(Direction.xneg):
-			this = dvekXNegative ();
-			break;
-		case(Direction.ypos):
-			this = dvekYPositive ();
-			break;
-		case(Direction.yneg):
-			this = dvekYNegative ();
-			break;
-		case(Direction.zpos):
-			this = dvekZPositive ();
-			break;
-		default: // zneg
-			this = dvekZNegative ();
-			break;
-		}
-	}
-
-	public static dvektor Inverse( dvektor aa) {
-		int total = aa.x + aa.y + aa.z;
-		dvektor retv = aa + (-total);
-		return retv * -1;
-	}
-
-	public static dvektor Abs( dvektor aa) {
-		return aa * aa;
-	}
-
-	public int total() {
-		return x + y + z;
-	}
-
-}
-
-//ChunkIndex (TODO: change name, too easy to confuse with ChunkCoord)
-//Chunk indices are meant to hold internal block coords within chunks. (i.e. between x,y,z between integers 0 and 15 for 16 length chunks)
-public struct ChunkIndex
-{
-	public int x,y,z;
-
-	public ChunkIndex(uint xx, uint yy, uint zz) {
-		x = (int) xx;
-		y = (int) yy;
-		z = (int) zz;
-	}
-
-	public ChunkIndex(int xx, int yy, int zz) {
-		x = (int) xx;
-		y = (int) yy;
-		z = (int) zz;
-	}
-
-	public ChunkIndex(dvektor d) {
-		x = (int)d.x;
-		y = (int)d.y;
-		z = (int)d.z;
-	}
-
-	public static ChunkIndex ChunkIndexNextToIndex(ChunkIndex ci, Direction dir)
-	{
-		int idir = (int)dir;
-		int which_way = (idir % 2) == 1 ? -1 : 1;
-		int xx, yy, zz;
-		xx = yy = zz = 0;
-		if (dir < Direction.ypos)
-			xx = which_way;
-		else if (dir < Direction.zpos)
-			yy = which_way;
-		else
-			zz = which_way;
-
-		return new ChunkIndex ((int)(ci.x + xx), (int)( ci.y + yy),(int)( ci.z + zz));
-	}
-
-	public static ChunkIndex operator *(ChunkIndex aa, ChunkIndex bb) {
-		return new ChunkIndex (aa.x * bb.x, aa.y * bb.y, aa.z * bb.z);
-	}
-
-	public static ChunkIndex operator *(ChunkIndex aa, float bb) {
-		return new ChunkIndex ((int)(aa.x * bb),(int) (aa.y * bb),(int) (aa.z * bb));
-	}
-
-	public static ChunkIndex operator +(ChunkIndex aa, ChunkIndex bb) {
-		return new ChunkIndex (aa.x + bb.x, aa.y + bb.y, aa.z + bb.z);
-	}
-
-	public string toString(){
-		return "Chunk Index: x: " + x + " y: " + y + " z: " + z;
-	}
-
-
-}
 
 // TODO:
 // It would be handy to keep the Lists of verts/uvs/triangles
@@ -491,6 +325,11 @@ public class Chunk : ThreadedJob
 //		uvcoords_list.Clear (); // = new List<Vector2> ();
 
 		int triangles_index = 0;
+		
+#if ONLY_Y_FACES
+		// y Face approach
+		addYFaces (CHLEN, triangles_index); //want
+#else
 
 		noNeedToRenderFlag = true;
 
@@ -648,6 +487,7 @@ public class Chunk : ThreadedJob
 			noNeedToRenderFlag = (vertices_list.Count == 0);
 
 		}
+#endif
 
 		calculatedMeshAlready = true;
 	}
@@ -863,9 +703,9 @@ public class Chunk : ThreadedJob
 	}
 
 
-	void Start () {
-
-	}
+//	void Start () {
+//
+//	} // unity start or threaded job start????
 	
 	// Update is called once per frame
 	void Update () {
