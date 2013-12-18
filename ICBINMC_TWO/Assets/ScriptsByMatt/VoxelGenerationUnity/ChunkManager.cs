@@ -484,7 +484,6 @@ public class ChunkManager : MonoBehaviour
 		// TODO: if is destroyable...? etc.
 
 
-
 //		Vector3 avg = chunkRelativePointFromHit (hit);
 //		Chunk ch = chunkContainingCoord (blockCoord);
 //		Coord startOfChunkCoord = ch.chunkCoord * CHUNKLENGTH;
@@ -552,7 +551,6 @@ public class ChunkManager : MonoBehaviour
 		blocks [placingCoord] = b; // get saved blocks to update.
 
 		updateChunk (ch);
-
 
 	}
 

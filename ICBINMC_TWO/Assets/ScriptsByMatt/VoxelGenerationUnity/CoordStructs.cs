@@ -23,6 +23,17 @@ public struct CavePoint
 }
 
 [Serializable]
+public struct Range1D
+{
+	public int start, range;
+	
+	public Range1D(int _start, int _range) 
+	{
+		start = _start; range = _range;		
+	}
+}
+
+[Serializable]
 public struct Coord
 {
 	public int x, y, z;

@@ -741,7 +741,7 @@ public class NoisePatch : ThreadedJob
 				Block b = blocks [0, y, z];
 
 //				float d =  
-					//y % 4 == 0 ? 1f : (float)(x / texWidth);  // (float)(y / texHeight); // .75f; // 0.0f;
+//					y % 4 == 0 ? 1f : (float)(x / texWidth);  // (float)(y / texHeight); // .75f; // 0.0f;
 //				if (!float.IsNaN(this.m_borderValue) && (x == 0 || x == this.m_width - 1 || y == 0 || y == this.m_height - 1))
 //				{
 //					d = this.m_borderValue;
