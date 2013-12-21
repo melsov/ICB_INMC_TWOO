@@ -199,6 +199,18 @@ public class BlockCollection
 		
 		return noisePatches[nco].generatedBlockAlready;
 	}	
+	
+	public List<Range1D> heightsListAtWorldCoord(Coord woco) {
+		NoisePatch np = noisePatchAtWorldCoord(woco);
+		
+		if (np == null) {
+			throw new Exception("trying to get a heights list for which we don't have a noise patch");	
+			return null;
+		}
+		
+		return np.heightsListAtWorldCoord(woco);
+			
+	}
 
 //	public Block specialGetBlockForTesting(Coord woco) 
 //	{

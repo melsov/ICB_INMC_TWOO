@@ -1,16 +1,6 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs">
-    <Files>
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/BlockCollection.cs" Line="175" Column="7" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="798" Column="3" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkMap.cs" Line="82" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Chunk.cs" Line="642" Column="21" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="32" Column="35" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structs.cs" Line="97" Column="2" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/CoordStructs.cs" Line="26" Column="1" />
-    </Files>
-  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>

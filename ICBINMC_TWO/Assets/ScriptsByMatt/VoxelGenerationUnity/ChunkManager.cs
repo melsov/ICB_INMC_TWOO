@@ -60,7 +60,7 @@ public class ChunkManager : MonoBehaviour
 
 	//TODO: make the rest const
 	public const uint CHUNKLENGTH = 16;
-	public const int CHUNKHEIGHT = 64;
+	public const int CHUNKHEIGHT = 128;
 	public const int WORLD_HEIGHT_CHUNKS = 1;
 
 	private const int WORLD_HEIGHT_BLOCKS = (int) (WORLD_HEIGHT_CHUNKS * CHUNKHEIGHT);
@@ -146,9 +146,32 @@ public class ChunkManager : MonoBehaviour
 			bug ("trying to get a block from ch coord: " + cc.toString() + " offset: " + offset.toString() +" for which we don't have a noise patch coord at woco: " + index.toString() );
 			return null;
 		}
+		
 
 		return blocks [index]; 
 
+	}
+	
+	public List<Range1D> heightsListAtChunkCoordOffset(Coord cc, Coord offset)
+	{
+		Coord index = new Coord ((int)(cc.x * CHUNKLENGTH + offset.x),
+									(int) (cc.y * CHUNKHEIGHT + offset.y),
+									(int) (cc.z * CHUNKLENGTH + offset.z));
+
+		if (index.y < 0 || index.y >= WORLD_HEIGHT_BLOCKS) {  
+			bug ("index. y out of range: (negative or greater than world height) " + index.toString ());
+			return null;
+		}
+		
+//		if (!blocks.noisePatches.ContainsKey (new NoiseCoord (cc / NoisePatch.CHUNKDIMENSION) ))
+		if (!blocks.noisePatchExistsAtWorldCoord(index) )
+		{
+			bug ("trying to get a block from ch coord: " + cc.toString() + " offset: " + offset.toString() +" for which we don't have a noise patch coord at woco: " + index.toString() );
+			return null;
+		}
+
+		
+		return blocks.heightsListAtWorldCoord(index); //   np.heightsListAtChunkCoordOffset(cc, offset);
 	}
 	
 	
@@ -1919,7 +1942,7 @@ public class ChunkManager : MonoBehaviour
 		while (times < 9) //test?
 		{
 			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
-			bug ("noise co tDE is: " + nco.toString());
+			
 			makeNewAndSetupPatchAtNoiseCoordMainThread(nco);
 			times++;
 		}

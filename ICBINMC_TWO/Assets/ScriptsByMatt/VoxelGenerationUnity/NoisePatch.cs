@@ -49,6 +49,7 @@ public class NoisePatch : ThreadedJob
 	public List<SavableBlock> savedBlocks { get; set;}
 
 	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
+	private List<Range1D>[] heightMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	
 	private BiomeTypeCorners biomeCorners;
 	
@@ -259,6 +260,32 @@ public class NoisePatch : ThreadedJob
 
 		return blocks [index.x, index.y, index.z];
 	}
+	
+	public List<Range1D> heightsListAtChunkCoordOffset(Coord chunkCo, Coord offset)
+	{
+		Coord index = NoisePatch.patchRelativeBlockCoordForChunkCoord(chunkCo) + offset;
+		
+		if (!index.isIndexSafe(patchDimensions))
+		{
+			return m_chunkManager.heightsListAtChunkCoordOffset ( chunkCo, offset);
+		}
+		
+		if(!generatedBlockAlready)
+			return null;
+		
+		return heightMap[index.x * patchDimensions.x + index.z];
+		
+	}
+	
+	public List<Range1D> heightsListAtWorldCoord(Coord woco)
+	{
+		Coord index = NoisePatch.patchRelativeBlockCoordForWorldBlockCoord(woco);
+		
+		if (!generatedBlockAlready)
+			return null;
+		
+		return heightMap[index.x * patchDimensions.x + index.z];
+	}
 
 	//FIND NEIGHBORS TOUCHING SIDES
 	public static List<NoiseCoord> nudgeNoiseCoordsAdjacentToChunkCoord(Coord chunkCo) 
@@ -305,113 +332,136 @@ public class NoisePatch : ThreadedJob
 	
 	private void updateYSurfaceMapWithBlockAndRelCoord(Block bb, Coord relCo) 
 	{
-		List<int> heights = ySurfaceMap [relCo.x * patchDimensions.x + relCo.z];
+		List<Range1D> heights = heightMap [relCo.x * patchDimensions.x + relCo.z];
 
-		bool isAiryBlock = bb.type == BlockType.Air; //CONDITION MIGHT NEED TO CHANGE LATER. HENCE 'AIRY'
-
-		if (heights.Count == 1) 
+		bool isAirBlock = bb.type == BlockType.Air; 
+		
+		int heightsIndex = 0;
+		Range1D rOD = Range1D.theErsatzNullRange();
+		if (isAirBlock)
 		{
-			if (isAiryBlock) {
-				if (heights[0] == relCo.y + 1) {
-					heights [0] = relCo.y;
-				} else {
-					heights.Insert (0, relCo.y);
-					heights.Insert (0, relCo.y);
-				}
-			} 
-			else //SOLID BLOCK
+			bool checkGotAContainingRange = false;
+			
+			for (; heightsIndex < heights.Count ; ++heightsIndex)
 			{
-				if (heights[0] == relCo.y) {
-					heights [0] += 1;
-				} else {
-					if (heights[0] > relCo.y) 
-						throw new Exception ("we are surprised. how can we add a solid block to a solid column area?");
+				
+				rOD = heights[heightsIndex];
+				if (rOD.contains(relCo.y))
+				{
 					
-					heights.Add (relCo.y - 1);
-					heights.Add (relCo.y + 1);
+					checkGotAContainingRange = true;
+					if (relCo.y == rOD.start) {
+						rOD.start ++;	
+						rOD.range--; // corner case: range now zero: (check for this later)
+					} else if (relCo.y == rOD.extentMinusOne() ) {
+						rOD.range--;
+					} else {
+						int newBelowRange = relCo.y - 1 + 1 - rOD.start;
+						Range1D newAboveRange = new Range1D(relCo.y + 1, rOD.range - newBelowRange - 1);
+						rOD.range = newBelowRange;
+						heights.Insert(heightsIndex + 1, newAboveRange);
+					}
+					
+					if (rOD.range == 0) // no more blocks here
+					{
+						heights.RemoveAt(heightsIndex);	
+					}
+					else
+					{
+						// need to put back???
+						heights[heightsIndex] = rOD;
+					}
+					
+					break;
 				}
 			}
-			return;
+			
+			if (!checkGotAContainingRange)
+			{
+				throw new Exception("confusing: we didn't find the height range where an air block was being added");
+			}
 		}
-
-		int i = 0;
-		while (i < heights.Count) {
-			if (heights [i] > relCo.y)
-				break;
-			i++;
-		}
-
-
-		if (isAiryBlock) 
+		else
 		{
-			if (i == 0) {
-				if (heights [i] == relCo.y + 1 && heights [i + 1] == relCo.y + 1) {
-					heights [i] = relCo.y;
-					return;
+			
+			for (; heightsIndex < heights.Count ; ++heightsIndex)
+			{
+				rOD = heights[heightsIndex];
+				if (rOD.isOneAboveRange(relCo.y) )
+				{
+					rOD.range++;
+					
+					//is there another range just above relCo y?
+					if (heightsIndex < heights.Count - 1)
+					{
+						Range1D nextRangeAbove = heights[heightsIndex + 1];
+						if (nextRangeAbove.isOneBelowStart(relCo.y))
+						{
+							//combine above and below
+							rOD.range += nextRangeAbove.range;
+							heights.RemoveAt(heightsIndex + 1);
+						}
+					}
+					
+					heights[heightsIndex] = rOD;
+										
+					break;
+					
 				}
-			}
-
-			//CONNECTED TWO AIR COLUMNS?
-			if (i > 0) {
-				if (heights [i] == relCo.y + 1 && heights [i - 1] == relCo.y - 1) {
-					heights.RemoveAt (i - 1);
-					heights.RemoveAt (i - 1);
-					return;
+				else if (rOD.isOneBelowStart(relCo.y)) 
+				{
+					rOD.start--;
+					rOD.range++;
+					heights[heightsIndex] = rOD;
+										
+					break;
+					// we already checked if the relCo y was one above the previous range (if it existed)
 				}
-			}
-
-			if (heights[i] == relCo.y + 1) {
-				heights [i] = relCo.y;
-				return;
-			}
-			if (heights[i -1] == relCo.y - 1) {
-				heights [i - 1] = relCo.y;
-				return;
-			}
-
-			//MADE A GAP IN A SOLID COLUMN
-			heights.Insert (i - 1, relCo.y);
-			heights.Insert (i - 1, relCo.y);
-		} 
-		else // SOLID BLOCK
-		{
-			if (i > 1) //SURELY IT IS, UNLESS HEIGHTS IS EMPTY! (WE KNOW IT'S NOT EQ. TO 1 AT THIS PT)
-			{ 
-				//FILLED A GAP TO MAKE A SOLID COLUMN?
-				if (heights[i - 1] == relCo.y && heights[i -2] == relCo.y) {
-					heights.RemoveAt (i - 2);
-					heights.RemoveAt (i - 2);
-					return;
+				else if (rOD.extentMinusOne() < relCo.y) // more than one block above a height range (already know its not directly above)
+				{
+					// two cases: 
+					//1. there's another range in the list: 
+					//		a. relco y is one below that range (we are jumping the gun): continue
+					//		b. relco y is greater than or eq. to the next range's start (we are jumping the gun): continue
+					//		(else c. relco y is more than one below: see case two) 
+					//2. we didn't jump the gun: whether or not there's a range above, 
+					// this block has no blocks one above or below
+					// add it at h index + 1
+					
+					if (heightsIndex < heights.Count - 1)
+					{
+						Range1D nextRangeAbove = heights[heightsIndex + 1];
+						if (relCo.y >= nextRangeAbove.start - 1) // cases 1a and 1b
+						{
+							continue;
+						}
+					}
+					
+					//case 2
+					Range1D rangeForRelCoY = new Range1D(relCo.y, 1);
+					heights.Insert(heightsIndex + 1, rangeForRelCoY);
+															
+					break;
 				}
-
-				if (heights[i - 1] == relCo.y) {
-					heights [i - 1] += 1;
-					return;
-				}
-
-				if (heights[i - 2] == relCo.y) {
-					heights [i - 2] += 1;
-					return;
-				}
-
-				//BLOCK WAS INSERTED INTO AN AIR COLUMN
-				heights.Insert (i, relCo.y + 1);
-				heights.Insert (i, relCo.y - 1);
-
-				// WEIRD CASE: FILLED A GAP TO MAKE A COLUMN THAT NOW SPANS 0 TO WORLD MAX HEIGHT (HEIGHT[0] == MAX HEIGHT??)
+				
+				if (rOD.contains(relCo.y) )
+					throw new Exception("confusing: adding a block to an already solid area??");
+				
 			}
 		}
+		heightMap [relCo.x * patchDimensions.x + relCo.z] = heights;
 	}
+	
 
 	void bug(string str) {
 		UnityEngine.Debug.Log (str);
 	}
 
 	#region Surface Maps
-
-	public List<int>[] ySurfaceMapForChunk(Chunk chunk) 
+	
+	public List<Range1D>[] heightMapForChunk(Chunk chunk) 
 	{
-		List<List<int>> retList = new List<List<int>> ();
+		List<List<Range1D>> retList = new List<List<Range1D>> ();
 		Coord patchRel = patchRelativeBlockCoordForChunkCoord (chunk.chunkCoord);
 
 		int startIndex = patchRel.x * patchDimensions.x + patchRel.z;
@@ -419,11 +469,31 @@ public class NoisePatch : ThreadedJob
 		for(; i < CHUNKLENGTH; ++i) 
 		{
 			int startRange = startIndex + patchDimensions.x * i;
-			retList.AddRange ( ySurfaceMap.Skip(startRange).Take(CHUNKLENGTH));
+			retList.AddRange ( heightMap.Skip(startRange).Take(CHUNKLENGTH));
 		}
-
+		
+		List<Range1D> test = retList[0];
+	
 		return retList.ToArray ();
 	}
+	
+//	public List<int>[] ySurfaceMapForChunk(Chunk chunk) 
+//	{
+//		List<List<int>> retList = new List<List<int>> ();
+//		Coord patchRel = patchRelativeBlockCoordForChunkCoord (chunk.chunkCoord);
+//
+//		int startIndex = patchRel.x * patchDimensions.x + patchRel.z;
+//		int i = 0;
+//		for(; i < CHUNKLENGTH; ++i) 
+//		{
+//			int startRange = startIndex + patchDimensions.x * i;
+//			retList.AddRange ( ySurfaceMap.Skip(startRange).Take(CHUNKLENGTH));
+//		}
+//
+//		return retList.ToArray ();
+//	}
+	
+	
 
 	#endregion
 
@@ -523,6 +593,10 @@ public class NoisePatch : ThreadedJob
 		
 		BiomeInputs biomeInputs = biomeInputsAtCoord(0,0);
 		
+		//height map 2.0
+		int[,] heightMapStarts = new int[patchDimensions.x, patchDimensions.z];
+		int[,] heightMapEnds = new int[patchDimensions.x, patchDimensions.z];
+		
 		int xx = x_start;
 		for (; xx < x_end ; xx++ ) 
 		{
@@ -580,19 +654,52 @@ public class NoisePatch : ThreadedJob
 					}
 
 					curBlock = blocks [xx, yy, zz];
-
-					// Y SURFACE MAP
-					if (yy > 0) {
-						prevYBlock = blocks [xx, yy - 1, zz];
-						if (prevYBlock.type != curBlock.type) {
-							if (curBlock.type == BlockType.Air) {
-								yHeights.Add (yy);
-							} 
-							else if (prevYBlock.type == BlockType.Air) {
-								yHeights.Add (yy - 1);
+					
+					// HEIGHT MAP 2.0
+				
+					if (yy == 0 && curBlock.type != BlockType.Air) {
+						heightMapStarts[xx,zz] = yy;
+					} else {
+						prevYBlock = blocks[xx, yy - 1, zz];
+						if (prevYBlock.type != curBlock.type) 
+						{
+							if (curBlock.type == BlockType.Air) { // end of a solid stack of blocks
+								int stackHeight = (yy - 1) + 1 - heightMapStarts[xx,zz];
+								Range1D range_ = new Range1D(heightMapStarts[xx,zz], stackHeight);
+								
+								List<Range1D> currentHeights = heightMap[xx * patchDimensions.x + zz];
+								if (currentHeights == null)
+								{	
+//									bug ("got cur heights null. The range range was: " + range_.range);
+									
+									currentHeights = new List<Range1D>();
+								}
+								
+								currentHeights.Add(range_);
+								heightMap[xx * patchDimensions.x + zz] = currentHeights;
+								
+							}
+							else if (prevYBlock.type == BlockType.Air) { // start of a solid stack of blocks
+								heightMapStarts[xx,zz] = yy;
 							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
 						}
+						
 					}
+				
+					// HEIGHT MAP 2.0 END
+
+					// Y SURFACE MAP
+//					if (yy > 0) {
+//						prevYBlock = blocks [xx, yy - 1, zz];
+//						if (prevYBlock.type != curBlock.type) {
+//							if (curBlock.type == BlockType.Air) {
+//								yHeights.Add (yy);
+//							}
+//							else if (prevYBlock.type == BlockType.Air) {
+//								yHeights.Add (yy - 1);
+//							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
+//						}
+//					}
 
 				} // end for yy
 				if (yHeights.Count == 0)

@@ -27,10 +27,77 @@ public struct Range1D
 {
 	public int start, range;
 	
+	public bool backScratchedX, backScratchedZ;
+	//TODO: move the above accounting variables to another struct
+	//that owns a range1d——and replace a bunch of code so that it deals with this new struct
+	
 	public Range1D(int _start, int _range) 
 	{
 		start = _start; range = _range;		
+		backScratchedX = false;
+		backScratchedZ = false;
 	}
+	
+	public int extent() {
+		return this.start + this.range;
+	}
+	
+	public int extentMinusOne() {
+		return this.extent() - 1;
+	}
+	
+	public static Range1D theErsatzNullRange() {
+		return new Range1D(-999123, -9999999);
+	}
+	
+	public static bool Equal(Range1D aa, Range1D bb) {
+		return (aa.start == bb.start && aa.range == bb.range);	
+	}
+	
+	public bool contains(int index) {
+		return index >= this.start && index < this.extent();	
+	}
+		
+	public bool isOneBelowStart(int index) {
+		return index == this.start - 1;
+	}
+	
+	public bool isOneAboveRange(int index) {
+		return this.extent() == index;	
+	}
+	
+	public string toString() {
+		return "Range1D->start: " + this.start + " range: " + this.range;	
+	}
+	
+	public static Range1D Copy(Range1D copyMe) {
+		return new Range1D(copyMe.start, copyMe.range);	
+	}
+	// set funcs.
+	
+	public Range1D subRangeAboveRange(Range1D excluder) {
+		
+		return subRangeAbove(excluder.extentMinusOne());
+	}
+	
+	public Range1D subRangeAbove(int level) {
+		
+		int newRange = this.extent() - level - 1;
+		if (newRange <= 0)
+			return Range1D.theErsatzNullRange();
+		
+		return new Range1D(level + 1, newRange);
+	}
+	
+	public Range1D subRangeBelow(int level) {
+		if (level <= this.start)
+			return Range1D.theErsatzNullRange();
+		
+		return new Range1D(this.start, level - this.start);
+	}
+	
+	
+	
 }
 
 [Serializable]

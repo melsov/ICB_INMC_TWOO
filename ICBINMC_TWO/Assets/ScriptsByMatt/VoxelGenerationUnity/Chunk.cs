@@ -69,7 +69,7 @@ public class Chunk : ThreadedJob
 
 	private int random_new_chunk_color_int_test;
 
-	private static int[] m_meshGenPhaseOneDirections = new int[] {0, 1, 4, 5}; // (Direction enum)
+	private static int[] m_meshGenPhaseOneDirections = new int[] {}; // {1, 4, 5}; // {0, 1, 4, 5}; // (Direction enum)
 
 	public Chunk()
 	{
@@ -491,50 +491,292 @@ public class Chunk : ThreadedJob
 
 		calculatedMeshAlready = true;
 	}
-
-
+	
 	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
 	{
-		List<int>[] ySurfaceMap = m_noisePatch.ySurfaceMapForChunk (this);
-
-		List<int> heights;
+//		List<int>[] ySurfaceMap = m_noisePatch.ySurfaceMapForChunk (this);
+		List<Range1D>[] ySurfaceMap = m_noisePatch.heightMapForChunk (this);
+		
+		List<Range1D> heights;
 
 		int xx = 0;
 		for (; xx < CHLEN; ++xx) {
 			int zz = 0;
 			for (; zz < CHLEN; ++zz) {
-				int height_index = 0;
+//				int height_index = 0;
 				heights = ySurfaceMap [xx * CHLEN + zz];
+				
+				if (heights == null)
+					throw new Exception("in add y faces heights was Null");
+//				else if (heights.Length == 0)
+//					throw new Exception("in add y faces heights was zero");
+				
 				if (heights != null) {
-					foreach (int hh in heights) 
+					foreach (Range1D h_range in heights) 
 					{
 						#if TESTRENDER
 						if (height_index == heights.Count - 1)
 							break;
 						#endif
-//						bug ("adding some verts?");
-						int targetY = hh + 1;
-						Direction dir = Direction.ypos;
-						if (height_index % 2 == 0)
+						
+						ChunkIndex targetBlockIndex;
+						Block b;
+						// deal with the start heights
+						if (h_range.start != 0) //don't draw below bedrock
 						{
-							targetY = hh - 1;
-							dir = Direction.yneg;
+							targetBlockIndex = new ChunkIndex(xx, h_range.start, zz);	
+							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, h_range.start, zz));
+							addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
+							starting_tri_index += 4;
 						}
-
-						ChunkIndex targetBlockIndex = new ChunkIndex (xx, targetY, zz);
-
-						Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, targetY, zz));
-
-						addYFaceAtChunkIndex (targetBlockIndex, b.type, dir, starting_tri_index);
-
-						height_index++;
+						
+						targetBlockIndex = new ChunkIndex(xx, h_range.extentMinusOne() , zz);	
+						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, h_range.extentMinusOne(), zz));
+						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
 						starting_tri_index += 4;
+						
+						// DRAWING X AND Z TOO!
+						
+						// the rules: non x = (0|CHLEN - 1) or z == (0|CHLEN - 1) ranges only draw the x and z faces on their x and z positive sides
+						// they take care of these x and z faces even when they are really attached to the column ahead of them (i.e. next column is higher)
+						// (remember possible floating columns by the way--or stalagmites next to stalagmites)
+						
+						// x,z == CHLEN - 1 ranges only draw the ranges below (may have to resort to rote block check by block check for this--since we don't have a handy way of getting an adjacent npatch's heights list...although how hard would it be...that can be a TODO maybe)
+						// and also only the x,z pos faces
+						
+						// x,z == 0 ranges deal with pos faces just like all other ranges do. 
+						// they also only draw the ranges below (i.e. below there extents) for their neg faces
+						
+						// ------ OR . (alt rules) -----
+						
+						// all ranges always draw only their x,z pos faces <--no, actually all four directions!
+						// except we want to catch it when there's a face that's not overlapped by any other range.
+						// struct can have two booleans: backRubbedX--backRubbedZ (easy!)
+						// chunks ask noisepatchs for ranges at the chunk limits
+						// noise patches just deal with it at the noise patch limit...
+						
+						
+						//XPOS
+						List<Range1D> adjRanges;
+						if (xx == CHLEN - 1) {
+							adjRanges = m_noisePatch.heightsListAtChunkCoordOffset(this.chunkCoord, new Coord(xx + 1, 0, zz));
+						} else {
+							adjRanges = ySurfaceMap[(xx + 1) * CHLEN + zz];
+						}
+						
+						List<Range1D> exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+						addMeshDataForExposedRanges(exposedRanges, Direction.xneg, ref starting_tri_index, xx, zz);
+						
+						//ZPOS
+						if (zz == CHLEN - 1) {
+							adjRanges = m_noisePatch.heightsListAtChunkCoordOffset(this.chunkCoord, new Coord(xx, 0, zz + 1));
+						} else {
+							adjRanges = ySurfaceMap[xx * CHLEN + zz + 1];
+						}
+						
+						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+						addMeshDataForExposedRanges(exposedRanges, Direction.zneg, ref starting_tri_index, xx, zz);
+						
+						//ZPOS
+						if (zz == CHLEN - 1) {
+							adjRanges = m_noisePatch.heightsListAtChunkCoordOffset(this.chunkCoord, new Coord(xx, 0, zz + 1));
+						} else {
+							adjRanges = ySurfaceMap[xx * CHLEN + zz + 1];
+						}
+						
+						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+						addMeshDataForExposedRanges(exposedRanges, Direction.zneg, ref starting_tri_index, xx, zz);
+						
+						//XNEG
+						if (xx == 0) {
+							adjRanges = m_noisePatch.heightsListAtChunkCoordOffset(this.chunkCoord, new Coord(- 1, 0, zz));
+						} else {
+							adjRanges = ySurfaceMap[(xx - 1) * CHLEN + zz];
+						}
+						
+						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+						addMeshDataForExposedRanges(exposedRanges, Direction.xpos, ref starting_tri_index, xx, zz);
+						
+						//ZNEG
+						if (zz == 0) {
+							adjRanges = m_noisePatch.heightsListAtChunkCoordOffset(this.chunkCoord, new Coord(xx, 0, -1));
+						} else {
+							adjRanges = ySurfaceMap[xx * CHLEN + zz - 1];
+						}
+						
+						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+						addMeshDataForExposedRanges(exposedRanges, Direction.zpos, ref starting_tri_index, xx, zz);
+						
+						
+//						foreach(Range1D rng in exposedRangesXPos)
+//						{
+//							int blockY = rng.start;
+//														
+//							while(blockY < rng.extent()) {
+//								targetBlockIndex = new ChunkIndex(xx, blockY, zz);
+//								
+//								if (blockY == Range1D.theErsatzNullRange().start)
+//									throw new Exception ("this range was ersatz nullish " + rng.toString());
+//								
+//								b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, blockY, zz));
+//								addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.xneg, starting_tri_index);
+//								starting_tri_index += 4;
+//								
+//								blockY++;	
+//							}
+//						}
+						
+						
+						// COMBINE GEOM?? (USING YET ANOTHER SET OF LISTS.)
+						// have an array of CHLEN lists per each dimension.
+						// come across a face column that you could add to an adjacent/same-type/flush face.
+						// add it (as part of some custom collection obj??–-minimesh) 
+						// each mini-mesh holds the verts, indices and uv coords that it needs
+						// also, in the shader itself, just draw the texture based on the uv
+						// coord of a pixel at 0?? (somehow give the shader a hint about the offset)
+						// then hardcode the tile size...and hard code the width of a block
+						
+						
+						// END DRAWING X AND Z TOO
 					}
 				}
 
 			}
 		}
 	}
+	
+	private void addMeshDataForExposedRanges(List<Range1D> exposedRanges, Direction camFacingDir, ref int starting_tri_i, int xx, int zz)
+	{
+		ChunkIndex targetBlockIndex;
+		foreach(Range1D rng in exposedRanges)
+		{
+			int blockY = rng.start;
+										
+			while(blockY < rng.extent()) {
+				targetBlockIndex = new ChunkIndex(xx, blockY, zz);
+				
+				if (blockY == Range1D.theErsatzNullRange().start)
+					throw new Exception ("this range was ersatz nullish " + rng.toString());
+				
+				Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, blockY, zz));
+				addYFaceAtChunkIndex(targetBlockIndex, b.type, camFacingDir, starting_tri_i);
+				starting_tri_i += 4;
+				
+				blockY++;	
+			}
+		}
+	}
+	
+	private List<Range1D> exposedRangesWithinRange(Range1D _range, List<Range1D> adjacentRanges)
+	{
+		return exposedRangesWithinRange(_range, adjacentRanges, false);
+	}
+	
+	private List<Range1D> exposedRangesWithinRange(Range1D _range, List<Range1D> adjacentRanges, bool debug)
+	{
+		
+		// (assume adjacents ranges is in height order)
+		// go through adjRanges. 
+		// find any non-overlap below the start of the first adj range
+		// add this as a new range (the non-overlapped piece below) to a return list of ranges
+		
+		// set range to now be the range that excludes the overlapped part and everything below (i.e. new start now = adj range's extent
+		// i.e. take what's still above this adj range.)
+		// but just keep the same if there was no overlap.
+		
+		// if there was nothing above the extent: break.
+		// else repeat for the next
+		
+		// also, yo. did we find that the start of the adj. was above? make sure we add the remainder
+		List<Range1D> nonOverlappingRanges = new List<Range1D>();
+		
+		if (adjacentRanges == null)
+			return nonOverlappingRanges;
+		
+		Range1D remainderRange = _range;
+		
+		foreach(Range1D adjacentRange in adjacentRanges)
+		{
+			// get the section that's entirely below adj range
+			Range1D belowAdj = remainderRange.subRangeBelow(adjacentRange.start);
+			
+			// legit below range?
+			if (!Range1D.Equal(belowAdj, Range1D.theErsatzNullRange()) )
+			{
+//				if (debug)
+//					bug ("the range below that we are adding was: " + belowAdj.toString());
+				if (belowAdj.start == Range1D.theErsatzNullRange().start )
+					throw new Exception ("range is funky but we are adding it now" + belowAdj.toString() + " adj range was: " + adjacentRange.toString() + " the orig range was " + _range.toString());
+				
+				nonOverlappingRanges.Add(belowAdj);
+			}
+			
+			remainderRange = remainderRange.subRangeAboveRange(adjacentRange);
+			
+			// no hope of finding more ranges?
+			if (adjacentRange.extentMinusOne() >= remainderRange.extentMinusOne())
+				break;
+//			if (belowAdj.start >= remainderRange.extentMinusOne())
+//				break;
+			
+			
+		}
+		
+		if (!Range1D.Equal(remainderRange, Range1D.theErsatzNullRange()) )
+		{
+			if (debug)
+				bug ("adding theh last remainder range: " + remainderRange.toString());
+			if (remainderRange.start == Range1D.theErsatzNullRange().start )
+					throw new Exception ("remainder range is funky but we are adding iti now" + remainderRange.toString());
+			nonOverlappingRanges.Add(remainderRange);
+		}
+			
+		return nonOverlappingRanges;
+	}
+	
+
+//	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
+//	{
+//		List<int>[] ySurfaceMap = m_noisePatch.ySurfaceMapForChunk (this);
+//
+//		List<int> heights;
+//
+//		int xx = 0;
+//		for (; xx < CHLEN; ++xx) {
+//			int zz = 0;
+//			for (; zz < CHLEN; ++zz) {
+//				int height_index = 0;
+//				heights = ySurfaceMap [xx * CHLEN + zz];
+//				if (heights != null) {
+//					foreach (int hh in heights) 
+//					{
+//						#if TESTRENDER
+//						if (height_index == heights.Count - 1)
+//							break;
+//						#endif
+////						bug ("adding some verts?");
+//						int targetY = hh + 1;
+//						Direction dir = Direction.ypos;
+//						if (height_index % 2 == 0)
+//						{
+//							targetY = hh - 1;
+//							dir = Direction.yneg;
+//						}
+//
+//						ChunkIndex targetBlockIndex = new ChunkIndex (xx, targetY, zz);
+//
+//						Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, targetY, zz));
+//
+//						addYFaceAtChunkIndex (targetBlockIndex, b.type, dir, starting_tri_index);
+//
+//						height_index++;
+//						starting_tri_index += 4;
+//					}
+//				}
+//
+//			}
+//		}
+//	}
 
 	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index)
 	{
@@ -716,5 +958,7 @@ public class Chunk : ThreadedJob
 	void bug(string str) {
 		Debug.Log (str);
 	}
+	
+	
 
 }
