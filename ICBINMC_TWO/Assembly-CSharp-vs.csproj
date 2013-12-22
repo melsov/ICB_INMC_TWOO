@@ -96,6 +96,8 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\noise2d.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\SimplexNoise\Noise.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structs.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceAggregator.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceSet.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Builder\IBuilderFilter.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Builder\NoiseMap.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Builder\NoiseMapBuilder.cs" />

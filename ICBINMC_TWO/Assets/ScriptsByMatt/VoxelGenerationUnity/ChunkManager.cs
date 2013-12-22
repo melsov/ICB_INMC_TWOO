@@ -892,10 +892,10 @@ public class ChunkManager : MonoBehaviour
 				// pizza chunks
 				int cameraPizzaAngle = playerCameraAngleToPizzaAngle();
 				addToCreateTheseChunksWithDistanceFromPlayer(2, cameraPizzaAngle);
-//				addToCreateTheseChunksWithDistanceFromPlayer(3, cameraPizzaAngle);
+				addToCreateTheseChunksWithDistanceFromPlayer(3, cameraPizzaAngle);
 				
 			}
-			yield return new WaitForSeconds (.2f);
+			yield return new WaitForSeconds (.08f);
 		}
 
 	}
@@ -1555,7 +1555,7 @@ public class ChunkManager : MonoBehaviour
 //					yield return new WaitForSeconds (.05f);
 //				}
 			}
-			yield return new WaitForSeconds (.1f);
+			yield return null; // new WaitForSeconds (.1f);
 		}
 	}
 
@@ -1947,14 +1947,14 @@ public class ChunkManager : MonoBehaviour
 			times++;
 		}
 		times = 0;
-		foreach (NoiseCoord ncoord in noiseCoordsSurroundingNoiseCoord(initialNoiseCoord)) 
-		{
-//			if (!blocks.noisePatches.ContainsKey (ncoord))
-			makeNewAndSetupPatchAtNoiseCoordMainThread (ncoord);
-			if (times > 1)
-				break; //test???
-			times++; //test
-		}
+//		foreach (NoiseCoord ncoord in noiseCoordsSurroundingNoiseCoord(initialNoiseCoord)) 
+//		{
+////			if (!blocks.noisePatches.ContainsKey (ncoord))
+//			makeNewAndSetupPatchAtNoiseCoordMainThread (ncoord);
+//			if (times > 1)
+//				break; //test???
+//			times++; //test
+//		}
 
 		#if TERRAIN_TEST
 		terrainTex = blocks.textureForTerrainAtXEqualsZero();

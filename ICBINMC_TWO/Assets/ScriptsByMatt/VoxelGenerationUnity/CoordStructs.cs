@@ -80,7 +80,20 @@ public struct Range1D
 		return subRangeAbove(excluder.extentMinusOne());
 	}
 	
+	//TODO: fix sub range so it only can return a real sub range:
+	// this func. really gives the area above the level.
 	public Range1D subRangeAbove(int level) {
+		if (level <= this.start)
+			return this;
+		
+		int newRange = this.extentMinusOne() - level;
+		if (newRange <= 0)
+			return Range1D.theErsatzNullRange();
+		
+		return new Range1D(level + 1, newRange);
+	}
+	
+	public Range1D setRangeStartTo(int level) {
 		
 		int newRange = this.extent() - level - 1;
 		if (newRange <= 0)
@@ -96,7 +109,21 @@ public struct Range1D
 		return new Range1D(this.start, level - this.start);
 	}
 	
+	public Range1D extendRangeByOne() {
+		return new Range1D(this.start, this.range + 1);
+	}	
 	
+	public Range1D subtractOneFromStart() {
+		return this.adjustStartBy(-1);
+	}
+	
+	public Range1D adjustStartBy(int adjustBy) {
+		return new Range1D(this.start + adjustBy, this.range - adjustBy);	
+	}
+	
+	public Range1D extendRangeToInclude(Range1D extender) {
+		return new Range1D(this.start, extender.extentMinusOne() - this.start);	
+	}
 	
 }
 
@@ -318,6 +345,18 @@ public struct Coord
 
 	public static int Volume(Coord cc) {
 		return (cc.x * cc.y * cc.z);
+	}
+	
+	public Coord xMinusOne() {
+		return new Coord(this.x - 1, this.y, this.z);
+	}
+	
+	public Coord yMinusOne() {
+		return new Coord(this.x, this.y - 1, this.z);
+	}
+	
+	public Coord zMinusOne() {
+		return new Coord(this.x, this.y, this.z - 1);
 	}
 }
 

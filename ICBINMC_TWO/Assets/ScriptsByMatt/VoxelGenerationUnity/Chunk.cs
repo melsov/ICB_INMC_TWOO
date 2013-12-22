@@ -331,6 +331,11 @@ public class Chunk : ThreadedJob
 		addYFaces (CHLEN, triangles_index); //want
 #else
 
+				
+		// old approach...
+		/* 
+		 * 
+		 
 		noNeedToRenderFlag = true;
 
 		int iterCount = 0;
@@ -477,6 +482,8 @@ public class Chunk : ThreadedJob
 				}
 			}
 		}
+		
+		*/
 
 		// y Face approach
 		addYFaces (CHLEN, triangles_index); //want
@@ -518,6 +525,23 @@ public class Chunk : ThreadedJob
 						if (height_index == heights.Count - 1)
 							break;
 						#endif
+						
+						//COMBINE GEOM (MORE THOUGHTS)
+						// every level has a geometry aggregator
+						// might be better to aggregate in the noise patch?
+						// then we'd have to edit when we broke blocks?
+						
+						// one way or another...
+						// let's say we figure out how to render non-rectangular shapes
+						// could do this:
+						// the aggregator master collects sets of adjacent-same-type faces
+						// given an xz coord, go back by x - 1 and check
+						// if there's a adjacent set there.
+						// how do we do the look up?
+						// a two-d array of ints [chlen, chlen] in size
+						// the int (minus one) == the index in an aggregators list of the proper face set.
+						// if there's already a face set at that next door index, add the current coord to it
+						// else make a new one there...
 						
 						ChunkIndex targetBlockIndex;
 						Block b;
@@ -606,26 +630,7 @@ public class Chunk : ThreadedJob
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 						addMeshDataForExposedRanges(exposedRanges, Direction.zpos, ref starting_tri_index, xx, zz);
-						
-						
-//						foreach(Range1D rng in exposedRangesXPos)
-//						{
-//							int blockY = rng.start;
-//														
-//							while(blockY < rng.extent()) {
-//								targetBlockIndex = new ChunkIndex(xx, blockY, zz);
-//								
-//								if (blockY == Range1D.theErsatzNullRange().start)
-//									throw new Exception ("this range was ersatz nullish " + rng.toString());
-//								
-//								b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, blockY, zz));
-//								addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.xneg, starting_tri_index);
-//								starting_tri_index += 4;
-//								
-//								blockY++;	
-//							}
-//						}
-						
+
 						
 						// COMBINE GEOM?? (USING YET ANOTHER SET OF LISTS.)
 						// have an array of CHLEN lists per each dimension.
