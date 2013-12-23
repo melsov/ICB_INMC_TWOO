@@ -54,6 +54,10 @@ public struct Range1D
 		return (aa.start == bb.start && aa.range == bb.range);	
 	}
 	
+	public bool isErsatzNull() {
+		return Range1D.Equal(this, Range1D.theErsatzNullRange() );	
+	}
+	
 	public bool contains(int index) {
 		return index >= this.start && index < this.extent();	
 	}
@@ -123,6 +127,23 @@ public struct Range1D
 	
 	public Range1D extendRangeToInclude(Range1D extender) {
 		return new Range1D(this.start, extender.extentMinusOne() - this.start);	
+	}
+	
+	public static bool RangesIntersect(Range1D raa, Range1D rbb)
+	{
+		return !(Range1D.IntersectingRange(raa, rbb).isErsatzNull() );
+	}
+	
+	public static Range1D IntersectingRange(Range1D raa, Range1D rbb)
+	{
+		int interExtent = raa.extent() < rbb.extent() ? raa.extent() : rbb.extent();
+		int interStart = raa.start > rbb.start ? raa.start : rbb.start;
+		
+		if (interStart >= interExtent)
+			return Range1D.theErsatzNullRange();
+		
+		return new Range1D(interStart, interExtent - interStart);
+//		int extentDif = raa.e
 	}
 	
 }
@@ -673,6 +694,14 @@ public struct ChunkIndex
 		y = (int)d.y;
 		z = (int)d.z;
 	}
+	
+	public ChunkIndex(Coord d) {
+		x = (int)d.x;
+		y = (int)d.y;
+		z = (int)d.z;
+	}
+	
+	
 
 	public static ChunkIndex ChunkIndexNextToIndex(ChunkIndex ci, Direction dir)
 	{

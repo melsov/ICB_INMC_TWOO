@@ -1,4 +1,5 @@
-﻿//#define FLAT
+﻿//#define FLAT_TOO
+//#define FLAT
 
 using UnityEngine;
 using System.Collections;
@@ -603,9 +604,15 @@ public class NoisePatch : ThreadedJob
 			int zz = z_start;
 			for (; zz < z_end; zz++ ) 
 			{
+//				float noise_val = 0.5f; // FLAT TEST get2DNoise(xx, zz);
+			
+#if FLAT_TOO
+				float noise_val = .4f; // get2DNoise(xx, zz);
+				biomeInputs = BiomeInputs.Pasture();
+#else
 				float noise_val = get2DNoise(xx, zz);
 				biomeInputs = biomeInputsAtCoord(xx,zz, biomeInputs);
-
+#endif
 				List<int> yHeights = new List<int> ();
 
 				int yy = y_start; // (int) ccoord.y;
@@ -614,17 +621,23 @@ public class NoisePatch : ThreadedJob
 					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
 					{
 						BlockType btype = BlockType.Air;
-#if FLAT
+
 						if (yy == 16)
 							btype = BlockType.Grass;
-#else
+
 						
 						heightScaler = (float)yy/(float)y_end;
 						
 						m_chunkManager.m_libnoiseNetHandler.Gain3D = 0.26f * (1.2f - heightScaler * heightScaler);
+
+						
+#if FLAT_TOO
+						rmf3DValue = 0.2f;
+#else
 						
 						rmf3DValue = getRMF3DNoise(xx, yy, zz, biomeInputs.caveVerticalFrequency); // * (1f - heightScaler * heightScaler)); 
-
+						
+#endif
 						noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * biomeInputs.hilliness);
 						perturbAmount = (int) (rmf3DValue * patchDimensions.x * biomeInputs.overhangness);
 
@@ -647,7 +660,7 @@ public class NoisePatch : ThreadedJob
 								}
 							}
 						}
-#endif
+
 
 						blocks [xx, yy, zz] = new Block (btype);
 

@@ -1,3 +1,4 @@
+#define FACE_TEST
 #define TEST_LIBNOISENET
 //#define TERRAIN_TEST
 
@@ -1910,6 +1911,11 @@ public class ChunkManager : MonoBehaviour
 	// Use this for initialization
 	void Start () 
 	{
+
+		if (TestRunner.DontRunGame() )
+			return;
+
+
 		m_libnoiseNetHandler = new LibNoiseNetHandler();
 
 		firstNoisePatchDone = false;
@@ -2038,6 +2044,9 @@ public class ChunkManager : MonoBehaviour
 	// Update is called once per frame
 	void Update () 
 	{
+		if (TestRunner.DontRunGame())
+			return;
+	
 //		#if TEST_LIBNOISENET
 //		return;
 //		#endif

@@ -2,112 +2,34 @@
 using System.Collections;
 
 using System.Collections.Generic;
+using System;
 
-public struct CTwo
-{
-	int r, s;
-	
-	public CTwo(int rr, int ss) {
-		r = rr; s = ss;	
-	}
-	
-	public static CTwo CTwoXZFromCoord(Coord co) {
-		return new CTwo(co.x, co.z);	
-	}
-	
-	public string toString() {
-		return " CTwo: r: " + r + " s: " + s;	
-	}
-}
 
-public struct VertexTwo
-{
-	public CTwo coord;
-//	int tri_index;
-	
-	public VertexTwo(CTwo _ctwo) {  //, int _tri_index) {
-		coord = _ctwo;// tri_index = _tri_index;	
-	}
-	
-	public string toString() {
-		return " VertexTwo: coord: " + coord.toString(); // + " tri index: " + tri_index;
-	}
-}
 
-public struct Face
-{
-	// has an xpos and zpos neighbor
-//	Face * xPosNeighbor; //, zPosNeighbor; // these are unsafe (not allowed in this safe code world??)
-	
-	CTwo ctwo;
-	
-	//?? an enum (later an int to be looked at bitwise?) that tells which walls are intact
-	//for now just four bools
-	bool xnegWall, xposWall, znegWall, zposWall;
-	
-	public Face (CTwo _ctwo) {
-//		xPosNeighbor = zPosNeighbor = null;
-		ctwo = _ctwo;
-		xnegWall = xposWall = znegWall = zposWall = true;
-	}
-}
-
-public struct IndexSet
-{
-	public int upperLeft, upperRight, lowerLeft, lowerRight;
-	
-	public IndexSet(int ul, int ur, int ll, int lr) 
-	{
-		upperLeft = ul; upperRight = ur; lowerLeft = ll; lowerRight = lr;	
-	}
-	
-	public static IndexSet theErsatzNullIndexSet() {
-		return new IndexSet(-444, -123, -987554, -33);	
-	}
-}
-
-public struct Strip
-{
-	public Range1D range;
-	public IndexSet indexSet;
-	
-	public Strip(Range1D rr, IndexSet iset) {
-		range = rr; indexSet = iset;
-	}
-	
-	public Strip(Range1D rr) {
-		range = rr; indexSet = IndexSet.theErsatzNullIndexSet();	
-	}
-	
-	public static Strip theErsatzNullStrip() {
-		return new Strip(Range1D.theErsatzNullRange(), IndexSet.theErsatzNullIndexSet() );	
-	}
-	
-	public static bool StripNotNull(Strip ss) {
-		return !Range1D.Equal(ss.range, Range1D.theErsatzNullRange() );	
-	}
-	
-}
-
-public struct GeometrySet
-{
-	public List<int> indices;
-	public List<Vector3> vertices;
-	
-//	public GeometrySet() {
-//		indices = new List<int>();
-//		vertices = new List<Vector3>();
+//public struct Face
+//{
+//	// has an xpos and zpos neighbor
+////	Face * xPosNeighbor; //, zPosNeighbor; // these are unsafe (not allowed in this safe code world??)
+//	
+//	CTwo ctwo;
+//	
+//	//?? an enum (later an int to be looked at bitwise?) that tells which walls are intact
+//	//for now just four bools
+//	bool xnegWall, xposWall, znegWall, zposWall;
+//	
+//	public Face (CTwo _ctwo) {
+////		xPosNeighbor = zPosNeighbor = null;
+//		ctwo = _ctwo;
+//		xnegWall = xposWall = znegWall = zposWall = true;
 //	}
-	
-	public GeometrySet(List<int> ind, List<Vector3> vecs) {
-		indices = ind; vertices = vecs;
-	}
-}
+//}
+
 
 public class FaceSet  
 {
 
 	public BlockType blockType;
+	public Direction blockFaceDirection;
 	
 	private List<Strip>[] stripsArray = new List<Strip>[(int)ChunkManager.CHUNKLENGTH];
 	
@@ -115,20 +37,23 @@ public class FaceSet
 	
 //	private int internalTriIndex = 0;
 	
-	public FaceSet(BlockType _type)
+	public FaceSet(BlockType _type, Direction _dir, Coord initialCoord)
 	{
 		blockType = _type;	
+		blockFaceDirection = _dir;
+		
+		addCoord(initialCoord);
 	}
 	
 	public void addCoord(Coord co)
 	{
-		//...	assume we're dealing with xz faces and z neg is 'up' xpos is 'right'
+		// ADD/ADJUST STRIPS
+		
+		//...	assume we're dealing with xz faces and z neg is 'up' x pos is 'right'
 		int stripsIndex = co.x;
 		int addAtHeight = co.z;
 		
-		List<Strip> strips  = stripsAtIndex(stripsIndex);
-		// JUST ADD STRIPS (OR ADD/ADJUST STRIPS)
-		// MAKE INDICES AND VERTICES LATER
+		List<Strip> strips = stripsAtIndex(stripsIndex);
 		
 		// no strips yet?
 		if (strips.Count == 0)
@@ -144,7 +69,7 @@ public class FaceSet
 			Strip str = strips[i];
 			if 	(str.range.isOneAboveRange(addAtHeight) )
 			{
-				str.range = str.range.extendRangeByOne();
+				str.range.range++; // = str.range.extendRangeByOne();
 				
 				// can we combine with a next range?
 				if (i < strips.Count - 1) {
@@ -162,7 +87,9 @@ public class FaceSet
 			
 			if (str.range.isOneBelowStart(addAtHeight) ) 
 			{	
-				str.range = str.range.subtractOneFromStart();
+//				str.range = str.range.subtractOneFromStart();
+				str.range.start--;
+				str.range.range++;
 				
 				strips[i] = str;
 				break;
@@ -172,16 +99,28 @@ public class FaceSet
 			{
 				Strip newStrip = new Strip(new Range1D(addAtHeight, 1));
 				strips.Add(newStrip);
+				break;
 			}
 		}
 		
 		stripsArray[stripsIndex] = strips; // put it back!
 	}
 	
-	public GeometrySet CalculateGeometry(float verticalHeight) //need param y height...
+	public MeshSet CalculateGeometry(float verticalHeight) //need param y height...
 	{
 		int curTriIndex = 0;
 		int horizontalDim = 0;
+		
+		bool faceIsOnPosSide = ((int) this.blockFaceDirection % 2 == 0);
+		
+		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
+		
+		Vector2 monoUVValue = Chunk.uvOriginForBlockType(this.blockType, this.blockFaceDirection);
+		Vector2 uvURTexDimTest = new Vector2(0.25f, 0f);
+		Vector2 uvLLTexDimTest = new Vector2(0f, .25f);
+		Vector2 uvLRTexDimTest = new Vector2(0.25f, 0.25f);
+		
+		List<Vector2> returnUVS = new List<Vector2>();
 		
 		List<Strip> strips;
 		List<Vector3> rightVertexColumn;
@@ -190,36 +129,60 @@ public class FaceSet
 		List<int> returnTriIndices = new List<int>();
 		List<Vector3> returnVecs = new List<Vector3>();
 		
+		float half_unit = 0.5f;
+		
+		
 		for (; horizontalDim < stripsArray.Length; ++horizontalDim)
 		{
 			rightVertexColumn = new List<Vector3>(); 
 			strips = stripsArray[horizontalDim];
 			
-			for (int i = 0; i < strips.Count ; ++i)
+			float horizontalDimLessHalf = horizontalDim - half_unit;
+			
+			int strips_count = 0;
+			if (strips != null)
+				strips_count = strips.Count; //is continue ok???
+			
+			if (strips_count == 0)
+				bug ("strips count 0 (or null) at h dim: " + horizontalDim);
+			else if (strips_count > 1)
+				bug ("strips count > 1 : " + strips_count + " at h dim: " + horizontalDim);
+			
+			int vertsAddedByStrip = 0;
+			
+			for (int i = 0; i < strips_count ; ++i)
 			{
 				Strip str = strips[i];
-				int curULindex = curTriIndex;
-				int curLLindex = curTriIndex + 1;
-				int curURindex = curTriIndex + 2;
-				int curLRindex = curTriIndex + 3;
+				int curULindex = curTriIndex + i * 2;
+				int curLLindex = curULindex + 1;
+				int curURindex = curTriIndex + strips_count * 2 + i * 2;
+				int curLRindex = curURindex + 1;;
+//				int curURindex = curTriIndex + 2;
+//				int curLRindex = curTriIndex + 3;
 				
 				bool addULVert = true;
 				bool addLLVert = true;
 				
-				if (horizontalDim > 0) 
+				
+#if COMBINE_FLUSH_VERTS
+
+				if (horizontalDim > 0 && stripsArray[horizontalDim - 1] != null) 
 				{
 					// if this strip is flush with the start of any strips in the col to the left...
-					Strip flushWithStartOneLeft = stripFromListWithStartEqualTo(str.range.start, stripsArray[horizontalDim - 1]);
-					if (Strip.StripNotNull(flushWithStartOneLeft))
+					Strip flushWithStartOneLeft = Strip.theErsatzNullStrip();
+					bool gotAStrip = stripFromListWithStartEqualTo(str.range.start, stripsArray[horizontalDim - 1], ref flushWithStartOneLeft);
+					if (gotAStrip) // (Strip.StripNotNull(flushWithStartOneLeft))
 					{
 						curULindex = flushWithStartOneLeft.indexSet.upperRight;
+						curLLindex--;
 						curURindex--;
 						curLRindex--;
 						addULVert = false;
 					}
 					
-					Strip flushWithExtentOneLeft = stripFromListWithExtentEqualTo(str.range.extentMinusOne() , stripsArray[horizontalDim - 1]);
-					if (Strip.StripNotNull(flushWithExtentOneLeft))
+					Strip flushWithExtentOneLeft = Strip.theErsatzNullStrip();
+					gotAStrip =	stripFromListWithExtentEqualTo(str.range.extentMinusOne() , stripsArray[horizontalDim - 1], ref flushWithExtentOneLeft);
+					if (gotAStrip)
 					{
 						curLLindex = flushWithExtentOneLeft.indexSet.lowerRight;
 						curURindex--;
@@ -227,40 +190,49 @@ public class FaceSet
 						addLLVert = false;
 					}
 				}
+#endif
 				
 				if (addULVert) {
-					Vector3 ulVec = new Vector3((float) horizontalDim, verticalHeight, (float)str.range.start);
-//					VertexTwo ulVert = new VertexTwo(new CTwo(horizontalDim, str.range.start));//, curULindex);
+					Vector3 ulVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.start - half_unit);
 					leftVertexColumn.Add(ulVec); //LEFT COLUMN
-					curTriIndex++;
+					vertsAddedByStrip++;
+					returnUVS.Add(monoUVValue);
 				}
 				
 				if (addLLVert) {
-					Vector3 llVec = new Vector3((float) horizontalDim, verticalHeight, (float)str.range.extent());
-//					VertexTwo llVert = new VertexTwo(new CTwo(horizontalDim, str.range.extent()));//, curULindex);
+					Vector3 llVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.extent() - half_unit);
 					leftVertexColumn.Add(llVec); //LEFT COLUMN!!
-					curTriIndex++;
+					vertsAddedByStrip++;
+					returnUVS.Add(monoUVValue + uvLLTexDimTest);
 				}
 				
-				Vector3 urVec = new Vector3((float) horizontalDim + 1, verticalHeight, (float)str.range.start);
-//				VertexTwo urVert = new VertexTwo(new CTwo(horizontalDim + 1, str.range.start));
+				Vector3 urVec = new Vector3((float) horizontalDimLessHalf + 1, verticalHeight, (float)str.range.start - half_unit);
 				rightVertexColumn.Add(urVec);
-				curTriIndex++;
+				vertsAddedByStrip++;
+				returnUVS.Add(monoUVValue + uvURTexDimTest);
 				
-				Vector3 lrVec = new Vector3((float)horizontalDim + 1, verticalHeight, (float)str.range.extent());
-//				VertexTwo lrVert = new VertexTwo(new CTwo(horizontalDim + 1, str.range.extent()));
+				Vector3 lrVec = new Vector3((float)horizontalDimLessHalf + 1, verticalHeight, (float)str.range.extent() - half_unit);
 				rightVertexColumn.Add(lrVec);
-				curTriIndex++;
+				vertsAddedByStrip++;
+				returnUVS.Add(monoUVValue + uvLRTexDimTest);
 				
-				//maybe won't need index sets.
-//				str.indexSet = new IndexSet(curULindex, curURindex, curLLindex, curLRindex);
-//				strips[i] = str;
+				//need to index sets.
+				str.indexSet = new IndexSet(curULindex, curURindex, curLLindex, curLRindex);
+				strips[i] = str;
 				
-				returnTriIndices.Add(curULindex);
-				returnTriIndices.Add(curURindex);
-				returnTriIndices.Add(curLLindex);
-				returnTriIndices.Add(curLRindex);
+				int[] tris;
+				
+				if (faceIsOnPosSide) {
+					tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
+				} else {
+					tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
+				}
+				
+				returnTriIndices.AddRange(tris);
+				
 			}
+			
+			curTriIndex += vertsAddedByStrip;
 			
 //			vertexColumns[horizontalDim] = leftVertexColumn;
 //			vertexColumns[horizontalDim + 1] = rightVertexColumn;
@@ -280,10 +252,9 @@ public class FaceSet
 		}
 		
 		//now maybe just calculate the actual v3 array and the indices....
-		GeometrySet geomset = new GeometrySet();
-		geomset.vertices = returnVecs;
-		geomset.indices = returnTriIndices;
-		return geomset;
+		GeometrySet geomset = new GeometrySet(returnTriIndices, returnVecs );
+		
+		return new MeshSet(geomset, returnUVS);
 		
 	}
 	
@@ -307,20 +278,24 @@ public class FaceSet
 //		return vertexColumns[index];
 //	}
 	
-	private Strip stripFromListWithStartEqualTo(int equalToThis, List<Strip> _strips) {
-		foreach (Strip str in _strips) {
-			if (str.range.start == equalToThis)
-				return str;
-		}
-		return Strip.theErsatzNullStrip();
+	private bool stripFromListWithStartEqualTo(int equalToThis, List<Strip> _strips, ref Strip out_strip) {
+		return stripFromList(equalToThis, _strips, ref out_strip, false);
 	}
 	
-	private Strip stripFromListWithExtentEqualTo(int equalToThis, List<Strip> _strips) {
+	private bool stripFromListWithExtentEqualTo(int equalToThis, List<Strip> _strips, ref Strip out_strip) {
+		return stripFromList(equalToThis, _strips, ref out_strip, true);
+	}
+	
+	private bool stripFromList(int equalToThis, List<Strip> _strips, ref Strip out_strip, bool wantExtent) {
 		foreach (Strip str in _strips) {
-			if (str.range.extentMinusOne() == equalToThis)
-				return str;
+			if ((wantExtent && str.range.extentMinusOne() == equalToThis) || str.range.start == equalToThis)
+			{
+				out_strip = str;
+				return true;
+			}
+			
 		}
-		return Strip.theErsatzNullStrip();
+		return false; // Strip.theErsatzNullStrip();
 	}
 	
 	private List<Strip> stripsAtIndex(int ix) {
@@ -329,9 +304,159 @@ public class FaceSet
 		}
 		return stripsArray[ix];
 	}
+	
+	public void logStripsArray() 
+	{
+		int count = 0;
+		string info = "";
+		foreach(List<Strip> strips in stripsArray)
+		{
+			
+			if (strips != null)
+			{
+				info += "" + strips.Count;
+				
+			
+				foreach(Strip st in strips) {
+	
+					info += "strip: " + st.toString ();
+				}
+				info += "\n";
+			}
+			++count;
+		}	
+		bug (info);
+	}
+	
+	public void checkForIntersectingStrips()
+	{
+		//TODO: this func.
+		//Also, check if there's total coverage in the strips across the CHLEN
+		// and if not where are the gaps?
+	}
+	
+	private void bug(string str) {
+		UnityEngine.Debug.Log(str);	
+	}
 }
 
-
+public class FaceSetTest
+{
+	private List<Vector3> showInGuiVecs = new List<Vector3>();
+	public FaceSetTest()
+	{
+		bug ("BEGIN FACE SET TEST");
+		FaceSet fs = new FaceSet(BlockType.Grass, Direction.ypos, new Coord(0,2,0));
+		
+		Coord[] coords = new Coord[256];
+		for(int i = 0; i < 256 ; ++i)
+		{
+			int z = i % 16;
+			int x = i / 16;
+			coords[i] = new Coord(x, 2, z);
+		}
+		
+		Coord[] other_coords = new Coord[] {
+			new Coord(0, 2, 0),
+			new Coord(0, 2, 1),
+			new Coord(0, 2, 2),
+			new Coord(0, 2, 3),
+			new Coord(0, 2, 4),
+			
+			new Coord(1, 2, 0),
+			new Coord(1, 2, 1),
+			new Coord(1, 2, 2),
+			new Coord(1, 2, 3),
+			new Coord(1, 2, 4),
+			new Coord(1, 2, 5),
+			
+			new Coord(2, 2, 0),
+			new Coord(2, 2, 1),
+			new Coord(2, 2, 2),
+			
+			new Coord(3, 2, 1),
+			new Coord(3, 2, 2),
+			new Coord(3, 2, 3),
+//			
+			new Coord(4, 2, 0),
+			new Coord(4, 2, 1),
+			new Coord(4, 2, 2),
+		};
+		
+		foreach (Coord co in coords) {
+			fs.addCoord(co);	
+		}
+		
+		MeshSet mset = fs.CalculateGeometry(2);
+		
+		fs.logStripsArray();
+		
+		this.logMeshSet(mset);
+		
+		bug ("END FACE SET TEST");
+	}
+	
+	private void logMeshSet( MeshSet mset) 
+	{
+		bug("Mesh set verts");
+		string vstr = "";
+		int jj = 0;
+		foreach(Vector3 vert in mset.geometrySet.vertices) {
+			if (jj % 4 == 0)
+				vstr += "\n";
+			vstr += "[" + vert.x + " , " + vert.z + "]";
+			jj++;
+		}
+		bug (vstr);
+		
+		vstr="";
+		jj = 0;
+		foreach(Vector3 vert in mset.geometrySet.vertices) {
+//			if (jj % 4 == 0)
+			vstr += "*";
+			if (jj % 16 == 0)
+				vstr += "\n";
+			jj++;
+		}
+		bug (vstr);
+		
+		showInGuiVecs.AddRange(mset.geometrySet.vertices);
+		
+		int vertCount = mset.geometrySet.vertices.Count;
+		
+		bug("VertCount: " + vertCount + " verts/indices (INDEX)[x,z]");
+		string indexstr = "";
+		int count = 0;
+		foreach(int ii in mset.geometrySet.indices) {
+			if (count % 6 == 0) 
+				indexstr += "\n";
+//			indexstr += "|" + ii;
+			Vector3 vv = mset.geometrySet.vertices[ii];
+			indexstr += "("+ii+")[" + vv.x + " , " + vv.z + "]";
+			if (ii >= vertCount || ii < 0) {
+				indexstr += "\n out of bounds: ? " + ii + "\n";
+			}
+			++count;
+		}
+//		bug (indexstr);
+	}
+	
+	private void bug(string str) {
+		
+		UnityEngine.Debug.Log(str);
+	}
+	
+//	public void OnGUI() 
+//	{
+//		foreach(Vector3 vv in showInGuiVecs) {
+//			guiBlipAt(vv);	
+//		}
+//	}
+//	
+//	private void guiBlipAt(Vector3 vv) {
+//		GUI.Box (new Rect (vv.x * 10, vv.z * 10 , 10, 10), "*");
+//	}
+}
 
 
 //			int relUpperLeftTriIndex = ++internalTriIndex;

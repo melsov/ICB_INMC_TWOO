@@ -48,6 +48,7 @@
      <Compile Include="Assets\GraveYardCode.cs" />
      <Compile Include="Assets\Materials\ShadersMP\GameClock.cs" />
      <Compile Include="Assets\ScriptsByMatt\Camera-Player\BlockPointer.cs" />
+     <Compile Include="Assets\ScriptsByMatt\Tester\TestRunner.cs" />
      <Compile Include="Assets\ScriptsByMatt\TetraMesh.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Block.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\BlockCollection.cs" />
@@ -193,6 +194,7 @@
      <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.LESSER.txt" />
+     <None Include="Assets\Materials\ShadersMP\BlockTilingAtlas.shader" />
      <None Include="Assets\Materials\ShadersMP\BlockShader.shader" />
  <Reference Include="Library\ScriptAssemblies\Assembly-UnityScript-firstpass">
  <HintPath>Library\ScriptAssemblies\Assembly-UnityScript-firstpass.dll</HintPath>

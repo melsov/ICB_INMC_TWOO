@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-
+using System.Collections.Generic;
 
 
 public struct NeighborChunks
@@ -19,6 +19,104 @@ public struct NeighborChunks
 	}
 }
 
+
+public struct MeshSet
+{
+	public GeometrySet geometrySet;
+	public List<Vector2> uvs;
+	
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs) {
+		this.geometrySet = gs; this.uvs = _uvs;	
+	}
+}
+
+public struct CTwo
+{
+	int r, s;
+	
+	public CTwo(int rr, int ss) {
+		r = rr; s = ss;	
+	}
+	
+	public static CTwo CTwoXZFromCoord(Coord co) {
+		return new CTwo(co.x, co.z);	
+	}
+	
+	public string toString() {
+		return " CTwo: r: " + r + " s: " + s;	
+	}
+}
+
+public struct VertexTwo
+{
+	public CTwo coord;
+//	int tri_index;
+	
+	public VertexTwo(CTwo _ctwo) {  //, int _tri_index) {
+		coord = _ctwo;// tri_index = _tri_index;	
+	}
+	
+	public string toString() {
+		return " VertexTwo: coord: " + coord.toString(); // + " tri index: " + tri_index;
+	}
+}
+
+
+public struct IndexSet
+{
+	public int upperLeft, upperRight, lowerLeft, lowerRight;
+	
+	public IndexSet(int ul, int ur, int ll, int lr) 
+	{
+		upperLeft = ul; upperRight = ur; lowerLeft = ll; lowerRight = lr;	
+	}
+	
+	public static IndexSet theErsatzNullIndexSet() {
+		return new IndexSet(-444, -321, -987554, -33);	
+	}
+}
+
+public struct Strip
+{
+	public Range1D range;
+	public IndexSet indexSet;
+	
+	public Strip(Range1D rr, IndexSet iset) {
+		range = rr; indexSet = iset;
+	}
+	
+	public Strip(Range1D rr) {
+		range = rr; indexSet = IndexSet.theErsatzNullIndexSet();	
+	}
+	
+	public static Strip theErsatzNullStrip() {
+		return new Strip(Range1D.theErsatzNullRange(), IndexSet.theErsatzNullIndexSet() );	
+	}
+	
+	public static bool StripNotNull(Strip ss) {
+		return !Range1D.Equal(ss.range, Range1D.theErsatzNullRange() );	
+	}
+	
+	public string toString() {
+		return "strip with range: " + range.toString();	
+	}
+	
+}
+
+public struct GeometrySet
+{
+	public List<int> indices;
+	public List<Vector3> vertices;
+	
+//	public GeometrySet() {
+//		indices = new List<int>();
+//		vertices = new List<Vector3>();
+//	}
+	
+	public GeometrySet(List<int> ind, List<Vector3> vecs) {
+		indices = ind; vertices = vecs;
+	}
+}
 
 
 public struct BiomeTypeCorners

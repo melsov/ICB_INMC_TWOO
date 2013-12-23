@@ -1,3 +1,5 @@
+#define FACE_AG
+//#define NO_XZ
 //#define ONLY_Y_FACES
 //#define TESTRENDER
 
@@ -25,8 +27,6 @@ using System.Collections.Generic;
 // dvektor == "direction vector"
 // duplicates functionality of 'Coord' and vis-versa...
 using System;
-
-
 
 
 // TODO:
@@ -70,7 +70,9 @@ public class Chunk : ThreadedJob
 	private int random_new_chunk_color_int_test;
 
 	private static int[] m_meshGenPhaseOneDirections = new int[] {}; // {1, 4, 5}; // {0, 1, 4, 5}; // (Direction enum)
-
+	
+	private FaceAggregator[] faceAggregators = new FaceAggregator[CHUNKHEIGHT];
+	
 	public Chunk()
 	{
 		vertices_list = new List<Vector3> ();
@@ -197,9 +199,60 @@ public class Chunk : ThreadedJob
 
 		return new Vector3[] { v0, v1, v2, v3 };
 	}
+	
+	//face aggregator helper
+	public static Vector2 uvOriginForBlockType( BlockType btype, Direction dir)
+	{
+		float tile_length = 0.25f;
+		
+		//want
+		float cX = 0.0f;
+		float cY = 0.0f;
 
+		switch (btype) {
+		case BlockType.Stone:
+			cY = tile_length;
+			cX = tile_length;
+			break;
+		case BlockType.Sand:
+			cX = tile_length * 2;
+			cY = tile_length; //<-- silly // * 2;
+			break;
+		case BlockType.Dirt:
+			cY = tile_length * 3;
+			break;
+		case BlockType.BedRock:
+			cY = tile_length * 2; //silly value at the moment
+			break;
+		default: //GRASS
+			//testing...make geom more visible
+			if (dir == Direction.xpos) 
+			{
+				cX = tile_length;
+			} else if (dir == Direction.xneg) {
+				cX = tile_length; cY = tile_length;
+			} else if (dir == Direction.yneg) {
+				cX = 2 * tile_length; cY = tile_length;
+			} else if (dir == Direction.zneg) {
+				cX = 3 * tile_length; cY = 3 * tile_length;
+			} else if (dir == Direction.zpos) {
+				cY = 3 * tile_length;
+			}
+			//end testing
+//			if (dir != Direction.ypos)
+//				cY = tile_length;
+			break;
+		}
+
+		return new Vector2(cX, cY);
+	}
+	
+	
+	
+	
 	Vector2[] uvCoordsForBlockType( BlockType btype, Direction dir)
 	{
+		//TODO: replace this duplicate code with the texAtlasOrigin func. and then return vector
 		float tile_length = 0.25f;
 //		int tiles_per_row = (int)(1.0f / tile_length);
 //		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
@@ -499,12 +552,46 @@ public class Chunk : ThreadedJob
 		calculatedMeshAlready = true;
 	}
 	
+//	private FaceAggregator faceAggregatorAt(int index, Direction dir) {
+	private FaceAggregator faceAggregatorAt(int index) {
+		
+//		index = (index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 );
+		
+		if(	faceAggregators[index] == null) {
+			faceAggregators[index] = new FaceAggregator();
+		}
+		return faceAggregators[index];
+	}
+	
+//	private void setFaceAggrefatorsAt(FaceAggregator fa, int index) {
+////		index = (index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 );
+////		faceAggregators[(index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 )] = fa;
+//		faceAggregators[index] = fa;
+//	}
+	
+	private static bool IsPosDir(Direction dir) {
+		return (int) dir % 2 == 0;	
+	}
+	
+	private void addCoordToFaceAggregorAtIndex(Coord co, BlockType type, Direction dir) {
+		FaceAggregator fa = faceAggregatorAt(co.y);
+		fa.addFaceAtCoordBlockType(co, type, dir );
+		faceAggregators[co.y] = fa; // put back...
+//		setFaceAggrefatorsAt(fa, co.y);
+	}
+	
+	private void resetFaceAggregatorsArray() {
+		faceAggregators = new FaceAggregator[ CHUNKHEIGHT];	
+	}
+	
 	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
 	{
 //		List<int>[] ySurfaceMap = m_noisePatch.ySurfaceMapForChunk (this);
 		List<Range1D>[] ySurfaceMap = m_noisePatch.heightMapForChunk (this);
 		
 		List<Range1D> heights;
+		
+		resetFaceAggregatorsArray();
 
 		int xx = 0;
 		for (; xx < CHLEN; ++xx) {
@@ -548,16 +635,29 @@ public class Chunk : ThreadedJob
 						// deal with the start heights
 						if (h_range.start != 0) //don't draw below bedrock
 						{
-							targetBlockIndex = new ChunkIndex(xx, h_range.start, zz);	
-							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, h_range.start, zz));
+							Coord blockCoord = new Coord (xx, h_range.start, zz);
+							targetBlockIndex = new ChunkIndex(blockCoord);	
+							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
+							
+#if FACE_AG
+							//face agg
+							addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos); 
+#else						
 							addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
 							starting_tri_index += 4;
+#endif
 						}
 						
-						targetBlockIndex = new ChunkIndex(xx, h_range.extentMinusOne() , zz);	
-						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, h_range.extentMinusOne(), zz));
+						Coord extentBlockCoord = new Coord(xx, h_range.extentMinusOne() , zz);
+						targetBlockIndex = new ChunkIndex (extentBlockCoord) ; //(xx, h_range.extentMinusOne() , zz);	
+						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, extentBlockCoord);
+#if FACE_AG
+						addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);					
+#else
+						
 						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
 						starting_tri_index += 4;
+#endif
 						
 						// DRAWING X AND Z TOO!
 						
@@ -580,6 +680,9 @@ public class Chunk : ThreadedJob
 						// noise patches just deal with it at the noise patch limit...
 						
 						
+						
+#if NO_XZ
+#else
 						//XPOS
 						List<Range1D> adjRanges;
 						if (xx == CHLEN - 1) {
@@ -630,7 +733,7 @@ public class Chunk : ThreadedJob
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 						addMeshDataForExposedRanges(exposedRanges, Direction.zpos, ref starting_tri_index, xx, zz);
-
+#endif
 						
 						// COMBINE GEOM?? (USING YET ANOTHER SET OF LISTS.)
 						// have an array of CHLEN lists per each dimension.
@@ -646,6 +749,37 @@ public class Chunk : ThreadedJob
 					}
 				}
 
+			} // end for zz
+		} // end for xx
+		
+#if FACE_AG
+		addAggregatedFaceGeomToMesh(starting_tri_index);	
+#endif
+		
+	}
+	
+	private void addAggregatedFaceGeomToMesh(int starting_tri_index) 
+	{
+		FaceAggregator fa;
+		for (int i = 0; i < faceAggregators.Length ; ++i)
+		{
+			fa = faceAggregators[i];
+			if (fa != null)
+			{
+				MeshSet mset = fa.getFaceGeometry(i);
+				GeometrySet gset = mset.geometrySet;
+				
+				vertices_list.AddRange(gset.vertices);	
+				
+				for(int j = 0; j < gset.indices.Count; ++j) {
+					gset.indices[j] += starting_tri_index;
+				}
+				
+				triangles_list.AddRange(gset.indices);
+				
+				starting_tri_index += gset.vertices.Count;
+				
+				uvcoords_list.AddRange(mset.uvs);
 			}
 		}
 	}
