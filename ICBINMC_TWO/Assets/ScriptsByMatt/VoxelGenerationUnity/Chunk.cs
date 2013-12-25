@@ -589,7 +589,7 @@ public class Chunk : ThreadedJob
 							adjRanges = ySurfaceMap[(xx - 1) * CHLEN + zz];
 						}
 						
-						//TODO: BUG: maybe something off by one with height maps...
+						//TODO: DONE? BUG: maybe something off by one with height maps...
 						// also TODO: FaceAggs should deal with only one face slice: so the upward faces of level n and downward of n+1
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
