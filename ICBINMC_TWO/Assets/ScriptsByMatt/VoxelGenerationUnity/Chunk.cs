@@ -149,8 +149,13 @@ public class Chunk : ThreadedJob
 //		return m_chunkManager.blockAtChunkCoordOffset (chunkCoord, offset);
 //		return retBlock;
 	}
-
+	
 	Vector3[] faceMesh(Direction d, ChunkIndex ci) // Vector3[] verts, int[] triangles)
+	{
+		return faceMesh(d, ci, 0f);
+	}
+	
+	Vector3[] faceMesh(Direction d, ChunkIndex ci, float extra_height) // Vector3[] verts, int[] triangles)
 	{
 		float x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3;
 
@@ -166,12 +171,14 @@ public class Chunk : ThreadedJob
 
 //		Vector3 f = new Vector3 (0, 0, 0);
 //		Vector3[] ff = new Vector3[] { f, f, f, f, }; //fake
+		
+		Vector3 siz;
 
 		if (d <= Direction.xneg) 
 		{
 			//return ff;
 			x0 = x1 = x2 = x3 = ci.x + shift;
-			y1 = y2 = ci.y + halfunit; // worry about winding with triangle indices, not here... (1,2 always up, 0,3 always down)
+			y1 = y2 = ci.y + halfunit + extra_height; 
 			y0 = y3 = ci.y - halfunit;
 			z0 = z1 = ci.z - halfunit;
 			z2 = z3 = ci.z + halfunit;
@@ -192,16 +199,22 @@ public class Chunk : ThreadedJob
 			z0 = z1 = z2 = z3 = ci.z + shift;
 			x0 = x1 = ci.x + halfunit;
 			x2 = x3 = ci.x - halfunit;
-			y1 = y2 = ci.y + halfunit;
+			y1 = y2 = ci.y + halfunit + extra_height;
 			y0 = y3 = ci.y - halfunit;
 
 		}
-		Vector3 v0 = new Vector3 (x0, y0, z0) * VERTEXSCALE;
-		Vector3 v1 = new Vector3 (x1, y1, z1) * VERTEXSCALE;
-		Vector3 v2 = new Vector3 (x2, y2, z2) * VERTEXSCALE;
-		Vector3 v3 = new Vector3 (x3, y3, z3) * VERTEXSCALE;
+//		Vector3 v0 = new Vector3 (x0, y0, z0) * VERTEXSCALE;
+//		Vector3 v1 = new Vector3 (x1, y1, z1) * VERTEXSCALE;
+//		Vector3 v2 = new Vector3 (x2, y2, z2) * VERTEXSCALE;
+//		Vector3 v3 = new Vector3 (x3, y3, z3) * VERTEXSCALE;
 
-		return new Vector3[] { v0, v1, v2, v3 };
+		return new Vector3[] { 
+				new	Vector3 (x0, y0, z0) * VERTEXSCALE,
+				new Vector3 (x1, y1, z1) * VERTEXSCALE,
+				new Vector3 (x2, y2, z2) * VERTEXSCALE,
+				new Vector3 (x3, y3, z3) * VERTEXSCALE
+		};
+//			v0, v1, v2, v3 };
 	}
 	
 	//face aggregator helper
@@ -649,18 +662,19 @@ public class Chunk : ThreadedJob
 		{
 			int blockY = rng.start;
 										
-			while(blockY < rng.extent()) {
+//			while(blockY < rng.extent()) {
 				targetBlockIndex = new ChunkIndex(xx, blockY, zz);
 				
 				if (blockY == Range1D.theErsatzNullRange().start)
 					throw new Exception ("this range was ersatz nullish " + rng.toString());
 				
 				Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (xx, blockY, zz));
-				addYFaceAtChunkIndex(targetBlockIndex, b.type, camFacingDir, starting_tri_i);
+//			addYFaceAtChunkIndex(targetBlockIndex, b.type, camFacingDir, starting_tri_i); // old way with the while loop (now each range is one quad)
+				addYFaceAtChunkIndex(targetBlockIndex, b.type, camFacingDir, starting_tri_i, rng.range);
 				starting_tri_i += 4;
 				
-				blockY++;	
-			}
+//				blockY++;	
+//			}
 		}
 	}
 	
@@ -797,8 +811,13 @@ public class Chunk : ThreadedJob
 //			}
 //		}
 //	}
-
+	
 	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index)
+	{
+		addYFaceAtChunkIndex(ci, bType, dir, tri_index, 1);
+	}
+	
+	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index, int height)
 	{
 		Vector3[] verts = new Vector3[]{};
 		int[] tris = new int[]{};
@@ -818,7 +837,7 @@ public class Chunk : ThreadedJob
 		for (int ii = 0; ii < tris.Length; ++ii) {
 			tris [ii] += tri_index;
 		}
-		verts = faceMesh (oppositeDir, ci);
+		verts = faceMesh (oppositeDir, ci , (float) (height - 1)); //third param = extra hieght. TODO: change this silly implementation
 		vertices_list.AddRange (verts);
 		// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
 		triangles_list.AddRange (tris);
