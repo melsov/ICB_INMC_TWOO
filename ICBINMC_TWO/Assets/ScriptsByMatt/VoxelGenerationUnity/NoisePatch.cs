@@ -35,9 +35,9 @@ public class NoisePatch : ThreadedJob
 	private static Coord patchDimensions =new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
 					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
 					CHUNKLENGTH * CHUNKDIMENSION);
-//	public Block[,,] blocks;
+
 	public Block[,,] blocks { get; set;}
-//	public NoiseCoord coord;
+
 	public NoiseCoord coord {get; set;}
 	
 	public bool startedBlockSetup;

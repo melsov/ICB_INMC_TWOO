@@ -22,15 +22,23 @@ using System.Collections.Specialized;
 
 public class FaceAggregator 
 {
-	private int[,] faceSetTable = new int[(int) ChunkManager.CHUNKLENGTH,(int) ChunkManager.CHUNKLENGTH]; // would have to change for xy or zy type aggregator
+	private int[,] faceSetTable = new int[(int) ChunkManager.CHUNKLENGTH * 2,(int) ChunkManager.CHUNKLENGTH]; // would have to change for xy or zy type aggregator
 	
 	private List<FaceSet> faceSets = new List<FaceSet> ();
 	
 	private const int FACETABLE_LOOKUP_SHIFT = ChunkManager.CHUNKHEIGHT * 88;
 	
+	public int levelForTesting;
+	
 	public FaceAggregator() 
 	{
 		// face type assumed to be xz (for now)
+		
+	}
+	
+	public FaceAggregator(int levelForTestingg) 
+	{
+		levelForTesting = levelForTestingg;
 		
 	}
 	
@@ -54,7 +62,7 @@ public class FaceAggregator
 	private bool addCoordToFaceSetAtCoord(Coord addMeCoord, Coord adjacentCoord, BlockType type, Direction dir)
 	{
 		// if there is a face set here
-		int faceSetIndex = indexOfFaceSetAtCoord(adjacentCoord);
+		int faceSetIndex = indexOfFaceSetAtCoord(adjacentCoord, dir);
 		
 		
 		if (faceSetIndex > -1)
@@ -65,69 +73,39 @@ public class FaceAggregator
 			{
 
 				fset.addCoord(addMeCoord); //, adjacentCoord);
-				copyFaceSetIndexFromToCoord(adjacentCoord, addMeCoord);
+				copyFaceSetIndexFromToCoord(adjacentCoord, addMeCoord, dir);
 				return true;
 			}
 
 		}
 		return false;
 	}
-	
-	#region debug funcs
-	private static Coord[] bugTheseCoords = new Coord[]{
-		new Coord(0, 2, 0), 
-		new Coord(2, 2, 3), 
-		new Coord(0,2,1)
-	};
-	
-	private static bool CoordMatchesADebugCoord(Coord co) {
-		foreach (Coord dbco in FaceAggregator.bugTheseCoords) {
-			if (dbco.x == co.x && dbco.z == co.z)
-				return true;
-		}
-		return false;
-	}
-	
-	private void zeroZeroBug(Coord co, string str) {
-		if (!(co.x == 0 && co.z == 0) ) {
-			return;
-		}
-		
-		bug (str + " : the coord: " + co.toString());
-	}
-	
-	private void coordOfInterestBug(Coord co, string str) {
-		if (!FaceAggregator.CoordMatchesADebugCoord(co) ) {
-			return;
-		}
-		
-		bug (str + " : the coord: " + co.toString());
-	}
-	
-	#endregion
-	
-	private int indexOfFaceSetAtCoord(Coord coord)
+
+	private int indexOfFaceSetAtCoord(Coord coord, Direction dir)
 	{
+		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
+		
 		// assume we want the xz plane for now
-		return faceSetTable[coord.x, coord.z] - FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		return faceSetTable[coord.x + nudge_lookup, coord.z] - FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
 	private void newFaceSetAtCoord(Coord coord, BlockType type, Direction dir)
 	{
-		bug ("new face set at Coord" + coord.toString());
-		if (indexOfFaceSetAtCoord(coord) > -1)
-			bug ("trying to add a new face set where there already was one? " + coord.toString());
-//			throw new Exception("trying to add a new face set where there already was one? " + coord.toString());
+		if (indexOfFaceSetAtCoord(coord, dir) > -1) //
+//			bug ("trying to add a new face set where there already was one? " + coord.toString());
+			throw new Exception("trying to add a new face set where there already was one? coord is: " + coord.toString() + "my level is: " + levelForTesting);
 		
 		int faceSetsCount = faceSets.Count;
 		FaceSet fs = new FaceSet(type, dir, coord);
 		faceSets.Add (fs);
 		
-		faceSetTable[coord.x, coord.z] = faceSetsCount + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		
+		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
+		faceSetTable[coord.x + nudge_lookup, coord.z] = faceSetsCount + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
-	private void copyFaceSetIndexFromToCoord(Coord fromC, Coord toC) {
-		int indexFrom = indexOfFaceSetAtCoord(fromC);
+	private void copyFaceSetIndexFromToCoord(Coord fromC, Coord toC, Direction dirForBothCoords) {
+		int indexFrom = indexOfFaceSetAtCoord(fromC, dirForBothCoords);
 		faceSetTable[toC.x, toC.z] = indexFrom + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
@@ -163,12 +141,15 @@ public class FaceAggregator
 		return new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs);
 	}
 	
+	#region debugging
+	
 	public void LogFaceSets() {
 		for (int i=0; i< faceSets.Count; ++i) {
 			FaceSet fs = faceSets[i];
 			if (fs != null) {
 				bug("FACE AGGRTR: got a face set at: " + i);	
-				fs.logStripsArray();
+//				fs.logStripsArray();
+//				bug (" quads: " + fs.getQuadsString());
 			} else {
 				bug("face set was null");
 			}
@@ -248,6 +229,36 @@ public class FaceAggregator
 		UnityEngine.Debug.Log(ss);
 	}
 	
+		private static Coord[] bugTheseCoords = new Coord[]{
+		new Coord(0, 2, 0), 
+		new Coord(2, 2, 3), 
+		new Coord(0,2,1)
+	};
+	
+	private static bool CoordMatchesADebugCoord(Coord co) {
+		foreach (Coord dbco in FaceAggregator.bugTheseCoords) {
+			if (dbco.x == co.x && dbco.z == co.z)
+				return true;
+		}
+		return false;
+	}
+	
+	private void zeroZeroBug(Coord co, string str) {
+		if (!(co.x == 0 && co.z == 0) ) {
+			return;
+		}
+		
+		bug (str + " : the coord: " + co.toString());
+	}
+	
+	private void coordOfInterestBug(Coord co, string str) {
+		if (!FaceAggregator.CoordMatchesADebugCoord(co) ) {
+			return;
+		}
+		
+		bug (str + " : the coord: " + co.toString());
+	}
+	#endregion
 		
 }
 
@@ -259,7 +270,12 @@ public class FaceAggregatorTest
 	public FaceAggregator fa;
 	
 	private static Coord[] excludedCoords = new Coord[]{
-//		new Coord(0, 2, 0), 
+		
+		new Coord(0, 0, 0),
+		new Coord(0, 0, 1),
+		new Coord(1, 0, 0),
+		new Coord(0, 0, 5),
+		new Coord(5, 0, 0),
 		new Coord(2, 4, 3), 
 		new Coord(2, 4, 6),
 		new Coord(2, 4, 7),
@@ -267,7 +283,7 @@ public class FaceAggregatorTest
 		new Coord(12, 4, 6),
 		new Coord(12, 4, 7),
 		new Coord(12, 4, 8),
-//		new Coord(0,2,1)
+
 	};
 	
 	public FaceAggregatorTest()
@@ -308,9 +324,9 @@ public class FaceAggregatorTest
 		}
 		
 		fa.LogFaceSets();
-		bug (fa.faceSetTableToString());
+//		bug (fa.faceSetTableToString());
 		
-		fa.LogMeshResults();
+//		fa.LogMeshResults();
 	}
 	
 	public List<MeshSet> getMeshResults()

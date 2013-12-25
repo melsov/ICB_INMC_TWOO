@@ -290,7 +290,7 @@ public class ChunkManager : MonoBehaviour
 
 	void giveChunkItsMeshObject(Chunk c, Coord coord)
 	{
-		Vector3 pos = new Vector3 (CHUNKLENGTH * coord.x, CHUNKHEIGHT * coord.y, CHUNKLENGTH * coord.z);
+		Vector3 pos = new Vector3 (CHUNKLENGTH * coord.x, CHUNKHEIGHT * coord.y, CHUNKLENGTH * coord.z) * Chunk.VERTEXSCALE;
 
 		//change: the mesh is NOT of type Chunk (just a game object)
 		Transform gObjTrans = (Transform) Instantiate(prefabMeshHolder, pos, transform.rotation);
@@ -568,7 +568,9 @@ public class ChunkManager : MonoBehaviour
 		}
 
 		b.type = currentHeldBlockType ();
-
+		
+//		bug ("placing block at coord: " + placingCoord.toString());
+		
 		Chunk ch = chunkContainingCoord (placingCoord);
 		ch.noNeedToRenderFlag = false;
 
@@ -613,7 +615,7 @@ public class ChunkManager : MonoBehaviour
 		if (meshCollider == null || meshCollider.sharedMesh == null)
 			return new Vector3(9999999999999.0f, 0,0);
 
-		bug ("what was the triangle index: " + hit.triangleIndex);
+//		bug ("what was the triangle index: " + hit.triangleIndex);
 
 		Mesh mesh = meshCollider.sharedMesh;
 		Vector3[] vertices = mesh.vertices;

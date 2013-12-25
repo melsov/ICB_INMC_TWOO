@@ -5,7 +5,9 @@ using System.Collections.Generic;
 
 public class TestRunner : MonoBehaviour {
 	
-	private static bool dontRunGame;
+//	private static bool dontRunGame = true;
+	private static bool dontRunGame = false;
+	
 	// Use this for initialization
 	List<MeshSet> meshSets;
 	
@@ -15,11 +17,10 @@ public class TestRunner : MonoBehaviour {
 	
 	void Start () 
 	{
-		dontRunGame = true;
-		
+
 		if (dontRunGame)
 		{
-			FaceSetTest fst = new FaceSetTest();
+//			FaceSetTest fst = new FaceSetTest();
 			FaceAggregatorTest fat = new FaceAggregatorTest();
 			meshSets = fat.getMeshResults();
 		}

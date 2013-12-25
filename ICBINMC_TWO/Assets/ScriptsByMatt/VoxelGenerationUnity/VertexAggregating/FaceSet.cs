@@ -33,7 +33,22 @@ public class FaceSet
 	
 	private List<Strip>[] stripsArray = new List<Strip>[(int)ChunkManager.CHUNKLENGTH];
 	
+	private Quad faceSetLimits = Quad.theErsatzNullQuad();
+	private List<Quad> quads = new List<Quad>();
+	
+	private int[,] quadTable = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
+	
+	private bool[,] filledFaces = new bool[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
+	
 	List<VertexTwo>[] vertexColumns = new List<VertexTwo>[(int) ChunkManager.CHUNKLENGTH + 1];
+	
+	private int iterationSafety = 0;
+	
+	private const int SPECIAL_QUAD_LOOKUP_NUMBER = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH * 805);
+	
+	
+	
+//	private static int MAX_FACES;
 	
 //	private int internalTriIndex = 0;
 	
@@ -43,12 +58,43 @@ public class FaceSet
 		blockFaceDirection = _dir;
 		
 		addCoord(initialCoord);
+		
+//		MAX_FACES = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH); // for now
+	}
+	
+	private int quadIndexAtCoord(PTwo coord) {
+		return quadTable[coord.s, coord.t] - FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
+	}
+	
+	private int addNewQuadAtCoord(Quad qq, PTwo coord) {
+		int curQuadCount = quads.Count + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
+		quadTable[coord.s, coord.t] = curQuadCount ;
+		quads.Add(qq);
+		
+		return curQuadCount - FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
+	}
+	
+	private Quad quadAtCoord(PTwo co) {
+		return quads[quadIndexAtCoord(co)];	
+	}
+	
+	private void copyQuadIndexFromTo(PTwo fromCo, PTwo toCo) {
+		quadTable[toCo.s, toCo.t] = quadTable[fromCo.s, fromCo.t];	
 	}
 	
 	public void addCoord(Coord co)
 	{
 		// ADD/ADJUST STRIPS
 		
+		// for later...
+		filledFaces[co.x, co.z] = true; 
+		if (faceSetLimits.isErsatzNull() ) {
+			faceSetLimits = new Quad( PTwo.PTwoXZFromCoord(co), new PTwo(1,1) );	
+		} else {
+			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.x, co.z) );
+		}
+		
+		///
 		//...	assume we're dealing with xz faces and z neg is 'up' x pos is 'right'
 		int stripsIndex = co.x;
 		int addAtHeight = co.z;
@@ -106,19 +152,201 @@ public class FaceSet
 		stripsArray[stripsIndex] = strips; // put it back!
 	}
 	
+	private List<Quad> quadsForArea(Quad area, ref List<Quad> out_quads) // make a quad (if possible) from a given area
+	{
+		// THIS CAUSES AN 'OUT OF MEMORY' ERROR!
+		
+		if (iterationSafety > 1000) {
+			return new List<Quad>();	
+		}
+		
+		iterationSafety ++;
+		
+		if (areaIsFilled(area))
+		{
+			List<Quad> ret = new List<Quad>();
+			ret.Add(area);
+			return ret;
+		} else if (area.dimensions.area() == 1) {
+			return new List<Quad>();	
+		}
+		
+		if (area.dimensions.t > 1)
+		{
+			if (area.dimensions.s > 1)
+			{
+				Quad ULQuad = area.upperLeftQuarter();
+				out_quads.AddRange(quadsForArea(ULQuad, ref out_quads) );
+			}
+			
+			Quad URQuad = area.upperRightQuarter();
+			out_quads.AddRange(quadsForArea(URQuad, ref out_quads) );
+		}
+		
+		if (area.dimensions.s > 1) {
+			Quad LLQuad = area.lowerLeftQuarter();
+			out_quads.AddRange(quadsForArea(LLQuad, ref out_quads) );
+		}
+		
+		Quad LRQuad = area.lowerRightQuarter();
+		out_quads.AddRange(quadsForArea(LRQuad, ref out_quads) );
+		
+		return out_quads;
+
+	}
+	
+	private bool areaIsFilled(Quad area) 
+	{
+		if (area.dimensions.area() == 0)
+			return false;
+		
+		int i = area.origin.s;
+		int end = area.extent().s;
+		int jend = area.extent().t;
+		int jstart = area.origin.t;
+		int j;
+		for(; i < end ; ++i)
+		{
+			j = jstart;
+			for(; j < jend ; ++j)
+			{
+				if (!filledFaces[i, j])
+					return false;
+			}
+			
+		}
+		return true;
+	}
+	
+	private void optimizeStrips()
+	{
+		// ENHANCED NAIVE METHOD
+		// MAKE A LIST OF QUADS FROM THE LISTS OF STRIPS.
+		// (ADMITTEDLY: WE GOT NOTHING OUT OF USING QUADS INSTEAD OF STRIPS WITH LENGTH...)
+		int horizontalDim = 1;
+		List<Strip> currentStrips;
+		List<Strip> lastStrips;
+		for(; horizontalDim < stripsArray.Length ; ++horizontalDim)
+		{
+			currentStrips = stripsArray[horizontalDim];
+			lastStrips = stripsArray[horizontalDim - 1];
+			
+			// corner case
+			if (lastStrips == null && horizontalDim == stripsArray.Length - 1)
+			{
+				if (currentStrips != null)
+					foreach(Strip lastRowStrip in currentStrips)
+					{
+						Quad lq = Quad.QuadFromStrip(lastRowStrip, horizontalDim);
+						addNewQuadAtCoord(lq, new PTwo(horizontalDim, lastRowStrip.range.start) );
+						
+					}
+			}
+			
+			if ( lastStrips == null ) //currentStrips == null) // ||
+				continue;
+			
+			
+			
+			for(int j = 0 ; j < lastStrips.Count ; ++j) 
+			{
+				Strip lstp = lastStrips[j];
+				
+				//QUAD WAY
+				if (horizontalDim == 1)
+				{
+					Quad qq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
+					lstp.quadIndex = addNewQuadAtCoord(qq, new PTwo(horizontalDim - 1, lstp.range.start) );
+					lastStrips[j] = lstp;
+				}
+				
+				int curCount = currentStrips == null?  0 : currentStrips.Count;
+				for(int i = 0; i < curCount ; ++i) 
+				{
+					Strip stp = currentStrips[i];
+					
+					
+					if (Range1D.Equal(stp.range, lstp.range) ) // truly naive only 2 wide is pos!
+					{
+						
+						// has a quad index?
+						if (lstp.quadIndex != -1)
+						{
+							Quad qua = quads[ lstp.quadIndex];
+							qua.dimensions.s++;
+							quads[lstp.quadIndex] = qua;
+							stp.quadIndex = lstp.quadIndex;
+						} else {
+							// make a new quad with these two 
+							lstp.width ++;
+							Quad doubleWidthqq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
+							lstp.quadIndex = addNewQuadAtCoord(doubleWidthqq, new PTwo(horizontalDim - 1, lstp.range.start) );
+							stp.quadIndex = lstp.quadIndex;
+							
+						}
+//						lstp.width++;
+//						currentStrips.RemoveAt(i);
+//						i--;
+//						lastStrips[j] = lstp;
+						
+					} 
+					else {
+						// new quad with stp
+						Quad sq = Quad.QuadFromStrip(stp, horizontalDim);
+						stp.quadIndex = addNewQuadAtCoord(sq, new PTwo(horizontalDim, stp.range.start) );
+					}
+					
+					
+					currentStrips[i] = stp;
+				}
+				
+				if (lstp.quadIndex == -1) // still no match
+				{
+					Quad sq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
+					lstp.quadIndex = addNewQuadAtCoord(sq, new PTwo(horizontalDim - 1, lstp.range.start) );
+				}
+				
+				lastStrips[j] = lstp;
+			}
+			
+			stripsArray[horizontalDim] = currentStrips;
+			stripsArray[horizontalDim - 1] = lastStrips;
+		}
+		
+	}
+	
+
+	
 	public MeshSet CalculateGeometry(float verticalHeight) //need param y height...
 	{
+		optimizeStrips();
+		
 		int curTriIndex = 0;
 		int horizontalDim = 0;
 		
 		bool faceIsOnPosSide = ((int) this.blockFaceDirection % 2 == 0);
 		
+		
+		
 		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
 		
-		Vector2 monoUVValue = Chunk.uvOriginForBlockType(this.blockType, this.blockFaceDirection);
-		Vector2 uvURTexDimTest = new Vector2(0.25f, 0f);
-		Vector2 uvLLTexDimTest = new Vector2(0f, .25f);
-		Vector2 uvLRTexDimTest = new Vector2(0.25f, 0.25f);
+		float uvUnitLength = 1f;
+		
+		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
+		
+//		bug ("uv index is: " + uvIndex + " times 16 : " + uvIndex * 16f);
+		
+		// we could do this calc earlier...?
+//		Vector2 origin = Chunk.uvOriginForBlockType(this.blockType, this.blockFaceDirection);
+//		origin = Vector2.Scale(origin, new Vector2(0.25f, 0.25f));
+		Vector2 monoUVValue = new Vector2(uvIndex, 0f); // origin ;
+		
+		// 
+//		Vector2 uvURTexDim = new Vector2(uvUnitLength, 0f);
+//		Vector2 uvLLTexDim = new Vector2(0f, uvUnitLength);
+//		Vector2 uvLRTexDim = new Vector2(uvUnitLength, uvUnitLength);
+//		
+//		Vector2 uvScalingVec;
 		
 		List<Vector2> returnUVS = new List<Vector2>();
 		
@@ -131,9 +359,14 @@ public class FaceSet
 		
 		float half_unit = 0.5f;
 		
+		// NEW WAY: SIMPLY COLLECT THE VERTS AND INDICES FROM EACH STRIP IN ORDER
 		
-		for (; horizontalDim < stripsArray.Length; ++horizontalDim)
+//		for (; horizontalDim < stripsArray.Length; ++horizontalDim)
+		int i = 0;
+		for(; i < quads.Count ; ++i)
 		{
+			Quad quad = quads[i];
+			
 			rightVertexColumn = new List<Vector3>(); 
 			strips = stripsArray[horizontalDim];
 			
@@ -143,22 +376,19 @@ public class FaceSet
 			if (strips != null)
 				strips_count = strips.Count; //is continue ok???
 			
-			if (strips_count == 0)
-				bug ("strips count 0 (or null) at h dim: " + horizontalDim);
-			else if (strips_count > 1)
-				bug ("strips count > 1 : " + strips_count + " at h dim: " + horizontalDim);
+//			if (strips_count == 0)
+//				bug ("strips count 0 (or null) at h dim: " + horizontalDim);
+//			else if (strips_count > 1)
+//				bug ("strips count > 1 : " + strips_count + " at h dim: " + horizontalDim);
 			
 			int vertsAddedByStrip = 0;
 			
-			for (int i = 0; i < strips_count ; ++i)
-			{
-				Strip str = strips[i];
-				int curULindex = curTriIndex + i * 2;
+				int curULindex = curTriIndex; // + i * 4;
 				int curLLindex = curULindex + 1;
-				int curURindex = curTriIndex + strips_count * 2 + i * 2;
-				int curLRindex = curURindex + 1;;
-//				int curURindex = curTriIndex + 2;
-//				int curLRindex = curTriIndex + 3;
+//				int curURindex = curTriIndex + strips_count * 2 + i * 2;
+//				int curLRindex = curURindex + 1;;
+				int curURindex = curULindex + 2;
+				int curLRindex = curULindex + 3;
 				
 				bool addULVert = true;
 				bool addLLVert = true;
@@ -192,33 +422,51 @@ public class FaceSet
 				}
 #endif
 				
+//				uvScalingVec = new Vector2((float)quad.dimensions.s, (float) quad.dimensions.t);
+			
 				if (addULVert) {
-					Vector3 ulVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.start - half_unit);
-					leftVertexColumn.Add(ulVec); //LEFT COLUMN
+					Vector3 ulVec = new Vector3((float) quad.origin.s - half_unit, 
+						verticalHeight, 
+						(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
+					returnVecs.Add(ulVec);
 					vertsAddedByStrip++;
 					returnUVS.Add(monoUVValue);
 				}
 				
 				if (addLLVert) {
-					Vector3 llVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.extent() - half_unit);
-					leftVertexColumn.Add(llVec); //LEFT COLUMN!!
+					Vector3 llVec = new Vector3((float) quad.origin.s - half_unit, 
+						verticalHeight, 
+						(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
+					returnVecs.Add(llVec);
+					
 					vertsAddedByStrip++;
-					returnUVS.Add(monoUVValue + uvLLTexDimTest);
+				
+					returnUVS.Add(monoUVValue); // + Vector2.Scale(uvLLTexDim, uvScalingVec ));
+//					returnUVS.Add(monoUVValue + new Vector2((float)(llVec.x * uvLLTexDimTest.x),
+//							(float)( llVec.z * uvLLTexDimTest.y)) );
 				}
 				
-				Vector3 urVec = new Vector3((float) horizontalDimLessHalf + 1, verticalHeight, (float)str.range.start - half_unit);
-				rightVertexColumn.Add(urVec);
+				Vector3 urVec = new Vector3((float) quad.extent().s - half_unit, 
+					verticalHeight, 
+					(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
+				returnVecs.Add(urVec);
 				vertsAddedByStrip++;
-				returnUVS.Add(monoUVValue + uvURTexDimTest);
+				returnUVS.Add( monoUVValue); // + Vector2.Scale(uvURTexDim, uvScalingVec) );
+//				monoUVValue + new Vector2(urVec.x * uvURTexDimTest.x, 
+//							urVec.z * uvURTexDimTest.y));
 				
-				Vector3 lrVec = new Vector3((float)horizontalDimLessHalf + 1, verticalHeight, (float)str.range.extent() - half_unit);
-				rightVertexColumn.Add(lrVec);
+				Vector3 lrVec = new Vector3((float)quad.extent().s - half_unit, 
+					verticalHeight, 
+					(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
+				returnVecs.Add(lrVec);
 				vertsAddedByStrip++;
-				returnUVS.Add(monoUVValue + uvLRTexDimTest);
+				returnUVS.Add(monoUVValue); // + Vector2.Scale(uvLRTexDim, uvScalingVec) );
+//				monoUVValue + new Vector2(lrVec.x * uvLRTexDimTest.x, 
+//							lrVec.z * uvLRTexDimTest.y));
 				
 				//need to index sets.
-				str.indexSet = new IndexSet(curULindex, curURindex, curLLindex, curLRindex);
-				strips[i] = str;
+//				str.indexSet = new IndexSet(curULindex, curURindex, curLLindex, curLRindex);
+//				strips[i] = str;
 				
 				int[] tris;
 				
@@ -230,7 +478,7 @@ public class FaceSet
 				
 				returnTriIndices.AddRange(tris);
 				
-			}
+			
 			
 			curTriIndex += vertsAddedByStrip;
 			
@@ -328,6 +576,15 @@ public class FaceSet
 		bug (info);
 	}
 	
+	public string getQuadsString() {
+		string result = "";
+		
+		foreach(Quad qq in quads) {
+			result += " | " + qq.toString();	
+		}
+		return result;
+	}
+	
 	public void checkForIntersectingStrips()
 	{
 		//TODO: this func.
@@ -356,32 +613,7 @@ public class FaceSetTest
 			coords[i] = new Coord(x, 2, z);
 		}
 		
-		Coord[] other_coords = new Coord[] {
-			new Coord(0, 2, 0),
-			new Coord(0, 2, 1),
-			new Coord(0, 2, 2),
-			new Coord(0, 2, 3),
-			new Coord(0, 2, 4),
-			
-			new Coord(1, 2, 0),
-			new Coord(1, 2, 1),
-			new Coord(1, 2, 2),
-			new Coord(1, 2, 3),
-			new Coord(1, 2, 4),
-			new Coord(1, 2, 5),
-			
-			new Coord(2, 2, 0),
-			new Coord(2, 2, 1),
-			new Coord(2, 2, 2),
-			
-			new Coord(3, 2, 1),
-			new Coord(3, 2, 2),
-			new Coord(3, 2, 3),
-//			
-			new Coord(4, 2, 0),
-			new Coord(4, 2, 1),
-			new Coord(4, 2, 2),
-		};
+		
 		
 		foreach (Coord co in coords) {
 			fs.addCoord(co);	
@@ -389,7 +621,7 @@ public class FaceSetTest
 		
 		MeshSet mset = fs.CalculateGeometry(2);
 		
-		fs.logStripsArray();
+//		fs.logStripsArray();
 		
 		this.logMeshSet(mset);
 		
@@ -459,6 +691,8 @@ public class FaceSetTest
 }
 
 
+
+
 //			int relUpperLeftTriIndex = ++internalTriIndex;
 //			
 ////			IndexSet newIset = IndexSet(
@@ -472,3 +706,349 @@ public class FaceSetTest
 //					--internalTriIndex;
 //				}
 //			}
+
+
+// OLD calc geom
+
+//public MeshSet CalculateGeometry(float verticalHeight) //need param y height...
+//	{
+//		int curTriIndex = 0;
+//		int horizontalDim = 0;
+//		
+//		bool faceIsOnPosSide = ((int) this.blockFaceDirection % 2 == 0);
+//		
+//		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
+//		
+//		Vector2 monoUVValue = Chunk.uvOriginForBlockType(this.blockType, this.blockFaceDirection);
+//		Vector2 uvURTexDimTest = new Vector2(0.25f, 0f);
+//		Vector2 uvLLTexDimTest = new Vector2(0f, .25f);
+//		Vector2 uvLRTexDimTest = new Vector2(0.25f, 0.25f);
+//		
+//		List<Vector2> returnUVS = new List<Vector2>();
+//		
+//		List<Strip> strips;
+//		List<Vector3> rightVertexColumn;
+//		List<Vector3> leftVertexColumn = new List<Vector3>();
+//		
+//		List<int> returnTriIndices = new List<int>();
+//		List<Vector3> returnVecs = new List<Vector3>();
+//		
+//		float half_unit = 0.5f;
+//		
+//		
+//		for (; horizontalDim < stripsArray.Length; ++horizontalDim)
+//		{
+//			rightVertexColumn = new List<Vector3>(); 
+//			strips = stripsArray[horizontalDim];
+//			
+//			float horizontalDimLessHalf = horizontalDim - half_unit;
+//			
+//			int strips_count = 0;
+//			if (strips != null)
+//				strips_count = strips.Count; //is continue ok???
+//			
+//			if (strips_count == 0)
+//				bug ("strips count 0 (or null) at h dim: " + horizontalDim);
+//			else if (strips_count > 1)
+//				bug ("strips count > 1 : " + strips_count + " at h dim: " + horizontalDim);
+//			
+//			int vertsAddedByStrip = 0;
+//			
+//			for (int i = 0; i < strips_count ; ++i)
+//			{
+//				Strip str = strips[i];
+//				int curULindex = curTriIndex + i * 2;
+//				int curLLindex = curULindex + 1;
+//				int curURindex = curTriIndex + strips_count * 2 + i * 2;
+//				int curLRindex = curURindex + 1;;
+////				int curURindex = curTriIndex + 2;
+////				int curLRindex = curTriIndex + 3;
+//				
+//				bool addULVert = true;
+//				bool addLLVert = true;
+//				
+//				
+//#if COMBINE_FLUSH_VERTS
+//
+//				if (horizontalDim > 0 && stripsArray[horizontalDim - 1] != null) 
+//				{
+//					// if this strip is flush with the start of any strips in the col to the left...
+//					Strip flushWithStartOneLeft = Strip.theErsatzNullStrip();
+//					bool gotAStrip = stripFromListWithStartEqualTo(str.range.start, stripsArray[horizontalDim - 1], ref flushWithStartOneLeft);
+//					if (gotAStrip) // (Strip.StripNotNull(flushWithStartOneLeft))
+//					{
+//						curULindex = flushWithStartOneLeft.indexSet.upperRight;
+//						curLLindex--;
+//						curURindex--;
+//						curLRindex--;
+//						addULVert = false;
+//					}
+//					
+//					Strip flushWithExtentOneLeft = Strip.theErsatzNullStrip();
+//					gotAStrip =	stripFromListWithExtentEqualTo(str.range.extentMinusOne() , stripsArray[horizontalDim - 1], ref flushWithExtentOneLeft);
+//					if (gotAStrip)
+//					{
+//						curLLindex = flushWithExtentOneLeft.indexSet.lowerRight;
+//						curURindex--;
+//						curLRindex--;
+//						addLLVert = false;
+//					}
+//				}
+//#endif
+//				
+//				if (addULVert) {
+//					Vector3 ulVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.start - half_unit);
+//					leftVertexColumn.Add(ulVec); //LEFT COLUMN
+//					vertsAddedByStrip++;
+//					returnUVS.Add(monoUVValue);
+//				}
+//				
+//				if (addLLVert) {
+//					Vector3 llVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.extent() - half_unit);
+//					leftVertexColumn.Add(llVec); //LEFT COLUMN!!
+//					vertsAddedByStrip++;
+//					returnUVS.Add(monoUVValue + uvLLTexDimTest);
+//				}
+//				
+//				Vector3 urVec = new Vector3((float) horizontalDimLessHalf + 1, verticalHeight, (float)str.range.start - half_unit);
+//				rightVertexColumn.Add(urVec);
+//				vertsAddedByStrip++;
+//				returnUVS.Add(monoUVValue + uvURTexDimTest);
+//				
+//				Vector3 lrVec = new Vector3((float)horizontalDimLessHalf + 1, verticalHeight, (float)str.range.extent() - half_unit);
+//				rightVertexColumn.Add(lrVec);
+//				vertsAddedByStrip++;
+//				returnUVS.Add(monoUVValue + uvLRTexDimTest);
+//				
+//				//need to index sets.
+//				str.indexSet = new IndexSet(curULindex, curURindex, curLLindex, curLRindex);
+//				strips[i] = str;
+//				
+//				int[] tris;
+//				
+//				if (faceIsOnPosSide) {
+//					tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
+//				} else {
+//					tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
+//				}
+//				
+//				returnTriIndices.AddRange(tris);
+//				
+//			}
+//			
+//			curTriIndex += vertsAddedByStrip;
+//			
+////			vertexColumns[horizontalDim] = leftVertexColumn;
+////			vertexColumns[horizontalDim + 1] = rightVertexColumn;
+//			
+//			returnVecs.AddRange(leftVertexColumn);
+//			
+//			if (horizontalDim == stripsArray.Length - 1)
+//			{
+//				returnVecs.AddRange(rightVertexColumn);
+//			}
+//			else 
+//			{
+//				leftVertexColumn = rightVertexColumn;
+//			}
+//			
+////			stripsArray[horizontalDim] = strips;
+//		}
+//		
+//		//now maybe just calculate the actual v3 array and the indices....
+//		GeometrySet geomset = new GeometrySet(returnTriIndices, returnVecs );
+//		
+//		return new MeshSet(geomset, returnUVS);
+//		
+//	}
+
+
+
+
+//public MeshSet CalculateGeometry(float verticalHeight) //need param y height...
+//	{
+
+//  WORKS WITH STRIPS
+//		optimizeStrips();
+//		
+//		int curTriIndex = 0;
+//		int horizontalDim = 0;
+//		
+//		bool faceIsOnPosSide = ((int) this.blockFaceDirection % 2 == 0);
+//		
+//		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
+//		
+//		Vector2 monoUVValue = Chunk.uvOriginForBlockType(this.blockType, this.blockFaceDirection);
+//		Vector2 uvURTexDimTest = new Vector2(0.25f, 0f);
+//		Vector2 uvLLTexDimTest = new Vector2(0f, .25f);
+//		Vector2 uvLRTexDimTest = new Vector2(0.25f, 0.25f);
+//		
+//		List<Vector2> returnUVS = new List<Vector2>();
+//		
+//		List<Strip> strips;
+//		List<Vector3> rightVertexColumn;
+//		List<Vector3> leftVertexColumn = new List<Vector3>();
+//		
+//		List<int> returnTriIndices = new List<int>();
+//		List<Vector3> returnVecs = new List<Vector3>();
+//		
+//		float half_unit = 0.5f;
+//		
+//		// NEW WAY: SIMPLY COLLECT THE VERTS AND INDICES FROM EACH STRIP IN ORDER
+//		
+//		for (; horizontalDim < stripsArray.Length; ++horizontalDim)
+//		{
+//			rightVertexColumn = new List<Vector3>(); 
+//			strips = stripsArray[horizontalDim];
+//			
+//			float horizontalDimLessHalf = horizontalDim - half_unit;
+//			
+//			int strips_count = 0;
+//			if (strips != null)
+//				strips_count = strips.Count; //is continue ok???
+//			
+////			if (strips_count == 0)
+////				bug ("strips count 0 (or null) at h dim: " + horizontalDim);
+////			else if (strips_count > 1)
+////				bug ("strips count > 1 : " + strips_count + " at h dim: " + horizontalDim);
+//			
+//			int vertsAddedByStrip = 0;
+//			
+//			for (int i = 0; i < strips_count ; ++i)
+//			{
+//				Strip str = strips[i];
+//				int curULindex = curTriIndex + i * 4;
+//				int curLLindex = curULindex + 1;
+////				int curURindex = curTriIndex + strips_count * 2 + i * 2;
+////				int curLRindex = curURindex + 1;;
+//				int curURindex = curULindex + 2;
+//				int curLRindex = curULindex + 3;
+//				
+//				bool addULVert = true;
+//				bool addLLVert = true;
+//				
+//				
+//#if COMBINE_FLUSH_VERTS
+//
+//				if (horizontalDim > 0 && stripsArray[horizontalDim - 1] != null) 
+//				{
+//					// if this strip is flush with the start of any strips in the col to the left...
+//					Strip flushWithStartOneLeft = Strip.theErsatzNullStrip();
+//					bool gotAStrip = stripFromListWithStartEqualTo(str.range.start, stripsArray[horizontalDim - 1], ref flushWithStartOneLeft);
+//					if (gotAStrip) // (Strip.StripNotNull(flushWithStartOneLeft))
+//					{
+//						curULindex = flushWithStartOneLeft.indexSet.upperRight;
+//						curLLindex--;
+//						curURindex--;
+//						curLRindex--;
+//						addULVert = false;
+//					}
+//					
+//					Strip flushWithExtentOneLeft = Strip.theErsatzNullStrip();
+//					gotAStrip =	stripFromListWithExtentEqualTo(str.range.extentMinusOne() , stripsArray[horizontalDim - 1], ref flushWithExtentOneLeft);
+//					if (gotAStrip)
+//					{
+//						curLLindex = flushWithExtentOneLeft.indexSet.lowerRight;
+//						curURindex--;
+//						curLRindex--;
+//						addLLVert = false;
+//					}
+//				}
+//#endif
+//				
+//				if (addULVert) {
+//					Vector3 ulVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.start - half_unit);
+////					leftVertexColumn.Add(ulVec); //LEFT COLUMN
+//					returnVecs.Add(ulVec);
+//					vertsAddedByStrip++;
+//					returnUVS.Add(monoUVValue);
+//				}
+//				
+//				if (addLLVert) {
+//					Vector3 llVec = new Vector3((float) horizontalDimLessHalf, verticalHeight, (float)str.range.extent() - half_unit);
+////					leftVertexColumn.Add(llVec); //LEFT COLUMN!!
+//					returnVecs.Add(llVec);
+//					vertsAddedByStrip++;
+//					returnUVS.Add(monoUVValue + uvLLTexDimTest);
+//				}
+//				
+//				Vector3 urVec = new Vector3((float) horizontalDimLessHalf + (float) str.width, verticalHeight, (float)str.range.start - half_unit);
+////				rightVertexColumn.Add(urVec);
+//				returnVecs.Add(urVec);
+//				vertsAddedByStrip++;
+//				returnUVS.Add(monoUVValue + uvURTexDimTest);
+//				
+//				Vector3 lrVec = new Vector3((float)horizontalDimLessHalf + (float) str.width , verticalHeight, (float)str.range.extent() - half_unit);
+////				rightVertexColumn.Add(lrVec);
+//				returnVecs.Add(lrVec);
+//				vertsAddedByStrip++;
+//				returnUVS.Add(monoUVValue + uvLRTexDimTest);
+//				
+//				//need to index sets.
+//				str.indexSet = new IndexSet(curULindex, curURindex, curLLindex, curLRindex);
+//				strips[i] = str;
+//				
+//				int[] tris;
+//				
+//				if (faceIsOnPosSide) {
+//					tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
+//				} else {
+//					tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
+//				}
+//				
+//				returnTriIndices.AddRange(tris);
+//				
+//			}
+//			
+//			curTriIndex += vertsAddedByStrip;
+//			
+////			vertexColumns[horizontalDim] = leftVertexColumn;
+////			vertexColumns[horizontalDim + 1] = rightVertexColumn;
+//			
+//			returnVecs.AddRange(leftVertexColumn);
+//			
+//			if (horizontalDim == stripsArray.Length - 1)
+//			{
+//				returnVecs.AddRange(rightVertexColumn);
+//			}
+//			else 
+//			{
+//				leftVertexColumn = rightVertexColumn;
+//			}
+//			
+////			stripsArray[horizontalDim] = strips;
+//		}
+//		
+//		//now maybe just calculate the actual v3 array and the indices....
+//		GeometrySet geomset = new GeometrySet(returnTriIndices, returnVecs );
+//		
+//		return new MeshSet(geomset, returnUVS);
+//		
+//	}
+
+//Coord[] other_coords = new Coord[] {
+//			new Coord(0, 2, 0),
+//			new Coord(0, 2, 1),
+//			new Coord(0, 2, 2),
+//			new Coord(0, 2, 3),
+//			new Coord(0, 2, 4),
+//			
+//			new Coord(1, 2, 0),
+//			new Coord(1, 2, 1),
+//			new Coord(1, 2, 2),
+//			new Coord(1, 2, 3),
+//			new Coord(1, 2, 4),
+//			new Coord(1, 2, 5),
+//			
+//			new Coord(2, 2, 0),
+//			new Coord(2, 2, 1),
+//			new Coord(2, 2, 2),
+//			
+//			new Coord(3, 2, 1),
+//			new Coord(3, 2, 2),
+//			new Coord(3, 2, 3),
+////			
+//			new Coord(4, 2, 0),
+//			new Coord(4, 2, 1),
+//			new Coord(4, 2, 2),
+//		};

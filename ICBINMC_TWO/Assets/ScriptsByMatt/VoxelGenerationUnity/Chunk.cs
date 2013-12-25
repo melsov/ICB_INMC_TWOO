@@ -73,6 +73,10 @@ public class Chunk : ThreadedJob
 	
 	private FaceAggregator[] faceAggregators = new FaceAggregator[CHUNKHEIGHT];
 	
+	public const float VERTEXSCALE = 1f;
+	
+	public const int TEXTURE_ATLAS_TILES_PER_DIM = 4;
+	
 	public Chunk()
 	{
 		vertices_list = new List<Vector3> ();
@@ -192,18 +196,18 @@ public class Chunk : ThreadedJob
 			y0 = y3 = ci.y - halfunit;
 
 		}
-		Vector3 v0 = new Vector3 (x0, y0, z0);
-		Vector3 v1 = new Vector3 (x1, y1, z1);
-		Vector3 v2 = new Vector3 (x2, y2, z2);
-		Vector3 v3 = new Vector3 (x3, y3, z3);
+		Vector3 v0 = new Vector3 (x0, y0, z0) * VERTEXSCALE;
+		Vector3 v1 = new Vector3 (x1, y1, z1) * VERTEXSCALE;
+		Vector3 v2 = new Vector3 (x2, y2, z2) * VERTEXSCALE;
+		Vector3 v3 = new Vector3 (x3, y3, z3) * VERTEXSCALE;
 
 		return new Vector3[] { v0, v1, v2, v3 };
 	}
 	
 	//face aggregator helper
-	public static Vector2 uvOriginForBlockType( BlockType btype, Direction dir)
+	private static Vector2 uvOriginForBlockType( BlockType btype, Direction dir)
 	{
-		float tile_length = 0.25f;
+		float tile_length = 1.0f; ///(float) TEXTURE_ATLAS_TILES_PER_DIM;
 		
 		//want
 		float cX = 0.0f;
@@ -226,21 +230,23 @@ public class Chunk : ThreadedJob
 			break;
 		default: //GRASS
 			//testing...make geom more visible
-			if (dir == Direction.xpos) 
-			{
-				cX = tile_length;
-			} else if (dir == Direction.xneg) {
-				cX = tile_length; cY = tile_length;
-			} else if (dir == Direction.yneg) {
-				cX = 2 * tile_length; cY = tile_length;
-			} else if (dir == Direction.zneg) {
-				cX = 3 * tile_length; cY = 3 * tile_length;
-			} else if (dir == Direction.zpos) {
-				cY = 3 * tile_length;
-			}
+//			if (dir == Direction.xpos) 
+//			{
+//				cX = tile_length;
+//			} else if (dir == Direction.xneg) {
+//				cX = tile_length; cY = tile_length;
+//			} else if (dir == Direction.yneg) {
+//				cX = 2 * tile_length; cY = tile_length;
+//			} else if (dir == Direction.zneg) {
+//				cX = 3 * tile_length; cY = 3 * tile_length;
+//			} else if (dir == Direction.zpos) {
+//				cY = 3 * tile_length;
+//			}
 			//end testing
-//			if (dir != Direction.ypos)
-//				cY = tile_length;
+			if ( dir != Direction.yneg)
+			{
+				cY = tile_length; 
+			}
 			break;
 		}
 
@@ -248,65 +254,82 @@ public class Chunk : ThreadedJob
 	}
 	
 	
-	
-	
-	Vector2[] uvCoordsForBlockType( BlockType btype, Direction dir)
+	private static float uvIndexForUVOrigin(Vector2 or)
 	{
-		//TODO: replace this duplicate code with the texAtlasOrigin func. and then return vector
-		float tile_length = 0.25f;
-//		int tiles_per_row = (int)(1.0f / tile_length);
-//		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
-//		int cYBasedOnZCoord = chunkCoord.z % tiles_per_row;
-
-//test...
-//		float cX = cXBasedOnXCoord * tile_length;
-//		float cY = cYBasedOnZCoord * tile_length;
-
-		//want
-		float cX = 0.0f;
-		float cY = 0.0f;
-
-		switch (btype) {
-		case BlockType.Stone:
-			cY = tile_length;
-			cX = tile_length;
-			break;
-		case BlockType.Sand:
-			cX = tile_length * 2;
-			cY = tile_length; //<-- silly // * 2;
-			break;
-		case BlockType.Dirt:
-			cY = tile_length * 3;
-			break;
-		case BlockType.BedRock:
-			cY = tile_length * 2; //silly value at the moment
-			break;
-		default: //GRASS
-			//testing...make geom more visible
-			if (dir == Direction.xpos) 
-			{
-				cX = tile_length;
-			} else if (dir == Direction.xneg) {
-				cX = tile_length; cY = tile_length;
-			} else if (dir == Direction.yneg) {
-				cX = 2 * tile_length; cY = tile_length;
-			} else if (dir == Direction.zneg) {
-				cX = 3 * tile_length; cY = 3 * tile_length;
-			} else if (dir == Direction.zpos) {
-				cY = 3 * tile_length;
-			}
-			//end testing
-//			if (dir != Direction.ypos)
-//				cY = tile_length;
-			break;
-		}
-
-		return new Vector2[] { 
-			new Vector2 (cX, cY), 
-			new Vector2 (cX, cY + tile_length), 
-			new Vector2 (cX + tile_length , cY + tile_length), 
-			new Vector2 (cX + tile_length, cY) 
+		return (float)((or.y * Chunk.TEXTURE_ATLAS_TILES_PER_DIM + or.x)/
+			(Chunk.TEXTURE_ATLAS_TILES_PER_DIM * Chunk.TEXTURE_ATLAS_TILES_PER_DIM));
+	}
+	
+	public static float uvIndexForBlockTypeDirection(BlockType type, Direction dir) 
+	{
+		Vector2 or = uvOriginForBlockType(type, dir);
+		return uvIndexForUVOrigin(or);
+	}
+	
+	public static Vector2[] uvCoordsForBlockType( BlockType btype, Direction dir)
+	{
+		// new way of life: UV ORIGIN IS HELD IN THE FIRST COMPONENT. AS AN INDEX
+		float uv_index = uvIndexForBlockTypeDirection(btype, dir);
+		Vector2 mono_v = new Vector2(uv_index, 0f);
+		return new Vector2[] {
+			mono_v, mono_v, mono_v, mono_v 
 		};
+		
+//		//TODO DONE: replace this duplicate code with the texAtlasOrigin func. and then return vector
+//		float tile_length = 0.25f;
+////		int tiles_per_row = (int)(1.0f / tile_length);
+////		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
+////		int cYBasedOnZCoord = chunkCoord.z % tiles_per_row;
+//
+////test...
+////		float cX = cXBasedOnXCoord * tile_length;
+////		float cY = cYBasedOnZCoord * tile_length;
+//
+//		//want
+//		float cX = 0.0f;
+//		float cY = 0.0f;
+//
+//		switch (btype) {
+//		case BlockType.Stone:
+//			cY = tile_length;
+//			cX = tile_length;
+//			break;
+//		case BlockType.Sand:
+//			cX = tile_length * 2;
+//			cY = tile_length; //<-- silly // * 2;
+//			break;
+//		case BlockType.Dirt:
+//			cY = tile_length * 3;
+//			break;
+//		case BlockType.BedRock:
+//			cY = tile_length * 2; //silly value at the moment
+//			break;
+//		default: //GRASS
+//			//testing...make geom more visible
+//			if (dir == Direction.xpos) 
+//			{
+//				cX = tile_length;
+//			} else if (dir == Direction.xneg) {
+//				cX = tile_length; cY = tile_length;
+//			} else if (dir == Direction.yneg) {
+//				cX = 2 * tile_length; cY = tile_length;
+//			} else if (dir == Direction.zneg) {
+//				cX = 3 * tile_length; cY = 3 * tile_length;
+//			} else if (dir == Direction.zpos) {
+//				cY = 3 * tile_length;
+//			}
+//			//end testing
+////			if (dir != Direction.ypos)
+////				cY = tile_length;
+//			break;
+//		}
+//
+//		return new Vector2[] { 
+//			new Vector2 (cX, cY), 
+//			new Vector2 (cX, cY + tile_length), 
+//			new Vector2 (cX + tile_length , cY + tile_length), 
+//			new Vector2 (cX + tile_length, cY) 
+//		};
 	}
 
 	//TEST FUNC...
@@ -370,173 +393,8 @@ public class Chunk : ThreadedJob
 	public void makeMeshAltThread(int CHLEN, int CHHeight)
 	{
 		calculatedMeshAlready = false;
-		// (re)create my mesh.
-//		random_new_chunk_color_int_test = (int)(UnityEngine.Random.value * 4.0f);
-
-//		vertices_list.Clear(); // new List<Vector3> ();
-//		triangles_list.Clear (); // = new List<int> ();
-//		uvcoords_list.Clear (); // = new List<Vector2> ();
 
 		int triangles_index = 0;
-		
-#if ONLY_Y_FACES
-		// y Face approach
-		addYFaces (CHLEN, triangles_index); //want
-#else
-
-				
-		// old approach...
-		/* 
-		 * 
-		 
-		noNeedToRenderFlag = true;
-
-		int iterCount = 0;
-
-		int i = 0;
-		for (; i < CHLEN; ++i) 
-		{
-			int j = 0;
-			for (; j < CHHeight; ++j) 
-			{
-				int k = 0;
-				for (; k< CHLEN; ++k) 
-				{
-
-					Block b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, new Coord (i, j, k));
-
-					if (b == null)
-					{
-						//want *****??????
-//						bug ("block was null in makeMesh"); //WEIRD THIS CAUSES THE SEP THREAD TO WORK??? (TODO: why)
-						continue;
-					}
-
-					if ((b.type != BlockType.Air))
-						noNeedToRenderFlag = false;
-
-//					int dir = (int) Direction.xpos; // zero 
-//					int dir = (int) Direction.zpos; // zero
-					int dir = (int) Direction.zneg; // zero
-
-					Block targetBlock;
-
-					int directionsLookupIndex = 0;
-
-					#if TESTRENDER
-					directionsLookupIndex = m_meshGenPhaseOneDirections.Length; // i.e. skip this
-					#endif
-
-					for (; directionsLookupIndex < m_meshGenPhaseOneDirections.Length ; ++directionsLookupIndex)
-//					for (; dir <= (int) Direction.zneg; ++ dir) 
-//					for (; dir < (int) Direction.zpos; ++ dir) 
-					{
-
-						dir = m_meshGenPhaseOneDirections [directionsLookupIndex];
-
-						ChunkIndex ijk = new ChunkIndex (i, j, k);
-
-						// if block is of type air OR
-						// OR if direction and coord "match" and block is not of type air...
-						bool negDir = dir % 2 == 1;
-
-						dvektor dtotalUnitVek = new dvektor (ijk) * new dvektor ((Direction)dir);
-						int totalUnitVek = dtotalUnitVek.total ();
-
-						bool zeroAndNegDir = negDir && totalUnitVek == 0; // at zero at the coord corresponding to direction & negDir
-						bool chunkMaxAndPosDir = !negDir && totalUnitVek == CHLEN - 1; // the opposite
-
-						bool reachingBeyondChunkEdge = zeroAndNegDir || chunkMaxAndPosDir;
-						Block blockNextDoor = null;
-
-						// don't bother if we're not going to use...
-						// if non-air and non-edge
-						if (b.type == BlockType.Air || reachingBeyondChunkEdge) 
-						{
-							blockNextDoor = reachingBeyondChunkEdge && b.type != BlockType.Air ? nextBlock ((Direction)dir, ijk, true) : nextBlock ((Direction)dir, ijk);
-						}
-
-
-
-						//debug 
-						if (blockNextDoor == null && reachingBeyondChunkEdge) 
-						{
-//							bug ("we were reaching beyond this chunk but got a null block. reaching from chunk index (coord)" + ijk.toString () + "in Dir: " + dir);
-
-						}
-
-
-//						if (b.type == BlockType.Air || (blockNextDoor != null && reachingBeyondChunkEdge && blockNextDoor.type == BlockType.Air)) 
-						if ((reachingBeyondChunkEdge) || (b.type == BlockType.Air && blockNextDoor != null)) 
-						{
-
-							// if we're on the edge and not air, we want to know about the block in the next chunk over. if we are an air block,
-							// we want to throw out those blocks...
-							// (we could have just checked for blocks in the next chunk, only if we were an air block, 
-							// but then, we'd be drawing a bit of geom from the next chunk over...)
-
-							targetBlock = reachingBeyondChunkEdge ? b : blockNextDoor ; // if edge matches dir, we want 'this' block
-
-							if (targetBlock != null && targetBlock.type != BlockType.Air) //OK we got a block face that we can use
-							{
-								//ONE LAST CONDITION: ALLOWS US TO DEAL WITH 'REACHING-BEYOND' BLOCKS THAT WERE NULL
-								//WHILE SKIPPING BEYOND BLOCKS THAT WEREN'T AIR
-								if (reachingBeyondChunkEdge && blockNextDoor != null && blockNextDoor.type != BlockType.Air)
-								{
-									continue;
-								}
-								// get the opposite direction to the current one
-								//direction enum: xpos = 0, xneg, ypos, yneg, zpos, zneg = 5
-								int shift = negDir ? -1 : 1; 
-
-								if (reachingBeyondChunkEdge)
-									shift = 0; // want the same direction in this edge case
-
-								Vector3[] verts = new Vector3[]{};
-								int[] tris = new int[]{};
-
-								Vector2[] uvs;
-
-								if (reachingBeyondChunkEdge) //TEST
-									uvs = uvCoordsForTestBlock ((blockNextDoor == null), dir);
-								else 
-									uvs = uvCoordsForBlockType (targetBlock.type, (Direction) (dir + shift) );
-
-								// if on edge make the face for the block at this chunk index, else the one next to it in Direction dir.
-								ChunkIndex nextToIJK = reachingBeyondChunkEdge ? ijk : ChunkIndex.ChunkIndexNextToIndex (ijk,(Direction) dir);
-
-								Direction meshFaceDirection = (Direction)dir + shift;
-
-								int[] posTriangles = new int[] { 0, 2, 3, 0, 1, 2 };  // clockwise when looking from pos towards neg
-								int[] negTriangles = new int[] { 0, 3, 2, 0, 2, 1 }; // the opposite
-
-								tris =(dir + shift) % 2 == 0 ? posTriangles : negTriangles; 
-
-								for (int ii = 0; ii < tris.Length; ++ii) {
-									tris [ii] += triangles_index;
-								}
-								verts = faceMesh (meshFaceDirection, nextToIJK); // dir + shift == the opposite dir. (if xneg, xpos etc.)
-								vertices_list.AddRange (verts);
-								// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
-								triangles_list.AddRange (tris);
-								// 4 uv coords
-								uvcoords_list.AddRange (uvs);
-								triangles_index += 4;
-
-								//CORO!
-//								iterCount++;
-//								if (iterCount % 10 == 0) {
-//									yield return new WaitForSeconds (.1f);
-//								}
-
-							}
-						}
-					}
-				}
-			}
-		}
-		
-		*/
 
 		// y Face approach
 		addYFaces (CHLEN, triangles_index); //want
@@ -547,18 +405,15 @@ public class Chunk : ThreadedJob
 			noNeedToRenderFlag = (vertices_list.Count == 0);
 
 		}
-#endif
+
 
 		calculatedMeshAlready = true;
 	}
 	
-//	private FaceAggregator faceAggregatorAt(int index, Direction dir) {
-	private FaceAggregator faceAggregatorAt(int index) {
-		
-//		index = (index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 );
-		
+	private FaceAggregator faceAggregatorAt(int index) 
+	{
 		if(	faceAggregators[index] == null) {
-			faceAggregators[index] = new FaceAggregator();
+			faceAggregators[index] = new FaceAggregator(index );
 		}
 		return faceAggregators[index];
 	}
@@ -591,7 +446,7 @@ public class Chunk : ThreadedJob
 		
 		List<Range1D> heights;
 		
-		resetFaceAggregatorsArray();
+		resetFaceAggregatorsArray(); // TODO: face aggregators still report trying to add new facesets where there already was one...
 
 		int xx = 0;
 		for (; xx < CHLEN; ++xx) {
@@ -673,16 +528,13 @@ public class Chunk : ThreadedJob
 						
 						// ------ OR . (alt rules) -----
 						
-						// all ranges always draw only their x,z pos faces <--no, actually all four directions!
+						// all ranges always draw all four directions (x/z, pos/neg)
 						// except we want to catch it when there's a face that's not overlapped by any other range.
-						// struct can have two booleans: backRubbedX--backRubbedZ (easy!)
+						// struct can have two booleans: backRubbedX--backRubbedZ (easy! ?)
 						// chunks ask noisepatchs for ranges at the chunk limits
 						// noise patches just deal with it at the noise patch limit...
 						
-						
-						
-#if NO_XZ
-#else
+
 						//XPOS
 						List<Range1D> adjRanges;
 						if (xx == CHLEN - 1) {
@@ -691,8 +543,11 @@ public class Chunk : ThreadedJob
 							adjRanges = ySurfaceMap[(xx + 1) * CHLEN + zz];
 						}
 						
-						List<Range1D> exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+						List<Range1D> exposedRanges = exposedRangesWithinRange(h_range, adjRanges, heights.Count > 1);
 						addMeshDataForExposedRanges(exposedRanges, Direction.xneg, ref starting_tri_index, xx, zz);
+						
+#if NO_XZ
+#else						
 						
 						//ZPOS
 						if (zz == CHLEN - 1) {
@@ -720,6 +575,9 @@ public class Chunk : ThreadedJob
 						} else {
 							adjRanges = ySurfaceMap[(xx - 1) * CHLEN + zz];
 						}
+						
+						//TODO: BUG: maybe something off by one with height maps...
+						// also TODO: FaceAggs should deal with only one face slice: so the upward faces of level n and downward of n+1
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 						addMeshDataForExposedRanges(exposedRanges, Direction.xpos, ref starting_tri_index, xx, zz);
@@ -834,6 +692,8 @@ public class Chunk : ThreadedJob
 		
 		Range1D remainderRange = _range;
 		
+		bool shouldDebug = debug; 
+		
 		foreach(Range1D adjacentRange in adjacentRanges)
 		{
 			// get the section that's entirely below adj range
@@ -844,10 +704,23 @@ public class Chunk : ThreadedJob
 			{
 //				if (debug)
 //					bug ("the range below that we are adding was: " + belowAdj.toString());
-				if (belowAdj.start == Range1D.theErsatzNullRange().start )
+				if (belowAdj.start == Range1D.theErsatzNullRange().start ) //paranoid? (not quite?)
 					throw new Exception ("range is funky but we are adding it now" + belowAdj.toString() + " adj range was: " + adjacentRange.toString() + " the orig range was " + _range.toString());
 				
-				nonOverlappingRanges.Add(belowAdj);
+				if (shouldDebug) bug ("yes were adding a range: from below: " + belowAdj.toString());
+				
+				if (_range.contains(belowAdj))
+				{
+					nonOverlappingRanges.Add(belowAdj);
+				}
+				else if (debug) {
+					throw new Exception ("wha? trying to add a range not contained by the original range?? : new range: " + remainderRange.toString() + "orig range: " + _range.toString() );	
+				}
+				
+				
+			}
+			else if (shouldDebug) {
+				bug ("skipped a range below because it was ersatz null");	
 			}
 			
 			remainderRange = remainderRange.subRangeAboveRange(adjacentRange);
@@ -863,11 +736,19 @@ public class Chunk : ThreadedJob
 		
 		if (!Range1D.Equal(remainderRange, Range1D.theErsatzNullRange()) )
 		{
-			if (debug)
+			if (debug || shouldDebug)
 				bug ("adding theh last remainder range: " + remainderRange.toString());
 			if (remainderRange.start == Range1D.theErsatzNullRange().start )
 					throw new Exception ("remainder range is funky but we are adding iti now" + remainderRange.toString());
-			nonOverlappingRanges.Add(remainderRange);
+			
+			if (_range.contains(remainderRange))
+			{
+				nonOverlappingRanges.Add(remainderRange);
+			}
+			else if (debug) {
+				bug ("wha? trying to add a range not contained by the original range?? : new range: " + remainderRange.toString() + "orig range: " + _range.toString() );	
+			}
+			
 		}
 			
 		return nonOverlappingRanges;

@@ -87,7 +87,7 @@ public struct Range1D
 	//TODO: fix sub range so it only can return a real sub range:
 	// this func. really gives the area above the level.
 	public Range1D subRangeAbove(int level) {
-		if (level <= this.start)
+		if (level < this.start)
 			return this;
 		
 		int newRange = this.extentMinusOne() - level;
@@ -110,7 +110,9 @@ public struct Range1D
 		if (level <= this.start)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(this.start, level - this.start);
+		int min = Mathf.Min(this.extent(), level);
+		
+		return new Range1D(this.start, min - this.start);
 	}
 	
 	public Range1D extendRangeByOne() {
@@ -144,6 +146,10 @@ public struct Range1D
 		
 		return new Range1D(interStart, interExtent - interStart);
 //		int extentDif = raa.e
+	}
+	
+	public bool contains(Range1D r) {
+		return this.start <= r.start && this.extent() >=r.extent();	
 	}
 	
 }

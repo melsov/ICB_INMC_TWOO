@@ -25,12 +25,18 @@
         // /Applications/Unity/Unity.app/Contents/CGIncludes/UnityCG.cginc
         #include "UnityCG.cginc"
         
+        #define TILES_PER_DIM 4.0
+        #define TOTAL_TILES TILES_PER_DIM * TILES_PER_DIM
+        
+        #define NORMAL_THRESHOLD 0.2
+        
         uniform sampler2D _BlockTex;
 //        uniform fixed _GameClock;
 
         struct appdata {
             float4 vertex : POSITION;
             float3 normal : NORMAL;
+//            float4 color : COLOR;
             half2 texcoord : TEXCOORD0;
         };
 
@@ -40,76 +46,65 @@
             half2 uv : TEXCOORD0;
         };
         
+
         
-        
-        v2f vert(appdata v) {
+        v2f vert(appdata v) 
+        {
             v2f o;
             o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
-            o.color.xyz = v.normal * 0.5 + 0.5;
-            o.color.w = 1.0;
-			
-			half scale = 0.25;
-			half fudgeS = 0.5;
-			half fudgeAlso = 33.5;
-			half texX =  v.vertex.x * fudgeAlso + fudgeS; 
-			texX = half(texX - int(texX)) * scale;
 
-			half texZ =  v.vertex.z * fudgeAlso + fudgeS;
-			texZ = half(texZ - int(texZ)) * scale;
+			float vx = v.vertex.x + .5;
+			float vy = v.vertex.z + .5;
 			
-			half texY = v.vertex.y * fudgeAlso + fudgeS;
-			texY = half(texY - int(texY)) * scale;
 			
-			o.color = float4(texX, texZ, texY, 1.0);
+			if (v.normal.z > NORMAL_THRESHOLD)
+			{
+				vy = v.vertex.y + .5;				
+			}
+			else if ( v.normal.z < -NORMAL_THRESHOLD)
+			{
+				vy = -(v.vertex.y + .5);
+				vx *= -1;
+			}
+			else if (v.normal.x > NORMAL_THRESHOLD) 
+			{
+				vx = -(v.vertex.y + .5);
+				vy *= -1;
+			}
+			else if ( v.normal.x < -NORMAL_THRESHOLD)
+			{
+				vx = (v.vertex.y + .5);
+				vy *= -1;
+			}
+			else if (v.normal.y < -NORMAL_THRESHOLD)
+			{
+				vx *= -1;
+			}
+			
+			// GET TILE OFFSET
+			float index = v.texcoord.x * (TOTAL_TILES);
+			float blocky = floor(index/TILES_PER_DIM);
+			half2 tile_o = half2(index - blocky * TILES_PER_DIM, blocky) * 0.25;
 
-
-			half2 texOut = half2(texX, texZ);
+			// store in color for now
+			o.color.xy = tile_o;
+			// END OF GET TILE OFFSET
 			
-			if (v.normal.z > .9 || v.normal.z < -.9)
-				texOut = half2(texY + scale, texX);
-			else if (v.normal.x > .9 || v.normal.x < -.9)
-				texOut = half2(texY, texZ + scale);
-			
-			float rem = fmod(floor(v.vertex.x), 16.0)/16.0;
-			float zrem = fmod(floor(v.vertex.z), 16.0)/16.0;
-			
-//			rem = rem > .5 ? rem - 0.5 : rem;
-			o.color = float4(rem, .7, zrem, 1.0);
-			
-//			if (texX > .9 || texZ > .9)
-//			float xf = float(v.vertex.x - int(v.vertex.x));
-//			if (xf < 0.04 )
-//				o.color.xyz += -1.0;
-//            o.uv = MultiplyUV( UNITY_MATRIX_TEXTURE0, v.texcoord ); 
-			o.uv = MultiplyUV( UNITY_MATRIX_TEXTURE0, texOut ); 
-
-            return o;
+			o.uv =  half2(vx, vy);
+			return o;
+            
         }
         
-        fixed4 frag(v2f i) : COLOR {
+        fixed4 frag(v2f i) : COLOR 
+        {
         	
-        	
-			
-        
-	        return tex2D(_BlockTex, i.uv);
-//			fixed4 texcolor = tex2D(_BlockTex, i.uv);
-//			return fixed4(i.color);
-//			
-//			float2 wcoord = float2(i.uv);
-//			fixed4 color;
-//			
-//			//				if (fmod(1.0*wcoord.x,0.25)<1.0 || fmod(20.0*wcoord.y,15.0)<1.0 ) {
-//			if (wcoord.x < 0.1 ) {//|| wcoord.y < 0.9) {
-//			//					color = fixed4(wcoord.xy,0.0,1.0);
-//				color = fixed4(1.0, 0.8,0.0,1.0);
-//			} else {
-//				color = fixed4(0.3,0.3,0.3,1.0);
-//			//					color =   fixed4(i.color) + tex2D(_BlockTex, i.uv);
-//			}
-//			return color + texcolor;
-        
-//        	return   fixed4(i.color); // + tex2D(_BlockTex, i.uv);  //fixed4(i.uv.x, i.uv.y, .7, 1.0);
-//            return  tex2D(_BlockTex, i.uv);// TIME OFF FOR THE MOMNT * _GameClock; // fixed4(1.0, .6, 1.0, 1.0);
+
+			half2 fluv = frac(i.uv);
+			fluv = fluv * 0.25;
+			half2 offset =  i.color.xy;
+			fluv = fluv + offset;
+	        return tex2D(_BlockTex, fluv);
+
         }
 
         ENDCG

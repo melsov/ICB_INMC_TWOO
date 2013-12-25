@@ -30,29 +30,105 @@ public struct MeshSet
 	}
 }
 
-public struct CTwo
+public struct PTwo
 {
-	int r, s;
+	public int s, t;
 	
-	public CTwo(int rr, int ss) {
-		r = rr; s = ss;	
+	public PTwo(int ss, int tt) {
+		s = ss; t = tt;	
 	}
 	
-	public static CTwo CTwoXZFromCoord(Coord co) {
-		return new CTwo(co.x, co.z);	
+	public PTwo(int ss, float tt) {
+		this = new PTwo(ss, (int) tt);	
+	}
+	
+	public PTwo(float ss, int tt) {
+		this = new PTwo((int) ss, tt);
+	}
+	
+	public PTwo(float sss, float ttt) {
+		this = new PTwo((int) sss, (int) ttt);	
+	}
+	
+	public static PTwo newPTwoWidthHeight (int width, int height) {
+		if (width < 0 || height < 0)
+			UnityEngine.Debug.LogError("a negative width or height when you apparently meant otherwise?");
+		return new PTwo(width, height);
+	}
+	
+	public static PTwo PTwoXZFromCoord(Coord co) {
+		return new PTwo(co.x, co.z);	
+	}
+	
+	public int area() {
+		return s * t;	
 	}
 	
 	public string toString() {
-		return " CTwo: r: " + r + " s: " + s;	
+		return " PTwo: s: " + s + " t: " + t;	
 	}
+	
+	public int width() { return s; }
+	
+	public void setWidth(int ww) { s = ww; }
+	
+	public int height() { return t; }
+	
+	public void setHeight (int height) { t = height; }
+	
+	public static PTwo operator+  (PTwo ff, PTwo gg) {
+		return new PTwo(ff.s + gg.s, ff.t + gg.t);	
+	}
+	
+	public static PTwo operator-  (PTwo ff, PTwo gg) {
+		return new PTwo(ff.s - gg.s, ff.t - gg.t);	
+	}
+	
+	public static PTwo operator*  (PTwo ff, PTwo gg) {
+		return new PTwo(ff.s * gg.s, ff.t * gg.t);	
+	}
+	
+	public static PTwo operator*  (PTwo ff, int gg) {
+		return new PTwo(ff.s * gg, ff.t * gg);	
+	}
+	
+	
+	public static PTwo operator*  (PTwo ff, float gg) {
+		return new PTwo((int)(ff.s * gg), (int) (ff.t * gg));	
+	}
+	
+	public static PTwo operator%  (PTwo ff, PTwo gg) {
+		return new PTwo(ff.s % gg.s, ff.t % gg.t);	
+	}
+	
+	public static PTwo Min(PTwo aaa, PTwo bbb) {
+		return new PTwo( (aaa.s < bbb.s) ? aaa.s : bbb.s , (aaa.t < bbb.t ) ? aaa.t : bbb.t);	
+	}
+	
+	public static PTwo Max(PTwo aaa, PTwo bbb) {
+		return new PTwo( (aaa.s > bbb.s) ? aaa.s : bbb.s , (aaa.t > bbb.t ) ? aaa.t : bbb.t);	
+	}
+	
+	public static bool Equal(PTwo aaa, PTwo bbb) {
+		return aaa.s == bbb.s && aaa.t == bbb.t;	
+	}
+	
+	public static bool GreaterThan(PTwo aaa, PTwo bbb) {
+		return aaa.s > bbb.s && aaa.t > bbb.t;	
+	}
+	
+	public static bool GreaterThanOrEqual(PTwo aaa, PTwo bbb) {
+		return aaa.s >= bbb.s && aaa.t >= bbb.t;	
+	}
+	
 }
 
 public struct VertexTwo
 {
-	public CTwo coord;
+	public PTwo coord;
 //	int tri_index;
 	
-	public VertexTwo(CTwo _ctwo) {  //, int _tri_index) {
+	public VertexTwo(PTwo _ctwo) {  //, int _tri_index) {
 		coord = _ctwo;// tri_index = _tri_index;	
 	}
 	
@@ -76,17 +152,90 @@ public struct IndexSet
 	}
 }
 
+public struct Quad
+{
+	public PTwo origin;
+	public PTwo dimensions;
+	
+	public Quad(PTwo origin_, PTwo dims) {
+		origin = origin_; dimensions = dims;
+	}
+	
+	public static Quad UnitQuadWithPoint(PTwo point) {
+		return new Quad(point, new PTwo(1,1) );	
+	}
+	
+	public static Quad QuadWithOriginAndExtent(PTwo origin, PTwo extent) {
+		return new Quad( origin, extent - origin);	
+	}
+	
+	public string toString() {
+		return "Quad: origin: " + origin.toString() + " and dims: " + dimensions.toString();	
+	}
+	
+	public PTwo extent() {
+		return origin + dimensions;	
+	}
+	
+	public static Quad theErsatzNullQuad() {
+		return new Quad(new PTwo (-1, -777), new PTwo (-12399, -88) );	
+	}
+	
+	public bool isErsatzNull() {
+		return this.dimensions.s == -12399;	
+	}
+	
+	public Quad expandedToContainPoint(PTwo point) {
+		return Quad.QuadWithOriginAndExtent(PTwo.Min(this.origin, point) , PTwo.Max(this.extent(), point) );
+	}
+	
+	public Quad upperLeftQuarter() {
+		return 	new Quad(this.origin, this.dimensions * .5f);
+	}
+	
+	public Quad upperRightQuarter() {
+		PTwo shift = this.dimensions * .5f;
+		return new Quad(new PTwo (this.origin.s + shift.s , this.origin.t), new PTwo(this.dimensions.s - shift.s , shift.t ));
+	}
+	
+	public Quad lowerLeftQuarter() {
+		PTwo shift = this.dimensions * .5f;
+		return new Quad(new PTwo (this.origin.s , this.origin.t + shift.t), new PTwo(shift.s , this.dimensions.t - shift.t ));	
+	}
+	
+	public Quad lowerRightQuarter() {
+		PTwo shift = this.dimensions * .5f;
+		return new Quad( this.origin + shift, this.dimensions - shift);	
+	}
+	
+	public static Quad QuadFromStrip(Strip strip, int hLocation) {
+		return new Quad( new PTwo(hLocation, strip.range.start) , new PTwo(strip.width, strip.range.range) );	
+	}
+	
+//	public static Quad Union(Quad one, Quad two)
+//	{
+////		PTwo newO = 	
+//	}
+}
+
 public struct Strip
 {
 	public Range1D range;
 	public IndexSet indexSet;
+	public int width;
+	
+	public int quadIndex;
+	
+	public Strip(Range1D rr, IndexSet iset, int ww) {
+		range = rr; indexSet = iset; width = ww; quadIndex = -1;
+	}
 	
 	public Strip(Range1D rr, IndexSet iset) {
-		range = rr; indexSet = iset;
+		range = rr; indexSet = iset; width = 1; quadIndex = -1;
 	}
 	
 	public Strip(Range1D rr) {
-		range = rr; indexSet = IndexSet.theErsatzNullIndexSet();	
+		range = rr; indexSet = IndexSet.theErsatzNullIndexSet(); width = 1;	quadIndex = -1;
 	}
 	
 	public static Strip theErsatzNullStrip() {

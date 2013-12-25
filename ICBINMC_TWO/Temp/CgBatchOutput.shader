@@ -19,96 +19,77 @@
         LOD 100
         Program "vp" {
 // Vertex combos: 1
-//   opengl - ALU: 70 to 70
-//   d3d9 - ALU: 111 to 111
-//   d3d11 - ALU: 12 to 12, TEX: 0 to 0, FLOW: 1 to 1
-//   d3d11_9x - ALU: 12 to 12, TEX: 0 to 0, FLOW: 1 to 1
+//   opengl - ALU: 52 to 52
+//   d3d9 - ALU: 71 to 71
+//   d3d11 - ALU: 8 to 8, TEX: 0 to 0, FLOW: 1 to 1
+//   d3d11_9x - ALU: 8 to 8, TEX: 0 to 0, FLOW: 1 to 1
 SubProgram "opengl " {
 Keywords { }
 Bind "vertex" Vertex
 Bind "normal" Normal
+Bind "texcoord" TexCoord0
 "!!ARBvp1.0
-# 70 ALU
-PARAM c[11] = { { 0.69999999, 1, 0, 0.0625 },
+# 52 ALU
+PARAM c[6] = { { 16, 0.25, 4, 0.5 },
 		state.matrix.mvp,
-		state.matrix.texture[0],
-		{ 33.5, 0.5, 0.25, 0.89999998 },
-		{ -0.89999998, 16 } };
+		{ 0, 0.2, -0.2 } };
 TEMP R0;
 TEMP R1;
 TEMP R2;
-MUL R0.x, vertex.position.y, c[9];
-ADD R0.y, R0.x, c[9];
-MUL R1.y, vertex.position.x, c[9].x;
-ABS R0.z, R0.y;
-FLR R0.z, R0;
-SLT R0.w, R0.x, -c[9].y;
-ADD R0.x, -R0.z, -R0.z;
-MAD R0.x, R0, R0.w, R0.z;
-ADD R0.w, R1.y, c[9].y;
-ADD R0.x, R0.y, -R0;
-MUL R1.x, vertex.position.z, c[9];
-ADD R0.y, R1.x, c[9];
-MUL R0.x, R0, c[9].z;
-ABS R1.z, R0.w;
-FLR R1.z, R1;
-SLT R1.w, R1.y, -c[9].y;
-ADD R1.y, -R1.z, -R1.z;
-MAD R1.y, R1, R1.w, R1.z;
-ABS R2.x, R0.y;
-ADD R0.w, R0, -R1.y;
-FLR R1.z, R2.x;
-SLT R1.w, R1.x, -c[9].y;
-ADD R1.x, -R1.z, -R1.z;
-MAD R1.x, R1, R1.w, R1.z;
-ADD R0.y, R0, -R1.x;
-MUL R1.x, R0.w, c[9].z;
-MUL R0.y, R0, c[9].z;
-MOV R1.y, R0;
-ADD R0.z, R0.x, c[9];
-MOV R0.w, R1.x;
-ADD R0.zw, R0, -R1.xyxy;
-SLT R1.w, vertex.normal.z, c[10].x;
-SLT R1.z, c[9].w, vertex.normal;
-ADD R1.z, R1, R1.w;
-MAD R0.zw, R0, R1.z, R1.xyxy;
-ABS R1.x, R1.z;
-ADD R0.y, R0, c[9].z;
-ADD R0.xy, R0, -R0.zwzw;
-SLT R1.z, vertex.normal.x, c[10].x;
-SLT R1.y, c[9].w, vertex.normal.x;
-ADD R1.y, R1, R1.z;
-SGE R1.x, c[0].z, R1;
-MUL R1.x, R1, R1.y;
-MAD R1.xy, R0, R1.x, R0.zwzw;
-MOV R1.zw, c[0].z;
-FLR R0.y, vertex.position.x;
-FLR R0.x, vertex.position.z;
-MUL R0.z, R0.y, c[0].w;
-MUL R0.w, R0.x, c[0];
-ABS R0.z, R0;
-FRC R0.z, R0;
-MUL R0.z, R0, c[10].y;
-ABS R0.w, R0;
-DP4 result.texcoord[0].y, R1, c[6];
-DP4 result.texcoord[0].x, R1, c[5];
-FRC R1.x, R0.w;
-SLT R0.w, R0.y, c[0].z;
-ADD R0.y, -R0.z, -R0.z;
-MAD R0.y, R0, R0.w, R0.z;
-MUL R0.z, R1.x, c[10].y;
-SLT R0.w, R0.x, c[0].z;
-ADD R0.x, -R0.z, -R0.z;
-MAD R0.x, R0, R0.w, R0.z;
-MUL result.color.x, R0.y, c[0].w;
-MUL result.color.z, R0.x, c[0].w;
-MOV result.color.yw, c[0].xxzy;
+SLT R0.w, c[5].y, vertex.normal.z;
+ADD R0.x, vertex.position, c[0].w;
+ABS R0.y, R0.w;
+ADD R2.x, vertex.position.z, c[0].w;
+ADD R2.y, vertex.position, -R2.x;
+SGE R1.x, c[5], R0.y;
+SLT R1.y, vertex.normal.z, c[5].z;
+MUL R0.y, R1.x, R1;
+ADD R0.z, -R0.x, -R0.x;
+MAD R1.z, R0, R0.y, R0.x;
+ABS R0.x, R1.y;
+SGE R0.x, c[5], R0;
+MUL R0.z, R1.x, R0.x;
+ADD R1.y, -vertex.position, -R1.z;
+SLT R1.w, c[5].y, vertex.normal.x;
+MUL R0.x, R0.z, R1.w;
+ADD R1.x, R1.y, -c[0].w;
+MAD R1.x, R1, R0, R1.z;
+ABS R1.z, R1.w;
+ADD R1.y, vertex.position, -R1.x;
+SGE R1.w, c[5].x, R1.z;
+ADD R1.z, R1.y, c[0].w;
+MUL R1.y, R0.z, R1.w;
+SLT R1.w, vertex.normal.x, c[5].z;
+MUL R0.z, R1.y, R1.w;
+MAD R1.x, R1.z, R0.z, R1;
+ADD R2.y, R2, c[0].w;
+MAD R1.z, R0.w, R2.y, R2.x;
+ABS R2.x, R1.w;
+ADD R2.y, -vertex.position, -R1.z;
+ADD R1.w, R2.y, -c[0];
+SGE R2.x, c[5], R2;
+ADD R0.w, -R1.x, -R1.x;
+MAD R0.y, R0, R1.w, R1.z;
+SLT R2.y, vertex.normal, c[5].z;
+MUL R1.y, R1, R2.x;
+MUL R1.y, R1, R2;
+MAD result.texcoord[0].x, R0.w, R1.y, R1;
+ADD R1.x, -R0.y, -R0.y;
+MAD R0.y, R0.x, R1.x, R0;
+MUL R0.w, vertex.texcoord[0].x, c[0].x;
+ADD R1.x, -R0.y, -R0.y;
+MUL R0.x, R0.w, c[0].y;
+FLR R0.x, R0;
+MAD result.texcoord[0].y, R0.z, R1.x, R0;
+MOV R0.y, R0.x;
+MAD R0.x, -R0, c[0].z, R0.w;
+MUL result.color.xy, R0, c[0].y;
 DP4 result.position.w, vertex.position, c[4];
 DP4 result.position.z, vertex.position, c[3];
 DP4 result.position.y, vertex.position, c[2];
 DP4 result.position.x, vertex.position, c[1];
 END
-# 70 instructions, 3 R-regs
+# 52 instructions, 3 R-regs
 "
 }
 
@@ -116,108 +97,80 @@ SubProgram "d3d9 " {
 Keywords { }
 Bind "vertex" Vertex
 Bind "normal" Normal
+Bind "texcoord" TexCoord0
 Matrix 0 [glstate_matrix_mvp]
-Matrix 4 [glstate_matrix_texture0]
 "vs_2_0
-; 111 ALU
-def c8, 33.50000000, 0.50000000, -0.50000000, 0.00000000
-def c9, 1.00000000, 0.25000000, 0.89999998, -0.89999998
-def c10, 0.06250000, 16.00000000, 0.69999999, 1.00000000
+; 71 ALU
+def c4, 0.20000000, 0.00000000, -0.20000000, 0.50000000
+def c5, 1.00000000, 16.00000000, 0.25000000, 4.00000000
 dcl_position0 v0
 dcl_normal0 v1
-mul r0.y, v0.x, c8.x
-add r0.x, r0.y, c8.y
-abs r0.z, r0.x
-frc r0.w, r0.z
-mul r1.x, v0.z, c8
-slt r1.y, r1.x, c8.z
-add r1.x, r1, c8.y
-abs r1.z, r1.x
-frc r1.w, r1.z
-slt r0.y, r0, c8.z
+dcl_texcoord0 v2
+slt r0.y, c4.x, v1.z
+slt r1.x, v1.z, c4.z
+sge r0.z, c4.y, r0.y
+sge r0.x, r0.y, c4.y
+mul r0.w, r0.x, r0.z
+sge r0.z, c4.y, r1.x
+sge r0.x, r1, c4.y
+mul r0.x, r0, r0.z
+slt r0.z, c4.x, v1.x
+mul r0.x, r0.w, r0
+mul r1.x, r0.w, r1
+mul r1.y, r0.x, r0.z
+sge r1.w, c4.y, r0.z
+max r0.w, -r1.y, r1.y
+max r1.x, -r1, r1
+sge r0.z, r0, c4.y
+mul r0.z, r0, r1.w
+slt r1.y, c4, r1.x
 max r0.y, -r0, r0
-max r1.y, -r1, r1
-slt r1.y, c8.w, r1
-add r1.z, r1, -r1.w
-add r2.x, -r1.y, c9
-add r0.z, r0, -r0.w
-slt r0.y, c8.w, r0
-add r0.w, -r0.y, c9.x
-mul r0.w, r0.z, r0
-mad r0.z, r0.y, -r0, r0.w
-add r0.x, r0, -r0.z
-mul r1.w, r1.z, r2.x
-mad r0.y, r1, -r1.z, r1.w
-add r0.y, r1.x, -r0
-mul r2.x, r0.y, c9.y
-mul r0.z, v0.y, c8.x
-add r1.w, r0.z, c8.y
-mul r0.x, r0, c9.y
-slt r2.y, v1.z, c9.w
-slt r2.z, c9, v1
-add r2.w, r2.z, r2.y
-max r0.w, -r2, r2
-slt r3.x, c8.w, r0.w
-slt r0.w, r0.z, c8.z
-abs r0.z, r1.w
-frc r1.x, r0.z
-add r1.y, r0.z, -r1.x
-max r0.w, -r0, r0
-slt r1.z, c8.w, r0.w
-add r0.w, -r1.z, c9.x
-mul r1.x, r1.y, r0.w
-mad r1.x, r1.z, -r1.y, r1
-add r1.x, r1.w, -r1
-mov r0.y, r2.x
-add r0.z, -r3.x, c9.x
-mul r0.zw, r0.z, r0.xyxy
-sge r1.z, c8.w, r2.w
-slt r1.y, v1.x, c9.w
-slt r0.y, c9.z, v1.x
-add r0.y, r0, r1
-sge r1.y, r2.z, -r2
-mul r1.y, r1, r1.z
-mul r0.y, r1, r0
-mul r1.z, r1.x, c9.y
-max r0.y, -r0, r0
-slt r0.y, c8.w, r0
-mov r1.y, r0.x
-add r1.x, r1.z, c9.y
-mad r0.zw, r3.x, r1.xyxy, r0
-add r0.x, -r0.y, c9
-mul r0.zw, r0.x, r0
-frc r0.x, v0.z
-add r1.x, v0.z, -r0
-mul r1.x, r1, c10
-add r1.w, r2.x, c9.y
-mad r2.xy, r0.y, r1.zwzw, r0.zwzw
-mov r2.zw, c8.w
-frc r0.y, v0.x
-add r0.z, v0.x, -r0.y
-slt r0.y, v0.x, r0
-mul r0.z, r0, c10.x
-max r0.y, -r0, r0
-slt r0.y, c8.w, r0
-abs r0.z, r0
-frc r0.z, r0
-slt r0.x, v0.z, r0
-abs r1.y, r1.x
-max r0.x, -r0, r0
-slt r1.x, c8.w, r0
-frc r0.x, r1.y
-mul r1.y, r0.x, c10
-add r1.z, -r1.x, c9.x
-add r0.w, -r0.y, c9.x
-mul r0.z, r0, c10.y
-mul r0.w, r0.z, r0
-mad r0.x, r0.y, -r0.z, r0.w
-mul r1.z, r1.y, r1
-mad r0.y, r1.x, -r1, r1.z
-dp4 oT0.y, r2, c5
-dp4 oT0.x, r2, c4
-mul oD0.x, r0, c10
-mul oD0.z, r0.y, c10.x
-mov oD0.yw, c10.xzzw
+slt r1.x, c4.y, r0.y
+mul r0.x, r0, r0.z
+add r0.y, -r1.x, c5.x
+add r1.z, v0, c4.w
+mul r1.z, r0.y, r1
+add r0.y, v0, c4.w
+mad r1.x, r0.y, r1, r1.z
+add r1.z, -r1.y, c5.x
+mul r1.x, r1.z, r1
+mad r2.x, -r0.y, r1.y, r1
+slt r0.w, c4.y, r0
+add r1.x, -r0.w, c5
+mul r2.y, r1.x, r2.x
+mad r1.w, r0, -r2.x, r2.y
+slt r2.x, v1, c4.z
+add r2.y, v0.x, c4.w
+mul r0.z, r0.x, r2.x
+mul r1.z, r2.y, r1
+mad r1.y, r1, -r2, r1.z
+mul r1.y, r1.x, r1
+max r0.z, -r0, r0
+slt r0.z, c4.y, r0
+add r1.x, -r0.z, c5
+mad r0.w, r0, -r0.y, r1.y
+mul r1.y, r1.x, r0.w
+mul r1.z, r1.x, r1.w
+sge r1.x, c4.y, r2
+sge r0.w, r2.x, c4.y
+mul r0.w, r0, r1.x
+mul r0.x, r0, r0.w
+slt r1.x, v1.y, c4.z
+mul r0.x, r0, r1
+mad r1.x, r0.z, r0.y, r1.y
+max r0.y, -r0.x, r0.x
+slt r0.w, c4.y, r0.y
+mul r0.x, v2, c5.y
+add r1.y, -r0.w, c5.x
+mul r1.y, r1.x, r1
+mul r0.y, r0.x, c5.z
+mad oT0.y, r0.z, -r1.w, r1.z
+frc r0.z, r0.y
+add r0.z, r0.y, -r0
+mov r0.y, r0.z
+mad r0.x, -r0.z, c5.w, r0
+mad oT0.x, r0.w, -r1, r1.y
+mul oD0.xy, r0, c5.z
 dp4 oPos.w, v0, c3
 dp4 oPos.z, v0, c2
 dp4 oPos.y, v0, c1
@@ -229,56 +182,50 @@ SubProgram "d3d11 " {
 Keywords { }
 Bind "vertex" Vertex
 Bind "normal" Normal
+Bind "texcoord" TexCoord0
 ConstBuffer "UnityPerDraw" 336 // 64 used size, 6 vars
 Matrix 0 [glstate_matrix_mvp] 4
-ConstBuffer "UnityPerDrawTexMatrices" 768 // 576 used size, 5 vars
-Matrix 512 [glstate_matrix_texture0] 4
 BindCB "UnityPerDraw" 0
-BindCB "UnityPerDrawTexMatrices" 1
-// 24 instructions, 3 temp regs, 0 temp arrays:
-// ALU 11 float, 0 int, 1 uint
+// 19 instructions, 4 temp regs, 0 temp arrays:
+// ALU 8 float, 0 int, 0 uint
 // TEX 0 (0 load, 0 comp, 0 bias, 0 grad)
 // FLOW 1 static, 0 dynamic
 "vs_4_0
-eefiecedagheakfgcjdcfljmcanadigfmaachbgmabaaaaaaniaeaaaaadaaaaaa
+eefiecedggcioocokhmpagmbbhhonhjlinmoencdabaaaaaaeaaeaaaaadaaaaaa
 cmaaaaaakaaaaaaabeabaaaaejfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaa
 aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaafjaaaaaaaaaaaaaaaaaaaaaa
-adaaaaaaabaaaaaaahafaaaagaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
-adaaaaaafaepfdejfeejepeoaaeoepfcenebemaafeeffiedepepfceeaaklklkl
+adaaaaaaabaaaaaaahahaaaagaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
+adabaaaafaepfdejfeejepeoaaeoepfcenebemaafeeffiedepepfceeaaklklkl
 epfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaaaaaaaaaaabaaaaaaadaaaaaa
-aaaaaaaaapaaaaaafmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaaapaaaaaa
+aaaaaaaaapaaaaaafmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaaapamaaaa
 gcaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaaadamaaaafdfgfpfaepfdejfe
-ejepeoaaedepemepfcaafeeffiedepepfceeaaklfdeieefclmadaaaaeaaaabaa
-opaaaaaafjaaaaaeegiocaaaaaaaaaaaaeaaaaaafjaaaaaeegiocaaaabaaaaaa
-ccaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadfcbabaaaabaaaaaaghaaaaae
-pccabaaaaaaaaaaaabaaaaaagfaaaaadpccabaaaabaaaaaagfaaaaaddccabaaa
-acaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaaaaaaaaaa
-egiocaaaaaaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaaaaaaaaa
-aaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaa
-egiocaaaaaaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaak
-pccabaaaaaaaaaaaegiocaaaaaaaaaaaadaaaaaapgbpbaaaaaaaaaaaegaobaaa
-aaaaaaaaebaaaaafdcaabaaaaaaaaaaaigbabaaaaaaaaaaadiaaaaakdcaabaaa
-aaaaaaaaegaabaaaaaaaaaaaaceaaaaaaaaaiadnaaaaiadnaaaaaaaaaaaaaaaa
-bnaaaaaimcaabaaaaaaaaaaaagaebaaaaaaaaaaaagaebaiaebaaaaaaaaaaaaaa
-bkaaaaagdcaabaaaaaaaaaaaegaabaiaibaaaaaaaaaaaaaadhaaaaakfccabaaa
-abaaaaaakgalbaaaaaaaaaaaagabbaaaaaaaaaaaagabbaiaebaaaaaaaaaaaaaa
-dgaaaaaikccabaaaabaaaaaaaceaaaaaaaaaaaaadddddddpaaaaaaaaaaaaiadp
-dbaaaaakdcaabaaaaaaaaaaaaceaaaaaggggggdpggggggdpaaaaaaaaaaaaaaaa
-cgbkbaaaabaaaaaadbaaaaakmcaabaaaaaaaaaaakgbcbaaaabaaaaaaaceaaaaa
-aaaaaaaaaaaaaaaagggggglpgggggglpdmaaaaahdcaabaaaaaaaaaaaogakbaaa
-aaaaaaaaegaabaaaaaaaaaaadcaaaaaphcaabaaaabaaaaaaigbbbaaaaaaaaaaa
-aceaaaaaaaaaagecaaaaagecaaaaagecaaaaaaaaaceaaaaaaaaaaadpaaaaaadp
-aaaaaadpaaaaaaaaedaaaaafhcaabaaaacaaaaaaegacbaaaabaaaaaaaaaaaaai
-hcaabaaaabaaaaaaegacbaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaak
-hcaabaaaacaaaaaaegacbaaaabaaaaaaaceaaaaaaaaaiadoaaaaiadoaaaaiado
-aaaaaaaadcaaaaajicaabaaaacaaaaaabkaabaaaabaaaaaaabeaaaaaaaaaiado
-abeaaaaaaaaaiadodcaaaaapmcaabaaaaaaaaaaakgacbaaaabaaaaaaaceaaaaa
-aaaaaaaaaaaaaaaaaaaaiadoaaaaiadoaceaaaaaaaaaaaaaaaaaaaaaaaaaiado
-aaaaaaaadhaaaaajdcaabaaaabaaaaaafgafbaaaaaaaaaaaogakbaaaacaaaaaa
-egaabaaaacaaaaaadhaaaaajdcaabaaaaaaaaaaaagaabaaaaaaaaaaaogakbaaa
-aaaaaaaaegaabaaaabaaaaaadiaaaaaigcaabaaaaaaaaaaafgafbaaaaaaaaaaa
-agibcaaaabaaaaaacbaaaaaadcaaaaakdccabaaaacaaaaaaegiacaaaabaaaaaa
-caaaaaaaagaabaaaaaaaaaaajgafbaaaaaaaaaaadoaaaaab"
+ejepeoaaedepemepfcaafeeffiedepepfceeaaklfdeieefcceadaaaaeaaaabaa
+mjaaaaaafjaaaaaeegiocaaaaaaaaaaaaeaaaaaafpaaaaadpcbabaaaaaaaaaaa
+fpaaaaadhcbabaaaabaaaaaafpaaaaadbcbabaaaacaaaaaaghaaaaaepccabaaa
+aaaaaaaaabaaaaaagfaaaaaddccabaaaabaaaaaagfaaaaaddccabaaaacaaaaaa
+giaaaaacaeaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaaaaaaaaaaegiocaaa
+aaaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaaaaaaaaaaaaaaaaa
+agbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
+aaaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpccabaaa
+aaaaaaaaegiocaaaaaaaaaaaadaaaaaapgbpbaaaaaaaaaaaegaobaaaaaaaaaaa
+diaaaaakdcaabaaaaaaaaaaaagbabaaaacaaaaaaaceaaaaaaaaaiaebaaaaiaea
+aaaaaaaaaaaaaaaaebaaaaafccaabaaaabaaaaaabkaabaaaaaaaaaaadcaaaaak
+bcaabaaaabaaaaaabkaabaiaebaaaaaaabaaaaaaabeaaaaaaaaaiaeaakaabaaa
+aaaaaaaadiaaaaakdccabaaaabaaaaaaegaabaaaabaaaaaaaceaaaaaaaaaiado
+aaaaiadoaaaaaaaaaaaaaaaadcaaaaapdcaabaaaaaaaaaaajgbfbaaaaaaaaaaa
+aceaaaaaaaaaiadpaaaaialpaaaaaaaaaaaaaaaaaceaaaaaaaaaaadpaaaaaalp
+aaaaaaaaaaaaaaaaaaaaaaahccaabaaaabaaaaaackbabaaaaaaaaaaaabeaaaaa
+aaaaaadpdbaaaaakhcaabaaaacaaaaaacgbjbaaaabaaaaaaaceaaaaamnmmemlo
+mnmmemlomnmmemloaaaaaaaaaaaaaaakhcaabaaaadaaaaaabgbgbaaaaaaaaaaa
+aceaaaaaaaaaaadpaaaaaadpaaaaaadpaaaaaaaadhaaaaakbcaabaaaabaaaaaa
+ckaabaaaacaaaaaabkaabaiaebaaaaaaadaaaaaabkaabaaaadaaaaaadhaaaaaj
+dcaabaaaaaaaaaaafgafbaaaacaaaaaaegaabaaaaaaaaaaaegaabaaaabaaaaaa
+dbaaaaakmcaabaaaaaaaaaaaaceaaaaaaaaaaaaaaaaaaaaamnmmemdomnmmemdo
+kgbcbaaaabaaaaaadhaaaaakdcaabaaaaaaaaaaapgapbaaaaaaaaaaaigaabaia
+ebaaaaaaadaaaaaaegaabaaaaaaaaaaadhaaaaakdcaabaaaaaaaaaaaagaabaaa
+acaaaaaabgafbaiaebaaaaaaadaaaaaaegaabaaaaaaaaaaadhaaaaajdccabaaa
+acaaaaaakgakbaaaaaaaaaaabgafbaaaadaaaaaaegaabaaaaaaaaaaadoaaaaab
+"
 }
 
 SubProgram "gles " {
@@ -290,94 +237,67 @@ Keywords { }
 
 varying mediump vec2 xlv_TEXCOORD0;
 varying highp vec4 xlv_COLOR;
-uniform highp mat4 glstate_matrix_texture0;
 uniform highp mat4 glstate_matrix_mvp;
+attribute vec4 _glesMultiTexCoord0;
 attribute vec3 _glesNormal;
 attribute vec4 _glesVertex;
 void main ()
 {
   vec3 tmpvar_1;
   tmpvar_1 = normalize(_glesNormal);
-  mediump vec2 texOut_2;
-  mediump float texY_3;
-  mediump float texZ_4;
-  mediump float texX_5;
-  mediump vec2 tmpvar_6;
-  highp vec4 tmpvar_7;
-  tmpvar_7 = (glstate_matrix_mvp * _glesVertex);
-  highp float tmpvar_8;
-  tmpvar_8 = ((_glesVertex.x * 33.5) + 0.5);
-  texX_5 = tmpvar_8;
-  mediump float tmpvar_9;
-  tmpvar_9 = ((texX_5 - float(int(texX_5))) * 0.25);
-  texX_5 = tmpvar_9;
-  highp float tmpvar_10;
-  tmpvar_10 = ((_glesVertex.z * 33.5) + 0.5);
-  texZ_4 = tmpvar_10;
-  mediump float tmpvar_11;
-  tmpvar_11 = ((texZ_4 - float(int(texZ_4))) * 0.25);
-  texZ_4 = tmpvar_11;
-  highp float tmpvar_12;
-  tmpvar_12 = ((_glesVertex.y * 33.5) + 0.5);
-  texY_3 = tmpvar_12;
-  mediump float tmpvar_13;
-  tmpvar_13 = ((texY_3 - float(int(texY_3))) * 0.25);
-  texY_3 = tmpvar_13;
-  mediump vec2 tmpvar_14;
-  tmpvar_14.x = tmpvar_9;
-  tmpvar_14.y = tmpvar_11;
-  texOut_2 = tmpvar_14;
-  if (((tmpvar_1.z > 0.9) || (tmpvar_1.z < -0.9))) {
-    mediump vec2 tmpvar_15;
-    tmpvar_15.x = (tmpvar_13 + 0.25);
-    tmpvar_15.y = tmpvar_9;
-    texOut_2 = tmpvar_15;
+  mediump vec2 tile_o_2;
+  highp float index_3;
+  highp float vy_4;
+  highp float vx_5;
+  highp vec4 tmpvar_6;
+  mediump vec2 tmpvar_7;
+  highp vec4 tmpvar_8;
+  tmpvar_8 = (glstate_matrix_mvp * _glesVertex);
+  highp float tmpvar_9;
+  tmpvar_9 = (_glesVertex.x + 0.5);
+  vx_5 = tmpvar_9;
+  vy_4 = (_glesVertex.z + 0.5);
+  if ((tmpvar_1.z > 0.2)) {
+    vy_4 = (_glesVertex.y + 0.5);
   } else {
-    if (((tmpvar_1.x > 0.9) || (tmpvar_1.x < -0.9))) {
-      mediump vec2 tmpvar_16;
-      tmpvar_16.x = tmpvar_13;
-      tmpvar_16.y = (tmpvar_11 + 0.25);
-      texOut_2 = tmpvar_16;
+    if ((tmpvar_1.z < -0.2)) {
+      vy_4 = -((_glesVertex.y + 0.5));
+      vx_5 = (tmpvar_9 * -1.0);
+    } else {
+      if ((tmpvar_1.x > 0.2)) {
+        vx_5 = -((_glesVertex.y + 0.5));
+        vy_4 = (vy_4 * -1.0);
+      } else {
+        if ((tmpvar_1.x < -0.2)) {
+          vx_5 = (_glesVertex.y + 0.5);
+          vy_4 = (vy_4 * -1.0);
+        } else {
+          if ((tmpvar_1.y < -0.2)) {
+            vx_5 = (vx_5 * -1.0);
+          };
+        };
+      };
     };
   };
-  highp float tmpvar_17;
-  tmpvar_17 = (floor(_glesVertex.x) / 16.0);
-  highp float tmpvar_18;
-  tmpvar_18 = (fract(abs(tmpvar_17)) * 16.0);
-  highp float tmpvar_19;
-  if ((tmpvar_17 >= 0.0)) {
-    tmpvar_19 = tmpvar_18;
-  } else {
-    tmpvar_19 = -(tmpvar_18);
-  };
-  highp float tmpvar_20;
-  tmpvar_20 = (tmpvar_19 / 16.0);
-  highp float tmpvar_21;
-  tmpvar_21 = (floor(_glesVertex.z) / 16.0);
-  highp float tmpvar_22;
-  tmpvar_22 = (fract(abs(tmpvar_21)) * 16.0);
-  highp float tmpvar_23;
-  if ((tmpvar_21 >= 0.0)) {
-    tmpvar_23 = tmpvar_22;
-  } else {
-    tmpvar_23 = -(tmpvar_22);
-  };
-  highp vec4 tmpvar_24;
-  tmpvar_24.yw = vec2(0.7, 1.0);
-  tmpvar_24.x = tmpvar_20;
-  tmpvar_24.z = (tmpvar_23 / 16.0);
-  highp vec2 tmpvar_25;
-  highp vec2 inUV_26;
-  inUV_26 = texOut_2;
-  highp vec4 tmpvar_27;
-  tmpvar_27.zw = vec2(0.0, 0.0);
-  tmpvar_27.x = inUV_26.x;
-  tmpvar_27.y = inUV_26.y;
-  tmpvar_25 = (glstate_matrix_texture0 * tmpvar_27).xy;
-  tmpvar_6 = tmpvar_25;
-  gl_Position = tmpvar_7;
-  xlv_COLOR = tmpvar_24;
-  xlv_TEXCOORD0 = tmpvar_6;
+  mediump float tmpvar_10;
+  tmpvar_10 = (_glesMultiTexCoord0.x * 16.0);
+  index_3 = tmpvar_10;
+  highp float tmpvar_11;
+  tmpvar_11 = floor((index_3 / 4.0));
+  highp vec2 tmpvar_12;
+  tmpvar_12.x = (index_3 - (tmpvar_11 * 4.0));
+  tmpvar_12.y = tmpvar_11;
+  highp vec2 tmpvar_13;
+  tmpvar_13 = (tmpvar_12 * 0.25);
+  tile_o_2 = tmpvar_13;
+  tmpvar_6.xy = tile_o_2;
+  highp vec2 tmpvar_14;
+  tmpvar_14.x = vx_5;
+  tmpvar_14.y = vy_4;
+  tmpvar_7 = tmpvar_14;
+  gl_Position = tmpvar_8;
+  xlv_COLOR = tmpvar_6;
+  xlv_TEXCOORD0 = tmpvar_7;
 }
 
 
@@ -386,10 +306,17 @@ void main ()
 #ifdef FRAGMENT
 
 varying mediump vec2 xlv_TEXCOORD0;
+varying highp vec4 xlv_COLOR;
 uniform sampler2D _BlockTex;
 void main ()
 {
-  gl_FragData[0] = texture2D (_BlockTex, xlv_TEXCOORD0);
+  mediump vec2 offset_1;
+  highp vec2 tmpvar_2;
+  tmpvar_2 = xlv_COLOR.xy;
+  offset_1 = tmpvar_2;
+  mediump vec2 tmpvar_3;
+  tmpvar_3 = ((fract(xlv_TEXCOORD0) * 0.25) + offset_1);
+  gl_FragData[0] = texture2D (_BlockTex, tmpvar_3);
 }
 
 
@@ -406,94 +333,67 @@ Keywords { }
 
 varying mediump vec2 xlv_TEXCOORD0;
 varying highp vec4 xlv_COLOR;
-uniform highp mat4 glstate_matrix_texture0;
 uniform highp mat4 glstate_matrix_mvp;
+attribute vec4 _glesMultiTexCoord0;
 attribute vec3 _glesNormal;
 attribute vec4 _glesVertex;
 void main ()
 {
   vec3 tmpvar_1;
   tmpvar_1 = normalize(_glesNormal);
-  mediump vec2 texOut_2;
-  mediump float texY_3;
-  mediump float texZ_4;
-  mediump float texX_5;
-  mediump vec2 tmpvar_6;
-  highp vec4 tmpvar_7;
-  tmpvar_7 = (glstate_matrix_mvp * _glesVertex);
-  highp float tmpvar_8;
-  tmpvar_8 = ((_glesVertex.x * 33.5) + 0.5);
-  texX_5 = tmpvar_8;
-  mediump float tmpvar_9;
-  tmpvar_9 = ((texX_5 - float(int(texX_5))) * 0.25);
-  texX_5 = tmpvar_9;
-  highp float tmpvar_10;
-  tmpvar_10 = ((_glesVertex.z * 33.5) + 0.5);
-  texZ_4 = tmpvar_10;
-  mediump float tmpvar_11;
-  tmpvar_11 = ((texZ_4 - float(int(texZ_4))) * 0.25);
-  texZ_4 = tmpvar_11;
-  highp float tmpvar_12;
-  tmpvar_12 = ((_glesVertex.y * 33.5) + 0.5);
-  texY_3 = tmpvar_12;
-  mediump float tmpvar_13;
-  tmpvar_13 = ((texY_3 - float(int(texY_3))) * 0.25);
-  texY_3 = tmpvar_13;
-  mediump vec2 tmpvar_14;
-  tmpvar_14.x = tmpvar_9;
-  tmpvar_14.y = tmpvar_11;
-  texOut_2 = tmpvar_14;
-  if (((tmpvar_1.z > 0.9) || (tmpvar_1.z < -0.9))) {
-    mediump vec2 tmpvar_15;
-    tmpvar_15.x = (tmpvar_13 + 0.25);
-    tmpvar_15.y = tmpvar_9;
-    texOut_2 = tmpvar_15;
+  mediump vec2 tile_o_2;
+  highp float index_3;
+  highp float vy_4;
+  highp float vx_5;
+  highp vec4 tmpvar_6;
+  mediump vec2 tmpvar_7;
+  highp vec4 tmpvar_8;
+  tmpvar_8 = (glstate_matrix_mvp * _glesVertex);
+  highp float tmpvar_9;
+  tmpvar_9 = (_glesVertex.x + 0.5);
+  vx_5 = tmpvar_9;
+  vy_4 = (_glesVertex.z + 0.5);
+  if ((tmpvar_1.z > 0.2)) {
+    vy_4 = (_glesVertex.y + 0.5);
   } else {
-    if (((tmpvar_1.x > 0.9) || (tmpvar_1.x < -0.9))) {
-      mediump vec2 tmpvar_16;
-      tmpvar_16.x = tmpvar_13;
-      tmpvar_16.y = (tmpvar_11 + 0.25);
-      texOut_2 = tmpvar_16;
+    if ((tmpvar_1.z < -0.2)) {
+      vy_4 = -((_glesVertex.y + 0.5));
+      vx_5 = (tmpvar_9 * -1.0);
+    } else {
+      if ((tmpvar_1.x > 0.2)) {
+        vx_5 = -((_glesVertex.y + 0.5));
+        vy_4 = (vy_4 * -1.0);
+      } else {
+        if ((tmpvar_1.x < -0.2)) {
+          vx_5 = (_glesVertex.y + 0.5);
+          vy_4 = (vy_4 * -1.0);
+        } else {
+          if ((tmpvar_1.y < -0.2)) {
+            vx_5 = (vx_5 * -1.0);
+          };
+        };
+      };
     };
   };
-  highp float tmpvar_17;
-  tmpvar_17 = (floor(_glesVertex.x) / 16.0);
-  highp float tmpvar_18;
-  tmpvar_18 = (fract(abs(tmpvar_17)) * 16.0);
-  highp float tmpvar_19;
-  if ((tmpvar_17 >= 0.0)) {
-    tmpvar_19 = tmpvar_18;
-  } else {
-    tmpvar_19 = -(tmpvar_18);
-  };
-  highp float tmpvar_20;
-  tmpvar_20 = (tmpvar_19 / 16.0);
-  highp float tmpvar_21;
-  tmpvar_21 = (floor(_glesVertex.z) / 16.0);
-  highp float tmpvar_22;
-  tmpvar_22 = (fract(abs(tmpvar_21)) * 16.0);
-  highp float tmpvar_23;
-  if ((tmpvar_21 >= 0.0)) {
-    tmpvar_23 = tmpvar_22;
-  } else {
-    tmpvar_23 = -(tmpvar_22);
-  };
-  highp vec4 tmpvar_24;
-  tmpvar_24.yw = vec2(0.7, 1.0);
-  tmpvar_24.x = tmpvar_20;
-  tmpvar_24.z = (tmpvar_23 / 16.0);
-  highp vec2 tmpvar_25;
-  highp vec2 inUV_26;
-  inUV_26 = texOut_2;
-  highp vec4 tmpvar_27;
-  tmpvar_27.zw = vec2(0.0, 0.0);
-  tmpvar_27.x = inUV_26.x;
-  tmpvar_27.y = inUV_26.y;
-  tmpvar_25 = (glstate_matrix_texture0 * tmpvar_27).xy;
-  tmpvar_6 = tmpvar_25;
-  gl_Position = tmpvar_7;
-  xlv_COLOR = tmpvar_24;
-  xlv_TEXCOORD0 = tmpvar_6;
+  mediump float tmpvar_10;
+  tmpvar_10 = (_glesMultiTexCoord0.x * 16.0);
+  index_3 = tmpvar_10;
+  highp float tmpvar_11;
+  tmpvar_11 = floor((index_3 / 4.0));
+  highp vec2 tmpvar_12;
+  tmpvar_12.x = (index_3 - (tmpvar_11 * 4.0));
+  tmpvar_12.y = tmpvar_11;
+  highp vec2 tmpvar_13;
+  tmpvar_13 = (tmpvar_12 * 0.25);
+  tile_o_2 = tmpvar_13;
+  tmpvar_6.xy = tile_o_2;
+  highp vec2 tmpvar_14;
+  tmpvar_14.x = vx_5;
+  tmpvar_14.y = vy_4;
+  tmpvar_7 = tmpvar_14;
+  gl_Position = tmpvar_8;
+  xlv_COLOR = tmpvar_6;
+  xlv_TEXCOORD0 = tmpvar_7;
 }
 
 
@@ -502,10 +402,17 @@ void main ()
 #ifdef FRAGMENT
 
 varying mediump vec2 xlv_TEXCOORD0;
+varying highp vec4 xlv_COLOR;
 uniform sampler2D _BlockTex;
 void main ()
 {
-  gl_FragData[0] = texture2D (_BlockTex, xlv_TEXCOORD0);
+  mediump vec2 offset_1;
+  highp vec2 tmpvar_2;
+  tmpvar_2 = xlv_COLOR.xy;
+  offset_1 = tmpvar_2;
+  mediump vec2 tmpvar_3;
+  tmpvar_3 = ((fract(xlv_TEXCOORD0) * 0.25) + offset_1);
+  gl_FragData[0] = texture2D (_BlockTex, tmpvar_3);
 }
 
 
@@ -517,138 +424,109 @@ SubProgram "flash " {
 Keywords { }
 Bind "vertex" Vertex
 Bind "normal" Normal
+Bind "texcoord" TexCoord0
 Matrix 0 [glstate_matrix_mvp]
-Matrix 4 [glstate_matrix_texture0]
 "agal_vs
-c8 33.5 0.5 -0.5 0.0
-c9 1.0 0.25 0.9 -0.9
-c10 0.0625 16.0 0.7 1.0
+c4 0.2 0.0 -0.2 0.5
+c5 1.0 16.0 0.25 4.0
 [bc]
-adaaaaaaaaaaacacaaaaaaaaaaaaaaaaaiaaaaaaabaaaaaa mul r0.y, a0.x, c8.x
-abaaaaaaaaaaabacaaaaaaffacaaaaaaaiaaaaffabaaaaaa add r0.x, r0.y, c8.y
-beaaaaaaaaaaaeacaaaaaaaaacaaaaaaaaaaaaaaaaaaaaaa abs r0.z, r0.x
-aiaaaaaaaaaaaiacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa frc r0.w, r0.z
-adaaaaaaabaaabacaaaaaakkaaaaaaaaaiaaaaoeabaaaaaa mul r1.x, a0.z, c8
-ckaaaaaaabaaacacabaaaaaaacaaaaaaaiaaaakkabaaaaaa slt r1.y, r1.x, c8.z
-abaaaaaaabaaabacabaaaaaaacaaaaaaaiaaaaffabaaaaaa add r1.x, r1.x, c8.y
-beaaaaaaabaaaeacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa abs r1.z, r1.x
-aiaaaaaaabaaaiacabaaaakkacaaaaaaaaaaaaaaaaaaaaaa frc r1.w, r1.z
-ckaaaaaaaaaaacacaaaaaaffacaaaaaaaiaaaakkabaaaaaa slt r0.y, r0.y, c8.z
-bfaaaaaaacaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r2.y, r0.y
-ahaaaaaaaaaaacacacaaaaffacaaaaaaaaaaaaffacaaaaaa max r0.y, r2.y, r0.y
+ckaaaaaaaaaaacacaeaaaaaaabaaaaaaabaaaakkaaaaaaaa slt r0.y, c4.x, a1.z
+ckaaaaaaabaaabacabaaaakkaaaaaaaaaeaaaakkabaaaaaa slt r1.x, a1.z, c4.z
+cjaaaaaaaaaaaeacaeaaaaffabaaaaaaaaaaaaffacaaaaaa sge r0.z, c4.y, r0.y
+cjaaaaaaaaaaabacaaaaaaffacaaaaaaaeaaaaffabaaaaaa sge r0.x, r0.y, c4.y
+adaaaaaaaaaaaiacaaaaaaaaacaaaaaaaaaaaakkacaaaaaa mul r0.w, r0.x, r0.z
+cjaaaaaaaaaaaeacaeaaaaffabaaaaaaabaaaaaaacaaaaaa sge r0.z, c4.y, r1.x
+cjaaaaaaaaaaabacabaaaaaaacaaaaaaaeaaaaffabaaaaaa sge r0.x, r1.x, c4.y
+adaaaaaaaaaaabacaaaaaaaaacaaaaaaaaaaaakkacaaaaaa mul r0.x, r0.x, r0.z
+ckaaaaaaaaaaaeacaeaaaaaaabaaaaaaabaaaaaaaaaaaaaa slt r0.z, c4.x, a1.x
+adaaaaaaaaaaabacaaaaaappacaaaaaaaaaaaaaaacaaaaaa mul r0.x, r0.w, r0.x
+adaaaaaaabaaabacaaaaaappacaaaaaaabaaaaaaacaaaaaa mul r1.x, r0.w, r1.x
+adaaaaaaabaaacacaaaaaaaaacaaaaaaaaaaaakkacaaaaaa mul r1.y, r0.x, r0.z
+cjaaaaaaabaaaiacaeaaaaffabaaaaaaaaaaaakkacaaaaaa sge r1.w, c4.y, r0.z
+bfaaaaaaacaaacacabaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r2.y, r1.y
+ahaaaaaaaaaaaiacacaaaaffacaaaaaaabaaaaffacaaaaaa max r0.w, r2.y, r1.y
+bfaaaaaaacaaaeacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r2.z, r1.x
+ahaaaaaaabaaabacacaaaakkacaaaaaaabaaaaaaacaaaaaa max r1.x, r2.z, r1.x
+cjaaaaaaaaaaaeacaaaaaakkacaaaaaaaeaaaaffabaaaaaa sge r0.z, r0.z, c4.y
+adaaaaaaaaaaaeacaaaaaakkacaaaaaaabaaaappacaaaaaa mul r0.z, r0.z, r1.w
+ckaaaaaaabaaacacaeaaaaoeabaaaaaaabaaaaaaacaaaaaa slt r1.y, c4, r1.x
+bfaaaaaaadaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r3.y, r0.y
+ahaaaaaaaaaaacacadaaaaffacaaaaaaaaaaaaffacaaaaaa max r0.y, r3.y, r0.y
+ckaaaaaaabaaabacaeaaaaffabaaaaaaaaaaaaffacaaaaaa slt r1.x, c4.y, r0.y
+adaaaaaaaaaaabacaaaaaaaaacaaaaaaaaaaaakkacaaaaaa mul r0.x, r0.x, r0.z
+bfaaaaaaadaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r3.x, r1.x
+abaaaaaaaaaaacacadaaaaaaacaaaaaaafaaaaaaabaaaaaa add r0.y, r3.x, c5.x
+abaaaaaaabaaaeacaaaaaaoeaaaaaaaaaeaaaappabaaaaaa add r1.z, a0, c4.w
+adaaaaaaabaaaeacaaaaaaffacaaaaaaabaaaakkacaaaaaa mul r1.z, r0.y, r1.z
+abaaaaaaaaaaacacaaaaaaoeaaaaaaaaaeaaaappabaaaaaa add r0.y, a0, c4.w
+adaaaaaaadaaabacaaaaaaffacaaaaaaabaaaaaaacaaaaaa mul r3.x, r0.y, r1.x
+abaaaaaaabaaabacadaaaaaaacaaaaaaabaaaakkacaaaaaa add r1.x, r3.x, r1.z
 bfaaaaaaadaaacacabaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r3.y, r1.y
-ahaaaaaaabaaacacadaaaaffacaaaaaaabaaaaffacaaaaaa max r1.y, r3.y, r1.y
-ckaaaaaaabaaacacaiaaaappabaaaaaaabaaaaffacaaaaaa slt r1.y, c8.w, r1.y
-acaaaaaaabaaaeacabaaaakkacaaaaaaabaaaappacaaaaaa sub r1.z, r1.z, r1.w
-bfaaaaaaadaaaeacabaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r3.z, r1.y
-abaaaaaaacaaabacadaaaakkacaaaaaaajaaaaoeabaaaaaa add r2.x, r3.z, c9
-acaaaaaaaaaaaeacaaaaaakkacaaaaaaaaaaaappacaaaaaa sub r0.z, r0.z, r0.w
-ckaaaaaaaaaaacacaiaaaappabaaaaaaaaaaaaffacaaaaaa slt r0.y, c8.w, r0.y
-bfaaaaaaaeaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r4.y, r0.y
-abaaaaaaaaaaaiacaeaaaaffacaaaaaaajaaaaaaabaaaaaa add r0.w, r4.y, c9.x
-adaaaaaaaaaaaiacaaaaaakkacaaaaaaaaaaaappacaaaaaa mul r0.w, r0.z, r0.w
-bfaaaaaaaeaaaeacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa neg r4.z, r0.z
-adaaaaaaaeaaaeacaaaaaaffacaaaaaaaeaaaakkacaaaaaa mul r4.z, r0.y, r4.z
-abaaaaaaaaaaaeacaeaaaakkacaaaaaaaaaaaappacaaaaaa add r0.z, r4.z, r0.w
-acaaaaaaaaaaabacaaaaaaaaacaaaaaaaaaaaakkacaaaaaa sub r0.x, r0.x, r0.z
-adaaaaaaabaaaiacabaaaakkacaaaaaaacaaaaaaacaaaaaa mul r1.w, r1.z, r2.x
-bfaaaaaaaeaaaeacabaaaakkacaaaaaaaaaaaaaaaaaaaaaa neg r4.z, r1.z
-adaaaaaaaaaaacacabaaaaffacaaaaaaaeaaaakkacaaaaaa mul r0.y, r1.y, r4.z
-abaaaaaaaaaaacacaaaaaaffacaaaaaaabaaaappacaaaaaa add r0.y, r0.y, r1.w
-acaaaaaaaaaaacacabaaaaaaacaaaaaaaaaaaaffacaaaaaa sub r0.y, r1.x, r0.y
-adaaaaaaacaaabacaaaaaaffacaaaaaaajaaaaffabaaaaaa mul r2.x, r0.y, c9.y
-adaaaaaaaaaaaeacaaaaaaffaaaaaaaaaiaaaaaaabaaaaaa mul r0.z, a0.y, c8.x
-abaaaaaaabaaaiacaaaaaakkacaaaaaaaiaaaaffabaaaaaa add r1.w, r0.z, c8.y
-adaaaaaaaaaaabacaaaaaaaaacaaaaaaajaaaaffabaaaaaa mul r0.x, r0.x, c9.y
-ckaaaaaaacaaacacabaaaakkaaaaaaaaajaaaappabaaaaaa slt r2.y, a1.z, c9.w
-ckaaaaaaacaaaeacajaaaaoeabaaaaaaabaaaaoeaaaaaaaa slt r2.z, c9, a1
-abaaaaaaacaaaiacacaaaakkacaaaaaaacaaaaffacaaaaaa add r2.w, r2.z, r2.y
-bfaaaaaaaaaaaiacacaaaappacaaaaaaaaaaaaaaaaaaaaaa neg r0.w, r2.w
-ahaaaaaaaaaaaiacaaaaaappacaaaaaaacaaaappacaaaaaa max r0.w, r0.w, r2.w
-ckaaaaaaadaaabacaiaaaappabaaaaaaaaaaaappacaaaaaa slt r3.x, c8.w, r0.w
-ckaaaaaaaaaaaiacaaaaaakkacaaaaaaaiaaaakkabaaaaaa slt r0.w, r0.z, c8.z
-beaaaaaaaaaaaeacabaaaappacaaaaaaaaaaaaaaaaaaaaaa abs r0.z, r1.w
-aiaaaaaaabaaabacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa frc r1.x, r0.z
-acaaaaaaabaaacacaaaaaakkacaaaaaaabaaaaaaacaaaaaa sub r1.y, r0.z, r1.x
-bfaaaaaaaeaaaiacaaaaaappacaaaaaaaaaaaaaaaaaaaaaa neg r4.w, r0.w
-ahaaaaaaaaaaaiacaeaaaappacaaaaaaaaaaaappacaaaaaa max r0.w, r4.w, r0.w
-ckaaaaaaabaaaeacaiaaaappabaaaaaaaaaaaappacaaaaaa slt r1.z, c8.w, r0.w
-bfaaaaaaaeaaaeacabaaaakkacaaaaaaaaaaaaaaaaaaaaaa neg r4.z, r1.z
-abaaaaaaaaaaaiacaeaaaakkacaaaaaaajaaaaaaabaaaaaa add r0.w, r4.z, c9.x
-adaaaaaaabaaabacabaaaaffacaaaaaaaaaaaappacaaaaaa mul r1.x, r1.y, r0.w
-bfaaaaaaaeaaacacabaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r4.y, r1.y
-adaaaaaaaeaaabacabaaaakkacaaaaaaaeaaaaffacaaaaaa mul r4.x, r1.z, r4.y
-abaaaaaaabaaabacaeaaaaaaacaaaaaaabaaaaaaacaaaaaa add r1.x, r4.x, r1.x
-acaaaaaaabaaabacabaaaappacaaaaaaabaaaaaaacaaaaaa sub r1.x, r1.w, r1.x
-aaaaaaaaaaaaacacacaaaaaaacaaaaaaaaaaaaaaaaaaaaaa mov r0.y, r2.x
-bfaaaaaaaeaaabacadaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r4.x, r3.x
-abaaaaaaaaaaaeacaeaaaaaaacaaaaaaajaaaaaaabaaaaaa add r0.z, r4.x, c9.x
-adaaaaaaaaaaamacaaaaaakkacaaaaaaaaaaaaefacaaaaaa mul r0.zw, r0.z, r0.yyxy
-cjaaaaaaabaaaeacaiaaaappabaaaaaaacaaaappacaaaaaa sge r1.z, c8.w, r2.w
-ckaaaaaaabaaacacabaaaaaaaaaaaaaaajaaaappabaaaaaa slt r1.y, a1.x, c9.w
-ckaaaaaaaaaaacacajaaaakkabaaaaaaabaaaaaaaaaaaaaa slt r0.y, c9.z, a1.x
-abaaaaaaaaaaacacaaaaaaffacaaaaaaabaaaaffacaaaaaa add r0.y, r0.y, r1.y
-bfaaaaaaabaaacacacaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r1.y, r2.y
-cjaaaaaaabaaacacacaaaakkacaaaaaaabaaaaffacaaaaaa sge r1.y, r2.z, r1.y
-adaaaaaaabaaacacabaaaaffacaaaaaaabaaaakkacaaaaaa mul r1.y, r1.y, r1.z
-adaaaaaaaaaaacacabaaaaffacaaaaaaaaaaaaffacaaaaaa mul r0.y, r1.y, r0.y
-adaaaaaaabaaaeacabaaaaaaacaaaaaaajaaaaffabaaaaaa mul r1.z, r1.x, c9.y
-bfaaaaaaaeaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r4.y, r0.y
-ahaaaaaaaaaaacacaeaaaaffacaaaaaaaaaaaaffacaaaaaa max r0.y, r4.y, r0.y
-ckaaaaaaaaaaacacaiaaaappabaaaaaaaaaaaaffacaaaaaa slt r0.y, c8.w, r0.y
-aaaaaaaaabaaacacaaaaaaaaacaaaaaaaaaaaaaaaaaaaaaa mov r1.y, r0.x
-abaaaaaaabaaabacabaaaakkacaaaaaaajaaaaffabaaaaaa add r1.x, r1.z, c9.y
-adaaaaaaaeaaamacadaaaaaaacaaaaaaabaaaaefacaaaaaa mul r4.zw, r3.x, r1.yyxy
-abaaaaaaaaaaamacaeaaaaopacaaaaaaaaaaaaopacaaaaaa add r0.zw, r4.wwzw, r0.wwzw
-bfaaaaaaaeaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r4.y, r0.y
-abaaaaaaaaaaabacaeaaaaffacaaaaaaajaaaaoeabaaaaaa add r0.x, r4.y, c9
-adaaaaaaaaaaamacaaaaaaaaacaaaaaaaaaaaaopacaaaaaa mul r0.zw, r0.x, r0.wwzw
-aiaaaaaaaaaaabacaaaaaakkaaaaaaaaaaaaaaaaaaaaaaaa frc r0.x, a0.z
-acaaaaaaabaaabacaaaaaakkaaaaaaaaaaaaaaaaacaaaaaa sub r1.x, a0.z, r0.x
-adaaaaaaabaaabacabaaaaaaacaaaaaaakaaaaoeabaaaaaa mul r1.x, r1.x, c10
-abaaaaaaabaaaiacacaaaaaaacaaaaaaajaaaaffabaaaaaa add r1.w, r2.x, c9.y
-adaaaaaaacaaadacaaaaaaffacaaaaaaabaaaapoacaaaaaa mul r2.xy, r0.y, r1.zwww
-abaaaaaaacaaadacacaaaafeacaaaaaaaaaaaapoacaaaaaa add r2.xy, r2.xyyy, r0.zwww
-aaaaaaaaacaaamacaiaaaappabaaaaaaaaaaaaaaaaaaaaaa mov r2.zw, c8.w
-aiaaaaaaaaaaacacaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa frc r0.y, a0.x
-acaaaaaaaaaaaeacaaaaaaaaaaaaaaaaaaaaaaffacaaaaaa sub r0.z, a0.x, r0.y
-ckaaaaaaaaaaacacaaaaaaaaaaaaaaaaaaaaaaffacaaaaaa slt r0.y, a0.x, r0.y
-adaaaaaaaaaaaeacaaaaaakkacaaaaaaakaaaaaaabaaaaaa mul r0.z, r0.z, c10.x
-bfaaaaaaaeaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r4.y, r0.y
-ahaaaaaaaaaaacacaeaaaaffacaaaaaaaaaaaaffacaaaaaa max r0.y, r4.y, r0.y
-ckaaaaaaaaaaacacaiaaaappabaaaaaaaaaaaaffacaaaaaa slt r0.y, c8.w, r0.y
-beaaaaaaaaaaaeacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa abs r0.z, r0.z
-aiaaaaaaaaaaaeacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa frc r0.z, r0.z
-ckaaaaaaaaaaabacaaaaaakkaaaaaaaaaaaaaaaaacaaaaaa slt r0.x, a0.z, r0.x
-beaaaaaaabaaacacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa abs r1.y, r1.x
-bfaaaaaaaeaaabacaaaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r4.x, r0.x
-ahaaaaaaaaaaabacaeaaaaaaacaaaaaaaaaaaaaaacaaaaaa max r0.x, r4.x, r0.x
-ckaaaaaaabaaabacaiaaaappabaaaaaaaaaaaaaaacaaaaaa slt r1.x, c8.w, r0.x
-aiaaaaaaaaaaabacabaaaaffacaaaaaaaaaaaaaaaaaaaaaa frc r0.x, r1.y
-adaaaaaaabaaacacaaaaaaaaacaaaaaaakaaaaoeabaaaaaa mul r1.y, r0.x, c10
-bfaaaaaaaeaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r4.x, r1.x
-abaaaaaaabaaaeacaeaaaaaaacaaaaaaajaaaaaaabaaaaaa add r1.z, r4.x, c9.x
-bfaaaaaaaeaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r4.y, r0.y
-abaaaaaaaaaaaiacaeaaaaffacaaaaaaajaaaaaaabaaaaaa add r0.w, r4.y, c9.x
-adaaaaaaaaaaaeacaaaaaakkacaaaaaaakaaaaffabaaaaaa mul r0.z, r0.z, c10.y
-adaaaaaaaaaaaiacaaaaaakkacaaaaaaaaaaaappacaaaaaa mul r0.w, r0.z, r0.w
-bfaaaaaaaeaaaeacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa neg r4.z, r0.z
-adaaaaaaaeaaabacaaaaaaffacaaaaaaaeaaaakkacaaaaaa mul r4.x, r0.y, r4.z
-abaaaaaaaaaaabacaeaaaaaaacaaaaaaaaaaaappacaaaaaa add r0.x, r4.x, r0.w
-adaaaaaaabaaaeacabaaaaffacaaaaaaabaaaakkacaaaaaa mul r1.z, r1.y, r1.z
-bfaaaaaaaaaaacacabaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r0.y, r1.y
-adaaaaaaaaaaacacabaaaaaaacaaaaaaaaaaaaffacaaaaaa mul r0.y, r1.x, r0.y
-abaaaaaaaaaaacacaaaaaaffacaaaaaaabaaaakkacaaaaaa add r0.y, r0.y, r1.z
-bdaaaaaaaaaaacaeacaaaaoeacaaaaaaafaaaaoeabaaaaaa dp4 v0.y, r2, c5
-bdaaaaaaaaaaabaeacaaaaoeacaaaaaaaeaaaaoeabaaaaaa dp4 v0.x, r2, c4
-adaaaaaaahaaabaeaaaaaaaaacaaaaaaakaaaaoeabaaaaaa mul v7.x, r0.x, c10
-adaaaaaaahaaaeaeaaaaaaffacaaaaaaakaaaaaaabaaaaaa mul v7.z, r0.y, c10.x
-aaaaaaaaahaaakaeakaaaaoiabaaaaaaaaaaaaaaaaaaaaaa mov v7.yw, c10.xzzw
+abaaaaaaabaaaeacadaaaaffacaaaaaaafaaaaaaabaaaaaa add r1.z, r3.y, c5.x
+adaaaaaaabaaabacabaaaakkacaaaaaaabaaaaaaacaaaaaa mul r1.x, r1.z, r1.x
+bfaaaaaaadaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r3.y, r0.y
+adaaaaaaacaaabacadaaaaffacaaaaaaabaaaaffacaaaaaa mul r2.x, r3.y, r1.y
+abaaaaaaacaaabacacaaaaaaacaaaaaaabaaaaaaacaaaaaa add r2.x, r2.x, r1.x
+ckaaaaaaaaaaaiacaeaaaaffabaaaaaaaaaaaappacaaaaaa slt r0.w, c4.y, r0.w
+bfaaaaaaadaaaiacaaaaaappacaaaaaaaaaaaaaaaaaaaaaa neg r3.w, r0.w
+abaaaaaaabaaabacadaaaappacaaaaaaafaaaaoeabaaaaaa add r1.x, r3.w, c5
+adaaaaaaacaaacacabaaaaaaacaaaaaaacaaaaaaacaaaaaa mul r2.y, r1.x, r2.x
+bfaaaaaaadaaabacacaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r3.x, r2.x
+adaaaaaaabaaaiacaaaaaappacaaaaaaadaaaaaaacaaaaaa mul r1.w, r0.w, r3.x
+abaaaaaaabaaaiacabaaaappacaaaaaaacaaaaffacaaaaaa add r1.w, r1.w, r2.y
+ckaaaaaaacaaabacabaaaaoeaaaaaaaaaeaaaakkabaaaaaa slt r2.x, a1, c4.z
+abaaaaaaacaaacacaaaaaaaaaaaaaaaaaeaaaappabaaaaaa add r2.y, a0.x, c4.w
+adaaaaaaaaaaaeacaaaaaaaaacaaaaaaacaaaaaaacaaaaaa mul r0.z, r0.x, r2.x
+adaaaaaaabaaaeacacaaaaffacaaaaaaabaaaakkacaaaaaa mul r1.z, r2.y, r1.z
+bfaaaaaaadaaacacacaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r3.y, r2.y
+adaaaaaaadaaacacabaaaaffacaaaaaaadaaaaffacaaaaaa mul r3.y, r1.y, r3.y
+abaaaaaaabaaacacadaaaaffacaaaaaaabaaaakkacaaaaaa add r1.y, r3.y, r1.z
+adaaaaaaabaaacacabaaaaaaacaaaaaaabaaaaffacaaaaaa mul r1.y, r1.x, r1.y
+bfaaaaaaadaaaeacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa neg r3.z, r0.z
+ahaaaaaaaaaaaeacadaaaakkacaaaaaaaaaaaakkacaaaaaa max r0.z, r3.z, r0.z
+ckaaaaaaaaaaaeacaeaaaaffabaaaaaaaaaaaakkacaaaaaa slt r0.z, c4.y, r0.z
+bfaaaaaaadaaaeacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa neg r3.z, r0.z
+abaaaaaaabaaabacadaaaakkacaaaaaaafaaaaoeabaaaaaa add r1.x, r3.z, c5
+bfaaaaaaadaaacacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa neg r3.y, r0.y
+adaaaaaaaaaaaiacaaaaaappacaaaaaaadaaaaffacaaaaaa mul r0.w, r0.w, r3.y
+abaaaaaaaaaaaiacaaaaaappacaaaaaaabaaaaffacaaaaaa add r0.w, r0.w, r1.y
+adaaaaaaabaaacacabaaaaaaacaaaaaaaaaaaappacaaaaaa mul r1.y, r1.x, r0.w
+adaaaaaaabaaaeacabaaaaaaacaaaaaaabaaaappacaaaaaa mul r1.z, r1.x, r1.w
+cjaaaaaaabaaabacaeaaaaffabaaaaaaacaaaaaaacaaaaaa sge r1.x, c4.y, r2.x
+cjaaaaaaaaaaaiacacaaaaaaacaaaaaaaeaaaaffabaaaaaa sge r0.w, r2.x, c4.y
+adaaaaaaaaaaaiacaaaaaappacaaaaaaabaaaaaaacaaaaaa mul r0.w, r0.w, r1.x
+adaaaaaaaaaaabacaaaaaaaaacaaaaaaaaaaaappacaaaaaa mul r0.x, r0.x, r0.w
+ckaaaaaaabaaabacabaaaaffaaaaaaaaaeaaaakkabaaaaaa slt r1.x, a1.y, c4.z
+adaaaaaaaaaaabacaaaaaaaaacaaaaaaabaaaaaaacaaaaaa mul r0.x, r0.x, r1.x
+adaaaaaaadaaabacaaaaaakkacaaaaaaaaaaaaffacaaaaaa mul r3.x, r0.z, r0.y
+abaaaaaaabaaabacadaaaaaaacaaaaaaabaaaaffacaaaaaa add r1.x, r3.x, r1.y
+bfaaaaaaadaaabacaaaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r3.x, r0.x
+ahaaaaaaaaaaacacadaaaaaaacaaaaaaaaaaaaaaacaaaaaa max r0.y, r3.x, r0.x
+ckaaaaaaaaaaaiacaeaaaaffabaaaaaaaaaaaaffacaaaaaa slt r0.w, c4.y, r0.y
+adaaaaaaaaaaabacadaaaaoeaaaaaaaaafaaaaffabaaaaaa mul r0.x, a3, c5.y
+bfaaaaaaadaaaiacaaaaaappacaaaaaaaaaaaaaaaaaaaaaa neg r3.w, r0.w
+abaaaaaaabaaacacadaaaappacaaaaaaafaaaaaaabaaaaaa add r1.y, r3.w, c5.x
+adaaaaaaabaaacacabaaaaaaacaaaaaaabaaaaffacaaaaaa mul r1.y, r1.x, r1.y
+adaaaaaaaaaaacacaaaaaaaaacaaaaaaafaaaakkabaaaaaa mul r0.y, r0.x, c5.z
+bfaaaaaaadaaaiacabaaaappacaaaaaaaaaaaaaaaaaaaaaa neg r3.w, r1.w
+adaaaaaaadaaacacaaaaaakkacaaaaaaadaaaappacaaaaaa mul r3.y, r0.z, r3.w
+abaaaaaaaaaaacaeadaaaaffacaaaaaaabaaaakkacaaaaaa add v0.y, r3.y, r1.z
+aiaaaaaaaaaaaeacaaaaaaffacaaaaaaaaaaaaaaaaaaaaaa frc r0.z, r0.y
+acaaaaaaaaaaaeacaaaaaaffacaaaaaaaaaaaakkacaaaaaa sub r0.z, r0.y, r0.z
+aaaaaaaaaaaaacacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa mov r0.y, r0.z
+bfaaaaaaadaaaeacaaaaaakkacaaaaaaaaaaaaaaaaaaaaaa neg r3.z, r0.z
+adaaaaaaadaaabacadaaaakkacaaaaaaafaaaappabaaaaaa mul r3.x, r3.z, c5.w
+abaaaaaaaaaaabacadaaaaaaacaaaaaaaaaaaaaaacaaaaaa add r0.x, r3.x, r0.x
+bfaaaaaaadaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r3.x, r1.x
+adaaaaaaadaaabacaaaaaappacaaaaaaadaaaaaaacaaaaaa mul r3.x, r0.w, r3.x
+abaaaaaaaaaaabaeadaaaaaaacaaaaaaabaaaaffacaaaaaa add v0.x, r3.x, r1.y
+adaaaaaaahaaadaeaaaaaafeacaaaaaaafaaaakkabaaaaaa mul v7.xy, r0.xyyy, c5.z
 bdaaaaaaaaaaaiadaaaaaaoeaaaaaaaaadaaaaoeabaaaaaa dp4 o0.w, a0, c3
 bdaaaaaaaaaaaeadaaaaaaoeaaaaaaaaacaaaaoeabaaaaaa dp4 o0.z, a0, c2
 bdaaaaaaaaaaacadaaaaaaoeaaaaaaaaabaaaaoeabaaaaaa dp4 o0.y, a0, c1
 bdaaaaaaaaaaabadaaaaaaoeaaaaaaaaaaaaaaoeabaaaaaa dp4 o0.x, a0, c0
 aaaaaaaaaaaaamaeaaaaaaoeabaaaaaaaaaaaaaaaaaaaaaa mov v0.zw, c0
+aaaaaaaaahaaamaeaaaaaaoeabaaaaaaaaaaaaaaaaaaaaaa mov v7.zw, c0
 "
 }
 
@@ -656,79 +534,68 @@ SubProgram "d3d11_9x " {
 Keywords { }
 Bind "vertex" Vertex
 Bind "normal" Normal
+Bind "texcoord" TexCoord0
 ConstBuffer "UnityPerDraw" 336 // 64 used size, 6 vars
 Matrix 0 [glstate_matrix_mvp] 4
-ConstBuffer "UnityPerDrawTexMatrices" 768 // 576 used size, 5 vars
-Matrix 512 [glstate_matrix_texture0] 4
 BindCB "UnityPerDraw" 0
-BindCB "UnityPerDrawTexMatrices" 1
-// 24 instructions, 3 temp regs, 0 temp arrays:
-// ALU 11 float, 0 int, 1 uint
+// 19 instructions, 4 temp regs, 0 temp arrays:
+// ALU 8 float, 0 int, 0 uint
 // TEX 0 (0 load, 0 comp, 0 bias, 0 grad)
 // FLOW 1 static, 0 dynamic
 "vs_4_0_level_9_1
-eefiecednmnhlagdidchdkebajcaemgaedhjjeobabaaaaaaleahaaaaaeaaaaaa
-daaaaaaaaiadaaaammagaaaaeaahaaaaebgpgodjnaacaaaanaacaaaaaaacpopp
-jaacaaaaeaaaaaaaacaaceaaaaaadmaaaaaadmaaaaaaceaaabaadmaaaaaaaaaa
-aeaaabaaaaaaaaaaabaacaaaacaaafaaaaaaaaaaaaaaaaaaaaacpoppfbaaaaaf
-ahaaapkaaaaaagecaaaaaadpaaaaiadoggggggdpfbaaaaafaiaaapkaaaaaiado
-aaaaaaaaaaaaiadnaaaaaaaafbaaaaafajaaapkadddddddpaaaaiadpaaaaaaaa
-aaaaaaaabpaaaaacafaaaaiaaaaaapjabpaaaaacafaaabiaabaaapjabdaaaaac
-aaaaadiaaaaaoijaacaaaaadaaaaadiaaaaaoeibaaaaoijaafaaaaadaaaaadia
-aaaaoeiaaiaakkkaanaaaaadaaaaamiaaaaaeeiaaaaaeeibcdaaaaacaaaaadia
-aaaaoeiabdaaaaacaaaaadiaaaaaoeiaacaaaaadabaaadiaaaaaoeiaaaaaoeia
-aeaaaaaeaaaaafoaaaaapgiaabaaneiaaaaaneibaeaaaaaeaaaaahiaaaaanija
-ahaaaakaahaaffkabdaaaaacabaaahiaaaaaoeiaacaaaaadacaaahiaaaaaoeia
-abaaoeibamaaaaadabaaahiaabaaoeibabaaoeiaamaaaaadadaaahiaaaaaoeia
-aaaaoeibaeaaaaaeabaaahiaadaaoeiaabaaoeiaacaaoeiaacaaaaadaaaaahia
-aaaaoeiaabaaoeibafaaaaadabaaahiaaaaaoeiaahaakkkaaeaaaaaeabaaaiia
-aaaaffiaahaakkkaahaakkkaaeaaaaaeaaaaadiaaaaaociaaiaaaakaaiaaoeka
-amaaaaadaaaaamiaahaappkaabaacejaamaaaaadacaaadiaabaaocjaahaappkb
-acaaaaadaaaaamiaaaaaoeiaacaaeeiaamaaaaadaaaaamiaaaaaoeibaaaaoeia
-bcaaaaaeacaaadiaaaaappiaabaaooiaabaaoeiabcaaaaaeabaaadiaaaaakkia
-aaaaoeiaacaaoeiaafaaaaadaaaaadiaabaaffiaagaaoekaaeaaaaaeabaaadoa
-afaaoekaabaaaaiaaaaaoeiaafaaaaadaaaaapiaaaaaffjaacaaoekaaeaaaaae
-aaaaapiaabaaoekaaaaaaajaaaaaoeiaaeaaaaaeaaaaapiaadaaoekaaaaakkja
-aaaaoeiaaeaaaaaeaaaaapiaaeaaoekaaaaappjaaaaaoeiaaeaaaaaeaaaaadma
-aaaappiaaaaaoekaaaaaoeiaabaaaaacaaaaammaaaaaoeiaabaaaaacaaaaakoa
-ajaagakappppaaaafdeieefclmadaaaaeaaaabaaopaaaaaafjaaaaaeegiocaaa
-aaaaaaaaaeaaaaaafjaaaaaeegiocaaaabaaaaaaccaaaaaafpaaaaadpcbabaaa
-aaaaaaaafpaaaaadfcbabaaaabaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
-gfaaaaadpccabaaaabaaaaaagfaaaaaddccabaaaacaaaaaagiaaaaacadaaaaaa
-diaaaaaipcaabaaaaaaaaaaafgbfbaaaaaaaaaaaegiocaaaaaaaaaaaabaaaaaa
-dcaaaaakpcaabaaaaaaaaaaaegiocaaaaaaaaaaaaaaaaaaaagbabaaaaaaaaaaa
-egaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaaaaaaaaaacaaaaaa
-kgbkbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpccabaaaaaaaaaaaegiocaaa
-aaaaaaaaadaaaaaapgbpbaaaaaaaaaaaegaobaaaaaaaaaaaebaaaaafdcaabaaa
-aaaaaaaaigbabaaaaaaaaaaadiaaaaakdcaabaaaaaaaaaaaegaabaaaaaaaaaaa
-aceaaaaaaaaaiadnaaaaiadnaaaaaaaaaaaaaaaabnaaaaaimcaabaaaaaaaaaaa
-agaebaaaaaaaaaaaagaebaiaebaaaaaaaaaaaaaabkaaaaagdcaabaaaaaaaaaaa
-egaabaiaibaaaaaaaaaaaaaadhaaaaakfccabaaaabaaaaaakgalbaaaaaaaaaaa
-agabbaaaaaaaaaaaagabbaiaebaaaaaaaaaaaaaadgaaaaaikccabaaaabaaaaaa
-aceaaaaaaaaaaaaadddddddpaaaaaaaaaaaaiadpdbaaaaakdcaabaaaaaaaaaaa
-aceaaaaaggggggdpggggggdpaaaaaaaaaaaaaaaacgbkbaaaabaaaaaadbaaaaak
-mcaabaaaaaaaaaaakgbcbaaaabaaaaaaaceaaaaaaaaaaaaaaaaaaaaagggggglp
-gggggglpdmaaaaahdcaabaaaaaaaaaaaogakbaaaaaaaaaaaegaabaaaaaaaaaaa
-dcaaaaaphcaabaaaabaaaaaaigbbbaaaaaaaaaaaaceaaaaaaaaaagecaaaaagec
-aaaaagecaaaaaaaaaceaaaaaaaaaaadpaaaaaadpaaaaaadpaaaaaaaaedaaaaaf
-hcaabaaaacaaaaaaegacbaaaabaaaaaaaaaaaaaihcaabaaaabaaaaaaegacbaaa
-abaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaakhcaabaaaacaaaaaaegacbaaa
-abaaaaaaaceaaaaaaaaaiadoaaaaiadoaaaaiadoaaaaaaaadcaaaaajicaabaaa
-acaaaaaabkaabaaaabaaaaaaabeaaaaaaaaaiadoabeaaaaaaaaaiadodcaaaaap
-mcaabaaaaaaaaaaakgacbaaaabaaaaaaaceaaaaaaaaaaaaaaaaaaaaaaaaaiado
-aaaaiadoaceaaaaaaaaaaaaaaaaaaaaaaaaaiadoaaaaaaaadhaaaaajdcaabaaa
-abaaaaaafgafbaaaaaaaaaaaogakbaaaacaaaaaaegaabaaaacaaaaaadhaaaaaj
-dcaabaaaaaaaaaaaagaabaaaaaaaaaaaogakbaaaaaaaaaaaegaabaaaabaaaaaa
-diaaaaaigcaabaaaaaaaaaaafgafbaaaaaaaaaaaagibcaaaabaaaaaacbaaaaaa
-dcaaaaakdccabaaaacaaaaaaegiacaaaabaaaaaacaaaaaaaagaabaaaaaaaaaaa
-jgafbaaaaaaaaaaadoaaaaabejfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaa
-aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaafjaaaaaaaaaaaaaaaaaaaaaa
-adaaaaaaabaaaaaaahafaaaagaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
-adaaaaaafaepfdejfeejepeoaaeoepfcenebemaafeeffiedepepfceeaaklklkl
-epfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaaaaaaaaaaabaaaaaaadaaaaaa
-aaaaaaaaapaaaaaafmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaaapaaaaaa
-gcaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaaadamaaaafdfgfpfaepfdejfe
-ejepeoaaedepemepfcaafeeffiedepepfceeaakl"
+eefiecedbfajmdgkojphhkgbepcniimaaafedpngabaaaaaaiiagaaaaaeaaaaaa
+daaaaaaaheacaaaakaafaaaabeagaaaaebgpgodjdmacaaaadmacaaaaaaacpopp
+aiacaaaadeaaaaaaabaaceaaaaaadaaaaaaadaaaaaaaceaaabaadaaaaaaaaaaa
+aeaaabaaaaaaaaaaaaaaaaaaaaacpoppfbaaaaafafaaapkaaaaaaadpmnmmemdo
+mnmmemloaaaaaamafbaaaaafagaaapkaaaaaiaebaaaaiaeaaaaaiadoaaaaaaaa
+fbaaaaafahaaapkaaaaaiadpaaaaialpaaaaaadpaaaaaalpbpaaaaacafaaaaia
+aaaaapjabpaaaaacafaaabiaabaaapjabpaaaaacafaaaciaacaaapjaacaaaaad
+aaaaadiaaaaaojjbafaaaakbaeaaaaaeaaaaamiaaaaajejaahaaeekaahaaoeka
+amaaaaadabaaahiaabaancjaafaakkkaacaaaaadacaaaliaaaaakejaafaaaaka
+afaaaaadabaaaeiaabaakkiaacaaaaiaaeaaaaaeacaaaeiaabaakkiaafaappka
+acaaaaiabcaaaaaeadaaadiaabaaffiaaaaaooiaacaaooiaamaaaaadaaaaamia
+afaaffkaabaacejabcaaaaaeabaaagiaaaaappiaaaaanaiaadaanaiabcaaaaae
+aaaaadiaabaaaaiaacaaoeibabaaojiaacaaaaadabaaadiaaaaaoeibacaaoeia
+aeaaaaaeabaaadoaaaaakkiaabaaoeiaaaaaoeiaafaaaaadaaaaadiaacaaaaja
+agaaoekabdaaaaacaaaaaeiaaaaaffiaacaaaaadabaaaciaaaaakkibaaaaffia
+aeaaaaaeabaaabiaabaaffiaagaaffkbaaaaaaiaafaaaaadaaaaadoaabaaoeia
+agaakkkaafaaaaadaaaaapiaaaaaffjaacaaoekaaeaaaaaeaaaaapiaabaaoeka
+aaaaaajaaaaaoeiaaeaaaaaeaaaaapiaadaaoekaaaaakkjaaaaaoeiaaeaaaaae
+aaaaapiaaeaaoekaaaaappjaaaaaoeiaaeaaaaaeaaaaadmaaaaappiaaaaaoeka
+aaaaoeiaabaaaaacaaaaammaaaaaoeiappppaaaafdeieefcceadaaaaeaaaabaa
+mjaaaaaafjaaaaaeegiocaaaaaaaaaaaaeaaaaaafpaaaaadpcbabaaaaaaaaaaa
+fpaaaaadhcbabaaaabaaaaaafpaaaaadbcbabaaaacaaaaaaghaaaaaepccabaaa
+aaaaaaaaabaaaaaagfaaaaaddccabaaaabaaaaaagfaaaaaddccabaaaacaaaaaa
+giaaaaacaeaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaaaaaaaaaaegiocaaa
+aaaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaaaaaaaaaaaaaaaaa
+agbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
+aaaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpccabaaa
+aaaaaaaaegiocaaaaaaaaaaaadaaaaaapgbpbaaaaaaaaaaaegaobaaaaaaaaaaa
+diaaaaakdcaabaaaaaaaaaaaagbabaaaacaaaaaaaceaaaaaaaaaiaebaaaaiaea
+aaaaaaaaaaaaaaaaebaaaaafccaabaaaabaaaaaabkaabaaaaaaaaaaadcaaaaak
+bcaabaaaabaaaaaabkaabaiaebaaaaaaabaaaaaaabeaaaaaaaaaiaeaakaabaaa
+aaaaaaaadiaaaaakdccabaaaabaaaaaaegaabaaaabaaaaaaaceaaaaaaaaaiado
+aaaaiadoaaaaaaaaaaaaaaaadcaaaaapdcaabaaaaaaaaaaajgbfbaaaaaaaaaaa
+aceaaaaaaaaaiadpaaaaialpaaaaaaaaaaaaaaaaaceaaaaaaaaaaadpaaaaaalp
+aaaaaaaaaaaaaaaaaaaaaaahccaabaaaabaaaaaackbabaaaaaaaaaaaabeaaaaa
+aaaaaadpdbaaaaakhcaabaaaacaaaaaacgbjbaaaabaaaaaaaceaaaaamnmmemlo
+mnmmemlomnmmemloaaaaaaaaaaaaaaakhcaabaaaadaaaaaabgbgbaaaaaaaaaaa
+aceaaaaaaaaaaadpaaaaaadpaaaaaadpaaaaaaaadhaaaaakbcaabaaaabaaaaaa
+ckaabaaaacaaaaaabkaabaiaebaaaaaaadaaaaaabkaabaaaadaaaaaadhaaaaaj
+dcaabaaaaaaaaaaafgafbaaaacaaaaaaegaabaaaaaaaaaaaegaabaaaabaaaaaa
+dbaaaaakmcaabaaaaaaaaaaaaceaaaaaaaaaaaaaaaaaaaaamnmmemdomnmmemdo
+kgbcbaaaabaaaaaadhaaaaakdcaabaaaaaaaaaaapgapbaaaaaaaaaaaigaabaia
+ebaaaaaaadaaaaaaegaabaaaaaaaaaaadhaaaaakdcaabaaaaaaaaaaaagaabaaa
+acaaaaaabgafbaiaebaaaaaaadaaaaaaegaabaaaaaaaaaaadhaaaaajdccabaaa
+acaaaaaakgakbaaaaaaaaaaabgafbaaaadaaaaaaegaabaaaaaaaaaaadoaaaaab
+ejfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
+aaaaaaaaapapaaaafjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaaahahaaaa
+gaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaaadabaaaafaepfdejfeejepeo
+aaeoepfcenebemaafeeffiedepepfceeaaklklklepfdeheogmaaaaaaadaaaaaa
+aiaaaaaafaaaaaaaaaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaafmaaaaaa
+aaaaaaaaaaaaaaaaadaaaaaaabaaaaaaapamaaaagcaaaaaaaaaaaaaaaaaaaaaa
+adaaaaaaacaaaaaaadamaaaafdfgfpfaepfdejfeejepeoaaedepemepfcaafeef
+fiedepepfceeaakl"
 }
 
 SubProgram "gles3 " {
@@ -744,26 +611,7 @@ in vec4 _glesVertex;
 in vec3 _glesNormal;
 #define gl_MultiTexCoord0 _glesMultiTexCoord0
 in vec4 _glesMultiTexCoord0;
-float xll_mod_f_f( float x, float y ) {
-  float d = x / y;
-  float f = fract (abs(d)) * y;
-  return d >= 0.0 ? f : -f;
-}
-vec2 xll_mod_vf2_vf2( vec2 x, vec2 y ) {
-  vec2 d = x / y;
-  vec2 f = fract (abs(d)) * y;
-  return vec2 (d.x >= 0.0 ? f.x : -f.x, d.y >= 0.0 ? f.y : -f.y);
-}
-vec3 xll_mod_vf3_vf3( vec3 x, vec3 y ) {
-  vec3 d = x / y;
-  vec3 f = fract (abs(d)) * y;
-  return vec3 (d.x >= 0.0 ? f.x : -f.x, d.y >= 0.0 ? f.y : -f.y, d.z >= 0.0 ? f.z : -f.z);
-}
-vec4 xll_mod_vf4_vf4( vec4 x, vec4 y ) {
-  vec4 d = x / y;
-  vec4 f = fract (abs(d)) * y;
-  return vec4 (d.x >= 0.0 ? f.x : -f.x, d.y >= 0.0 ? f.y : -f.y, d.z >= 0.0 ? f.z : -f.z, d.w >= 0.0 ? f.w : -f.w);
-}
+
 #line 150
 struct v2f_vertex_lit {
     highp vec2 uv;
@@ -881,48 +729,51 @@ uniform lowp vec4 unity_ColorSpaceGrey;
 #line 306
 uniform sampler2D _BlockTex;
 #line 321
-#line 346
-#line 192
-highp vec2 MultiplyUV( in highp mat4 mat, in highp vec2 inUV ) {
-    highp vec4 temp = vec4( inUV.x, inUV.y, 0.0, 0.0);
-    temp = (mat * temp);
-    #line 196
-    return temp.xy;
-}
+#line 357
 #line 321
 v2f vert( in appdata v ) {
     v2f o;
     o.pos = (glstate_matrix_mvp * v.vertex);
     #line 325
-    o.color.xyz = ((v.normal * 0.5) + 0.5);
-    o.color.w = 1.0;
-    mediump float scale = 0.25;
-    mediump float fudgeS = 0.5;
-    #line 329
-    mediump float fudgeAlso = 33.5;
-    mediump float texX = ((v.vertex.x * fudgeAlso) + fudgeS);
-    texX = ((texX - float(int(texX))) * scale);
-    mediump float texZ = ((v.vertex.z * fudgeAlso) + fudgeS);
-    #line 333
-    texZ = ((texZ - float(int(texZ))) * scale);
-    mediump float texY = ((v.vertex.y * fudgeAlso) + fudgeS);
-    texY = ((texY - float(int(texY))) * scale);
-    o.color = vec4( texX, texZ, texY, 1.0);
-    #line 337
-    mediump vec2 texOut = vec2( texX, texZ);
-    if (((v.normal.z > 0.9) || (v.normal.z < -0.9))){
-        texOut = vec2( (texY + scale), texX);
+    highp float vx = (v.vertex.x + 0.5);
+    highp float vy = (v.vertex.z + 0.5);
+    if ((v.normal.z > 0.2)){
+        #line 329
+        vy = (v.vertex.y + 0.5);
     }
     else{
-        if (((v.normal.x > 0.9) || (v.normal.x < -0.9))){
-            texOut = vec2( texY, (texZ + scale));
+        if ((v.normal.z < -0.2)){
+            #line 333
+            vy = (-(v.vertex.y + 0.5));
+            vx *= -1.0;
+        }
+        else{
+            if ((v.normal.x > 0.2)){
+                #line 338
+                vx = (-(v.vertex.y + 0.5));
+                vy *= -1.0;
+            }
+            else{
+                if ((v.normal.x < -0.2)){
+                    #line 343
+                    vx = (v.vertex.y + 0.5);
+                    vy *= -1.0;
+                }
+                else{
+                    if ((v.normal.y < -0.2)){
+                        #line 348
+                        vx *= -1.0;
+                    }
+                }
+            }
         }
     }
-    highp float rem = (xll_mod_f_f( floor(v.vertex.x), 16.0) / 16.0);
-    #line 341
-    highp float zrem = (xll_mod_f_f( floor(v.vertex.z), 16.0) / 16.0);
-    o.color = vec4( rem, 0.7, zrem, 1.0);
-    o.uv = MultiplyUV( glstate_matrix_texture0, texOut);
+    highp float index = (v.texcoord.x * 16.0);
+    highp float blocky = floor((index / 4.0));
+    #line 352
+    mediump vec2 tile_o = (vec2( (index - (blocky * 4.0)), blocky) * 0.25);
+    o.color.xy = tile_o;
+    o.uv = vec2( vx, vy);
     return o;
 }
 out highp vec4 xlv_COLOR;
@@ -1063,10 +914,15 @@ uniform lowp vec4 unity_ColorSpaceGrey;
 #line 306
 uniform sampler2D _BlockTex;
 #line 321
-#line 346
-#line 346
+#line 357
+#line 357
 lowp vec4 frag( in v2f i ) {
-    return texture( _BlockTex, i.uv);
+    mediump vec2 fluv = fract(i.uv);
+    fluv = (fluv * 0.25);
+    #line 361
+    mediump vec2 offset = i.color.xy;
+    fluv = (fluv + offset);
+    return texture( _BlockTex, fluv);
 }
 in highp vec4 xlv_COLOR;
 in mediump vec2 xlv_TEXCOORD0;
@@ -1087,18 +943,22 @@ void main() {
 }
 Program "fp" {
 // Fragment combos: 1
-//   opengl - ALU: 1 to 1, TEX: 1 to 1
-//   d3d9 - ALU: 1 to 1, TEX: 1 to 1
-//   d3d11 - ALU: 0 to 0, TEX: 1 to 1, FLOW: 1 to 1
-//   d3d11_9x - ALU: 0 to 0, TEX: 1 to 1, FLOW: 1 to 1
+//   opengl - ALU: 3 to 3, TEX: 1 to 1
+//   d3d9 - ALU: 3 to 3, TEX: 1 to 1
+//   d3d11 - ALU: 1 to 1, TEX: 1 to 1, FLOW: 1 to 1
+//   d3d11_9x - ALU: 1 to 1, TEX: 1 to 1, FLOW: 1 to 1
 SubProgram "opengl " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D
 "!!ARBfp1.0
-# 1 ALU, 1 TEX
-TEX result.color, fragment.texcoord[0], texture[0], 2D;
+# 3 ALU, 1 TEX
+PARAM c[1] = { { 0.25 } };
+TEMP R0;
+FRC R0.xy, fragment.texcoord[0];
+MAD R0.xy, R0, c[0].x, fragment.color.primary;
+TEX result.color, R0, texture[0], 2D;
 END
-# 1 instructions, 0 R-regs
+# 3 instructions, 1 R-regs
 "
 }
 
@@ -1106,10 +966,14 @@ SubProgram "d3d9 " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D
 "ps_2_0
-; 1 ALU, 1 TEX
+; 3 ALU, 1 TEX
 dcl_2d s0
+def c0, 0.25000000, 0, 0, 0
+dcl v0.xy
 dcl t0.xy
-texld r0, t0, s0
+frc_pp r0.xy, t0
+mad_pp r0.xy, r0, c0.x, v0
+texld r0, r0, s0
 mov_pp oC0, r0
 "
 }
@@ -1117,22 +981,24 @@ mov_pp oC0, r0
 SubProgram "d3d11 " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D 0
-// 2 instructions, 0 temp regs, 0 temp arrays:
-// ALU 0 float, 0 int, 0 uint
+// 4 instructions, 1 temp regs, 0 temp arrays:
+// ALU 1 float, 0 int, 0 uint
 // TEX 1 (0 load, 0 comp, 0 bias, 0 grad)
 // FLOW 1 static, 0 dynamic
 "ps_4_0
-eefiecedakjplffcpldbahdacbaljbljjkedcmceabaaaaaaeaabaaaaadaaaaaa
+eefiecediblkbnljjdhdgkpkehpdfnibclphjnjjabaaaaaajiabaaaaadaaaaaa
 cmaaaaaakaaaaaaaneaaaaaaejfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaa
 aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaafmaaaaaaaaaaaaaaaaaaaaaa
-adaaaaaaabaaaaaaapaaaaaagcaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
+adaaaaaaabaaaaaaapadaaaagcaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
 adadaaaafdfgfpfaepfdejfeejepeoaaedepemepfcaafeeffiedepepfceeaakl
 epfdeheocmaaaaaaabaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
-aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcgeaaaaaaeaaaaaaa
-bjaaaaaafkaaaaadaagabaaaaaaaaaaafibiaaaeaahabaaaaaaaaaaaffffaaaa
-gcbaaaaddcbabaaaacaaaaaagfaaaaadpccabaaaaaaaaaaaefaaaaajpccabaaa
-aaaaaaaaegbabaaaacaaaaaaeghobaaaaaaaaaaaaagabaaaaaaaaaaadoaaaaab
-"
+aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefclmaaaaaaeaaaaaaa
+cpaaaaaafkaaaaadaagabaaaaaaaaaaafibiaaaeaahabaaaaaaaaaaaffffaaaa
+gcbaaaaddcbabaaaabaaaaaagcbaaaaddcbabaaaacaaaaaagfaaaaadpccabaaa
+aaaaaaaagiaaaaacabaaaaaabkaaaaafdcaabaaaaaaaaaaaegbabaaaacaaaaaa
+dcaaaaamdcaabaaaaaaaaaaaegaabaaaaaaaaaaaaceaaaaaaaaaiadoaaaaiado
+aaaaaaaaaaaaaaaaegbabaaaabaaaaaaefaaaaajpccabaaaaaaaaaaaegaabaaa
+aaaaaaaaeghobaaaaaaaaaaaaagabaaaaaaaaaaadoaaaaab"
 }
 
 SubProgram "gles " {
@@ -1149,8 +1015,12 @@ SubProgram "flash " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D
 "agal_ps
+c0 0.25 0.0 0.0 0.0
 [bc]
-ciaaaaaaaaaaapacaaaaaaoeaeaaaaaaaaaaaaaaafaababb tex r0, v0, s0 <2d wrap linear point>
+aiaaaaaaaaaaadacaaaaaaoeaeaaaaaaaaaaaaaaaaaaaaaa frc r0.xy, v0
+adaaaaaaaaaaadacaaaaaafeacaaaaaaaaaaaaaaabaaaaaa mul r0.xy, r0.xyyy, c0.x
+abaaaaaaaaaaadacaaaaaafeacaaaaaaahaaaaoeaeaaaaaa add r0.xy, r0.xyyy, v7
+ciaaaaaaaaaaapacaaaaaafeacaaaaaaaaaaaaaaafaababb tex r0, r0.xyyy, s0 <2d wrap linear point>
 aaaaaaaaaaaaapadaaaaaaoeacaaaaaaaaaaaaaaaaaaaaaa mov o0, r0
 "
 }
@@ -1158,25 +1028,30 @@ aaaaaaaaaaaaapadaaaaaaoeacaaaaaaaaaaaaaaaaaaaaaa mov o0, r0
 SubProgram "d3d11_9x " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D 0
-// 2 instructions, 0 temp regs, 0 temp arrays:
-// ALU 0 float, 0 int, 0 uint
+// 4 instructions, 1 temp regs, 0 temp arrays:
+// ALU 1 float, 0 int, 0 uint
 // TEX 1 (0 load, 0 comp, 0 bias, 0 grad)
 // FLOW 1 static, 0 dynamic
 "ps_4_0_level_9_1
-eefiecedhfdklepjboecglemgiljbacdmhfniniiabaaaaaalaabaaaaaeaaaaaa
-daaaaaaajmaaaaaaaiabaaaahmabaaaaebgpgodjgeaaaaaageaaaaaaaaacpppp
-dmaaaaaaciaaaaaaaaaaciaaaaaaciaaaaaaciaaabaaceaaaaaaciaaaaaaaaaa
-aaacppppbpaaaaacaaaaaaiaabaacdlabpaaaaacaaaaaajaaaaiapkaecaaaaad
-aaaacpiaabaaoelaaaaioekaabaaaaacaaaicpiaaaaaoeiappppaaaafdeieefc
-geaaaaaaeaaaaaaabjaaaaaafkaaaaadaagabaaaaaaaaaaafibiaaaeaahabaaa
-aaaaaaaaffffaaaagcbaaaaddcbabaaaacaaaaaagfaaaaadpccabaaaaaaaaaaa
-efaaaaajpccabaaaaaaaaaaaegbabaaaacaaaaaaeghobaaaaaaaaaaaaagabaaa
-aaaaaaaadoaaaaabejfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaaaaaaaaaa
-abaaaaaaadaaaaaaaaaaaaaaapaaaaaafmaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
-abaaaaaaapaaaaaagcaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaaadadaaaa
-fdfgfpfaepfdejfeejepeoaaedepemepfcaafeeffiedepepfceeaaklepfdeheo
-cmaaaaaaabaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaa
-apaaaaaafdfgfpfegbhcghgfheaaklkl"
+eefiecedbcehmmpndekkanbhkaedkdefdaogebbeabaaaaaaemacaaaaaeaaaaaa
+daaaaaaaoaaaaaaakeabaaaabiacaaaaebgpgodjkiaaaaaakiaaaaaaaaacpppp
+iaaaaaaaciaaaaaaaaaaciaaaaaaciaaaaaaciaaabaaceaaaaaaciaaaaaaaaaa
+aaacppppfbaaaaafaaaaapkaaaaaiadoaaaaaaaaaaaaaaaaaaaaaaaabpaaaaac
+aaaaaaiaaaaacplabpaaaaacaaaaaaiaabaacdlabpaaaaacaaaaaajaaaaiapka
+bdaaaaacaaaacdiaabaaoelaaeaaaaaeaaaacdiaaaaaoeiaaaaaaakaaaaaoela
+ecaaaaadaaaacpiaaaaaoeiaaaaioekaabaaaaacaaaicpiaaaaaoeiappppaaaa
+fdeieefclmaaaaaaeaaaaaaacpaaaaaafkaaaaadaagabaaaaaaaaaaafibiaaae
+aahabaaaaaaaaaaaffffaaaagcbaaaaddcbabaaaabaaaaaagcbaaaaddcbabaaa
+acaaaaaagfaaaaadpccabaaaaaaaaaaagiaaaaacabaaaaaabkaaaaafdcaabaaa
+aaaaaaaaegbabaaaacaaaaaadcaaaaamdcaabaaaaaaaaaaaegaabaaaaaaaaaaa
+aceaaaaaaaaaiadoaaaaiadoaaaaaaaaaaaaaaaaegbabaaaabaaaaaaefaaaaaj
+pccabaaaaaaaaaaaegaabaaaaaaaaaaaeghobaaaaaaaaaaaaagabaaaaaaaaaaa
+doaaaaabejfdeheogmaaaaaaadaaaaaaaiaaaaaafaaaaaaaaaaaaaaaabaaaaaa
+adaaaaaaaaaaaaaaapaaaaaafmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
+apadaaaagcaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaaadadaaaafdfgfpfa
+epfdejfeejepeoaaedepemepfcaafeeffiedepepfceeaaklepfdeheocmaaaaaa
+abaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapaaaaaa
+fdfgfpfegbhcghgfheaaklkl"
 }
 
 SubProgram "gles3 " {
@@ -1186,7 +1061,7 @@ Keywords { }
 
 }
 
-#LINE 115
+#LINE 110
 
     }
     
