@@ -1,6 +1,6 @@
-#define FACE_TEST
 #define TEST_LIBNOISENET
-//#define TERRAIN_TEST
+
+
 
 
 using UnityEngine;
@@ -102,11 +102,10 @@ public class ChunkManager : MonoBehaviour
 
 	private bool firstNoisePatchDone = false;
 
-//	public Transform terrainTestPlane;
-
-	#if TERRAIN_TEST
+	public Transform terrainTestPlane;
+//	#if TERRAIN_TEST
 	private Texture2D terrainTex;
-	#endif
+//	#endif
 
 	public LibNoiseNetHandler m_libnoiseNetHandler;
 	
@@ -456,6 +455,13 @@ public class ChunkManager : MonoBehaviour
 //			y+=20;
 //		}
 		
+//		#if TERRAIN_TEST
+		if (TestRunner.DontRunDoTerrainTestInstead)
+		{
+			float imScale = 1f;
+			GUI.Box(new Rect ( 4, Screen.height - terrainTex.height * imScale , terrainTex.width * imScale, terrainTex.height * imScale), terrainTex );
+		}
+//		#endif
 		
 		// DRAW A '+' IN THE MIDDLE
 		float boxSize = 20;
@@ -480,10 +486,7 @@ public class ChunkManager : MonoBehaviour
 			blocks.saveNoisePatchesToPlayerPrefs ();
 		}
 
-		#if TERRAIN_TEST
-		float imScale = .25f;
-		GUI.Box(new Rect ( 4, Screen.height - terrainTex.height * imScale , terrainTex.width * imScale, terrainTex.height * imScale), terrainTex );
-		#endif
+		
 
 //		GUI.Box (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "FPS:" + Time.deltaTime );
 
@@ -1558,7 +1561,7 @@ public class ChunkManager : MonoBehaviour
 //					yield return new WaitForSeconds (.05f);
 //				}
 			}
-			yield return null; // new WaitForSeconds (.1f);
+			yield return new WaitForSeconds (.1f); //null; // 
 		}
 	}
 
@@ -1576,7 +1579,8 @@ public class ChunkManager : MonoBehaviour
 				if (np != null) 
 				{
 					if (!np.startedBlockSetup) {
-						np.populateBlocksAsync ();
+						np.populateBlocksAsync (); // async does smooth out game play...
+//						np.populateBlocksFromNoise();
 					}
 
 				} else {
@@ -1585,7 +1589,7 @@ public class ChunkManager : MonoBehaviour
 				
 				setupThesePatches.RemoveAt (0);
 			}
-			yield return new WaitForSeconds (0.05f);
+			yield return new WaitForSeconds (.12f);
 		}
 	}
 
@@ -1593,25 +1597,24 @@ public class ChunkManager : MonoBehaviour
 	{
 		NoisePatch np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet (ncoord); 
 
-		np.genNoiseAndPopulateBlocksOnMainThread ();
+		np.populateBlocksFromNoise();
 
 	}
 
-	void makeNewAndSetupPatchAtNoiseCoord(NoiseCoord ncoord)
-	{
-		makeNoisePatchIfNotExistsAtNoiseCoord (ncoord); 
+//	void makeNewAndSetupPatchAtNoiseCoord(NoiseCoord ncoord)
+//	{
+//		makeNoisePatchIfNotExistsAtNoiseCoord (ncoord); 
+//
+//		populateBlocksForPatchAtCoord (ncoord, false);
+//	}
 
-		generateNoiseForPatchAtCoord (ncoord, false);
-		populateBlocksForPatchAtCoord (ncoord, false);
-	}
-
-	void makeNewPatchesSurroundingNoiseCoord(NoiseCoord ncoord) 
-	{
-		foreach (NoiseCoord nco in noiseCoordsSurroundingNoiseCoord(ncoord))
-		{
-			makeNoisePatchIfNotExistsAtNoiseCoord (nco);
-		}
-	}
+//	void makeNewPatchesSurroundingNoiseCoord(NoiseCoord ncoord) 
+//	{
+//		foreach (NoiseCoord nco in noiseCoordsSurroundingNoiseCoord(ncoord))
+//		{
+//			makeNoisePatchIfNotExistsAtNoiseCoord (nco);
+//		}
+//	}
 	
 	NoiseCoord noiseCoordClosestToPlayerThatDoesNotExist(int RadiusLimit)
 	{
@@ -1807,28 +1810,28 @@ public class ChunkManager : MonoBehaviour
 		return npatch;
 	}
 
-	void makeNoisePatchIfNotExistsAtNoiseCoord(NoiseCoord ncoord) 
-	{
-		if (blocks.noisePatchExistsAtNoiseCoord(ncoord))
-			return;
+//	void makeNoisePatchIfNotExistsAtNoiseCoord(NoiseCoord ncoord) 
+//	{
+//		if (blocks.noisePatchExistsAtNoiseCoord(ncoord))
+//			return;
+//
+//		NoisePatch npatch = new NoisePatch (ncoord, this);
+//		blocks.noisePatches.Add (ncoord, npatch);
+//	}
 
-		NoisePatch npatch = new NoisePatch (ncoord, this);
-		blocks.noisePatches.Add (ncoord, npatch);
-	}
-
-	void generateNoiseForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
-		if (!blocks.noisePatchExistsAtNoiseCoord(ncoord))
-		{
-			throw new System.ArgumentException("no noise patch at this coord", "ncoord");
-		}
-
-		NoisePatch np = blocks.noisePatches [ncoord];
-
-		if (mainThread)
-			np.genNoiseOnMainThread();
-		else 
-			np.populateBlocksAsync ();
-	}
+//	void generateNoiseForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
+//		if (!blocks.noisePatchExistsAtNoiseCoord(ncoord))
+//		{
+//			throw new System.ArgumentException("no noise patch at this coord", "ncoord");
+//		}
+//
+//		NoisePatch np = blocks.noisePatches [ncoord];
+//
+//		if (mainThread)
+//			np.genNoiseAndPopulateBlocksOnMainThread();
+//		else 
+//			np.populateBlocksAsync ();
+//	}
 
 	void populateBlocksForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
 		if (!blocks.noisePatchExistsAtNoiseCoord(ncoord))
@@ -1840,9 +1843,10 @@ public class ChunkManager : MonoBehaviour
 		//if (mainThread)
 		//	np.pop
 		if (mainThread)
-			np.populateBlocksOnMainThread();
+			np.populateBlocksFromNoise();
 		else
-			np.populateBlocksFromNoise ();
+			np.Start();
+//			np.populateBlocksFromNoise (); // wha?? same func??
 	}
 
 	NoiseCoord noiseCoordContainingWorldCoord(Coord woco) {
@@ -1925,15 +1929,16 @@ public class ChunkManager : MonoBehaviour
 		chunkMap = new ChunkMap (); //new Coord (WORLD_XLENGTH_CHUNKS, WORLD_HEIGHT_CHUNKS, WORLD_ZLENGTH_CHUNKS));
 
 		blocks.getSavedNoisePatches (); // from player prefs, if any...
-
+		
+		// REFRESH SAVED NOISEPATCHES
 		foreach(KeyValuePair<NoiseCoord, NoisePatch> npatch in blocks.noisePatches)
 		{
-//			break;
-			
 			NoisePatch np = (NoisePatch)npatch.Value;
 			np.coord = npatch.Key;
 			np.updateChunkManager (this);
-
+			
+			// TODO: if noisepatch is within the 'init' zone, make it regen its blocks
+			// or are we already doing this?? (but are saved np's being 'lazy' somehow?)
 		}
 
 		lastPlayerNoiseCoord = new NoiseCoord (100000000, -100000003);
@@ -1945,16 +1950,19 @@ public class ChunkManager : MonoBehaviour
 
 		NoiseCoord initialNoiseCoord = new NoiseCoord (0, 0);
 		makeNewAndSetupPatchAtNoiseCoordMainThread (initialNoiseCoord);
-
-		int times = 0;
-		while (times < 9) //test?
+		
+		if(!TestRunner.RunGameOnlyOneNoisePatch)
 		{
-			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
-			
-			makeNewAndSetupPatchAtNoiseCoordMainThread(nco);
-			times++;
+			int times = 0;
+			while (times < 9) //test?
+			{
+				NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
+				
+				makeNewAndSetupPatchAtNoiseCoordMainThread(nco);
+				times++;
+			}
+			times = 0;
 		}
-		times = 0;
 //		foreach (NoiseCoord ncoord in noiseCoordsSurroundingNoiseCoord(initialNoiseCoord)) 
 //		{
 ////			if (!blocks.noisePatches.ContainsKey (ncoord))
@@ -1964,20 +1972,28 @@ public class ChunkManager : MonoBehaviour
 //			times++; //test
 //		}
 
-		#if TERRAIN_TEST
-		terrainTex = blocks.textureForTerrainAtXEqualsZero();
-		terrainTex.Apply();
-
-		bug("terrain tex height: " + terrainTex.height + " width: "  + terrainTex.width);
-		terrainTex.filterMode = FilterMode.Point;
-		terrainTex.anisoLevel = 1;
-		terrainTestPlane.renderer.material.mainTexture = terrainTex;
-		File.WriteAllBytes(Application.dataPath + "/../TerrainSlice.png", terrainTex.EncodeToPNG() );
-
-		return;
-		#endif
-
-
+		if (TestRunner.DontRunDoTerrainTestInstead)
+		{
+			//extra noise cos 
+			for (int k = -6 ; k < 7 ; k++) 
+			{
+				NoiseCoord nnco = new NoiseCoord(0,k);	
+	//			if (!blocks.noisePatches.ContainsKey (nnco))
+					makeNewAndSetupPatchAtNoiseCoordMainThread (nnco);
+			}
+			
+			
+			terrainTex = blocks.textureForTerrainAtXEqualsZero();
+			terrainTex.Apply();
+	
+			bug("terrain tex height: " + terrainTex.height + " width: "  + terrainTex.width);
+			terrainTex.filterMode = FilterMode.Point;
+			terrainTex.anisoLevel = 1;
+			terrainTestPlane.renderer.material.mainTexture = terrainTex;
+			File.WriteAllBytes(Application.dataPath + "/../TerrainSlice.png", terrainTex.EncodeToPNG() );
+	
+			return;
+		}
 
 
 		// ** MAKE SURROUNDING PATCHES AS WELL **// AND WAIT UNTIL ALL ARE DONE...
@@ -2024,14 +2040,19 @@ public class ChunkManager : MonoBehaviour
 
 		if (true) 
 		{
-			StartCoroutine (updateChunkLists ());
-			StartCoroutine (createAndDestroyChunksFromLists ()); // combined above two
-			//		StartCoroutine (createFurtherAwayChunks ());
-
-			StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
-			StartCoroutine (updateSetupPatchesListI ());
 			
-			StartCoroutine (checkAsyncChunksList ());
+			//		StartCoroutine (createFurtherAwayChunks ());
+			
+			if (!TestRunner.RunGameOnlyOneNoisePatch) 
+			{
+				StartCoroutine (updateChunkLists ());
+				StartCoroutine (createAndDestroyChunksFromLists ()); // combined above two
+				
+				StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
+				StartCoroutine (updateSetupPatchesListI ());
+				
+				StartCoroutine (checkAsyncChunksList ());
+			}
 
 		}
 

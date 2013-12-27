@@ -247,7 +247,6 @@ public class FaceSet
 				continue;
 			
 			
-			
 			for(int j = 0 ; j < lastStrips.Count ; ++j) 
 			{
 				Strip lstp = lastStrips[j];
@@ -322,181 +321,75 @@ public class FaceSet
 		optimizeStrips();
 		
 		int curTriIndex = 0;
-		int horizontalDim = 0;
 		
 		bool faceIsOnPosSide = ((int) this.blockFaceDirection % 2 == 0);
 		
-		
-		
 		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
 		
-		float uvUnitLength = 1f;
-		
 		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
-		
-//		bug ("uv index is: " + uvIndex + " times 16 : " + uvIndex * 16f);
-		
-		// we could do this calc earlier...?
-//		Vector2 origin = Chunk.uvOriginForBlockType(this.blockType, this.blockFaceDirection);
-//		origin = Vector2.Scale(origin, new Vector2(0.25f, 0.25f));
+
 		Vector2 monoUVValue = new Vector2(uvIndex, 0f); // origin ;
 		
-		// 
-//		Vector2 uvURTexDim = new Vector2(uvUnitLength, 0f);
-//		Vector2 uvLLTexDim = new Vector2(0f, uvUnitLength);
-//		Vector2 uvLRTexDim = new Vector2(uvUnitLength, uvUnitLength);
-//		
-//		Vector2 uvScalingVec;
-		
 		List<Vector2> returnUVS = new List<Vector2>();
-		
-		List<Strip> strips;
-		List<Vector3> rightVertexColumn;
-		List<Vector3> leftVertexColumn = new List<Vector3>();
-		
 		List<int> returnTriIndices = new List<int>();
 		List<Vector3> returnVecs = new List<Vector3>();
 		
 		float half_unit = 0.5f;
-		
-		// NEW WAY: SIMPLY COLLECT THE VERTS AND INDICES FROM EACH STRIP IN ORDER
-		
-//		for (; horizontalDim < stripsArray.Length; ++horizontalDim)
+
 		int i = 0;
 		for(; i < quads.Count ; ++i)
 		{
 			Quad quad = quads[i];
 			
-			rightVertexColumn = new List<Vector3>(); 
-			strips = stripsArray[horizontalDim];
-			
-			float horizontalDimLessHalf = horizontalDim - half_unit;
-			
-			int strips_count = 0;
-			if (strips != null)
-				strips_count = strips.Count; //is continue ok???
-			
-//			if (strips_count == 0)
-//				bug ("strips count 0 (or null) at h dim: " + horizontalDim);
-//			else if (strips_count > 1)
-//				bug ("strips count > 1 : " + strips_count + " at h dim: " + horizontalDim);
-			
 			int vertsAddedByStrip = 0;
 			
-				int curULindex = curTriIndex; // + i * 4;
-				int curLLindex = curULindex + 1;
-//				int curURindex = curTriIndex + strips_count * 2 + i * 2;
-//				int curLRindex = curURindex + 1;;
-				int curURindex = curULindex + 2;
-				int curLRindex = curULindex + 3;
+			int curULindex = curTriIndex; // + i * 4;
+			int curLLindex = curULindex + 1;
+			int curURindex = curULindex + 2;
+			int curLRindex = curULindex + 3;
 				
-				bool addULVert = true;
-				bool addLLVert = true;
-				
-				
-#if COMBINE_FLUSH_VERTS
+			Vector3 ulVec = new Vector3((float) quad.origin.s - half_unit, 
+				verticalHeight, 
+				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
+			returnVecs.Add(ulVec);
+			vertsAddedByStrip++;
+			returnUVS.Add(monoUVValue);
+		
+			Vector3 llVec = new Vector3((float) quad.origin.s - half_unit, 
+				verticalHeight, 
+				(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
+			returnVecs.Add(llVec);
+			
+			vertsAddedByStrip++;
+		
+			returnUVS.Add(monoUVValue);
 
-				if (horizontalDim > 0 && stripsArray[horizontalDim - 1] != null) 
-				{
-					// if this strip is flush with the start of any strips in the col to the left...
-					Strip flushWithStartOneLeft = Strip.theErsatzNullStrip();
-					bool gotAStrip = stripFromListWithStartEqualTo(str.range.start, stripsArray[horizontalDim - 1], ref flushWithStartOneLeft);
-					if (gotAStrip) // (Strip.StripNotNull(flushWithStartOneLeft))
-					{
-						curULindex = flushWithStartOneLeft.indexSet.upperRight;
-						curLLindex--;
-						curURindex--;
-						curLRindex--;
-						addULVert = false;
-					}
-					
-					Strip flushWithExtentOneLeft = Strip.theErsatzNullStrip();
-					gotAStrip =	stripFromListWithExtentEqualTo(str.range.extentMinusOne() , stripsArray[horizontalDim - 1], ref flushWithExtentOneLeft);
-					if (gotAStrip)
-					{
-						curLLindex = flushWithExtentOneLeft.indexSet.lowerRight;
-						curURindex--;
-						curLRindex--;
-						addLLVert = false;
-					}
-				}
-#endif
-				
-//				uvScalingVec = new Vector2((float)quad.dimensions.s, (float) quad.dimensions.t);
+			Vector3 urVec = new Vector3((float) quad.extent().s - half_unit, 
+				verticalHeight, 
+				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
+			returnVecs.Add(urVec);
+			vertsAddedByStrip++;
+			returnUVS.Add( monoUVValue); // + Vector2.Scale(uvURTexDim, uvScalingVec) );
 			
-				if (addULVert) {
-					Vector3 ulVec = new Vector3((float) quad.origin.s - half_unit, 
-						verticalHeight, 
-						(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
-					returnVecs.Add(ulVec);
-					vertsAddedByStrip++;
-					returnUVS.Add(monoUVValue);
-				}
-				
-				if (addLLVert) {
-					Vector3 llVec = new Vector3((float) quad.origin.s - half_unit, 
-						verticalHeight, 
-						(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
-					returnVecs.Add(llVec);
-					
-					vertsAddedByStrip++;
-				
-					returnUVS.Add(monoUVValue); // + Vector2.Scale(uvLLTexDim, uvScalingVec ));
-//					returnUVS.Add(monoUVValue + new Vector2((float)(llVec.x * uvLLTexDimTest.x),
-//							(float)( llVec.z * uvLLTexDimTest.y)) );
-				}
-				
-				Vector3 urVec = new Vector3((float) quad.extent().s - half_unit, 
-					verticalHeight, 
-					(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
-				returnVecs.Add(urVec);
-				vertsAddedByStrip++;
-				returnUVS.Add( monoUVValue); // + Vector2.Scale(uvURTexDim, uvScalingVec) );
-//				monoUVValue + new Vector2(urVec.x * uvURTexDimTest.x, 
-//							urVec.z * uvURTexDimTest.y));
-				
-				Vector3 lrVec = new Vector3((float)quad.extent().s - half_unit, 
-					verticalHeight, 
-					(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
-				returnVecs.Add(lrVec);
-				vertsAddedByStrip++;
-				returnUVS.Add(monoUVValue); // + Vector2.Scale(uvLRTexDim, uvScalingVec) );
-//				monoUVValue + new Vector2(lrVec.x * uvLRTexDimTest.x, 
-//							lrVec.z * uvLRTexDimTest.y));
-				
-				//need to index sets.
-//				str.indexSet = new IndexSet(curULindex, curURindex, curLLindex, curLRindex);
-//				strips[i] = str;
-				
-				int[] tris;
-				
-				if (faceIsOnPosSide) {
-					tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
-				} else {
-					tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
-				}
-				
-				returnTriIndices.AddRange(tris);
-				
+			Vector3 lrVec = new Vector3((float)quad.extent().s - half_unit, 
+				verticalHeight, 
+				(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
+			returnVecs.Add(lrVec);
+			vertsAddedByStrip++;
+			returnUVS.Add(monoUVValue); // + Vector2.Scale(uvLRTexDim, uvScalingVec) );
 			
+			int[] tris;
+			
+			if (faceIsOnPosSide) {
+				tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
+			} else {
+				tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
+			}
+			
+			returnTriIndices.AddRange(tris);
 			
 			curTriIndex += vertsAddedByStrip;
-			
-//			vertexColumns[horizontalDim] = leftVertexColumn;
-//			vertexColumns[horizontalDim + 1] = rightVertexColumn;
-			
-			returnVecs.AddRange(leftVertexColumn);
-			
-			if (horizontalDim == stripsArray.Length - 1)
-			{
-				returnVecs.AddRange(rightVertexColumn);
-			}
-			else 
-			{
-				leftVertexColumn = rightVertexColumn;
-			}
-			
-//			stripsArray[horizontalDim] = strips;
+
 		}
 		
 		//now maybe just calculate the actual v3 array and the indices....

@@ -33,16 +33,17 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 //	public float PerturbXStrength = 1f;
 //	public float PerturbVariationStrength = 4f;
 	
-	public float SetOctaveCount = 6f;
-	public float SetFrequency = 2f;
-	public bool FadeFrequency = false;
-	public float SetLacunarity = 2f;
-	public float SetGain = 2f;
-	public bool FadeGain = true;
-	public float SetSpectralExponent = 0.9f;
-	public bool FadeSpectralExponent = true;
 	
-	public int SetPrimitiveQual = 0;
+	private float SetOctaveCount = 6f;
+	private float SetFrequency = 2f;
+	private bool FadeFrequency = false;
+	private float SetLacunarity = 2f;
+	private float SetGain = 2f;
+	private bool FadeGain = true;
+	private float SetSpectralExponent = 1.9f;
+	private bool FadeSpectralExponent = true;
+	
+	private int SetPrimitiveQual = 0;
 	
 	public int TexWidth = 400;
 	public int TexHeight = 300;
@@ -82,8 +83,13 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 		}
 	}
 	
-	private void refreshTexture() 
+	private void setDefaults() 
 	{
+		setFilterModuleDefaults();
+		setPrimitiveModuleDefaults();
+	}
+	
+	private void setFilterModuleDefaults() {
 		SetOctaveCount = SetOctaveCount < 1 ? 6f : SetOctaveCount;
 		SetFrequency = SetFrequency < 1 ? 2f : SetFrequency;
 		
@@ -92,8 +98,15 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 		filterModule.Lacunarity = SetLacunarity;
 		filterModule.Gain = SetGain;
 		filterModule.SpectralExponent = SetSpectralExponent;
-		
+	}
+	
+	private void setPrimitiveModuleDefaults() {
 		primitiveModule.Quality = (NoiseQuality) Mathf.Clamp(SetPrimitiveQual, 0, 2);
+	}
+	
+	private void refreshTexture() 
+	{
+		setDefaults();
 		
 		testTex = GetTestImage();
 		renderer.material.mainTexture = testTex;
@@ -101,8 +114,11 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 	
 	public LibNoiseNetHandler()
 	{
+		
 		SetUpRidgedMultiFractal3DModule ();
 		SetUpNoise2D();
+		
+		setDefaults();
 	}
 
 	private void SetUpRidgedMultiFractal3DModule() 
@@ -117,11 +133,12 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 
 		ScaleBias scale = null;
 
-		filterModule = new Pipe(); //  RidgedMultiFractal();
+		filterModule =  new RidgedMultiFractal(); //new Pipe(); //
+		
 		// Used to show the difference with our gradient color (-1 + 1)
 		scale = new ScaleBias (filterModule, 1f, 0f); // 0.9f, -1.25f);
 		
-		float rmfScale = .3f;
+		float rmfScale = .75f;
 		ScalePoint scalePoint = new ScalePoint(filterModule, rmfScale, rmfScale * 1f, rmfScale);
 		
 		filterModule.Primitive3D = (IModule3D)pModule;

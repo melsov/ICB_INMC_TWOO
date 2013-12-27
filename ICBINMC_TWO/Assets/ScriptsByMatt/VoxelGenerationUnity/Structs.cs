@@ -286,19 +286,21 @@ public struct BiomeTypeCorners
 
 public struct BiomeInputs
 {
-	public float hilliness;
+	public float hilliness; // 0 to 1f
 	public float cragginess;
 	public float overhangness;
 	public float caveVerticalFrequency;
+	public float baseElevation;
 	
 	public static BiomeInputs Pasture()
 	{
 		BiomeInputs inputs = new BiomeInputs();
 		//pasture
-		inputs.hilliness = .2f;
-		inputs.cragginess = 3.2f;
-		inputs.overhangness = .03f;	
-		inputs.caveVerticalFrequency = 1.5f;
+		inputs.hilliness = .12f;
+		inputs.cragginess = 2.2f;
+		inputs.overhangness = .1f;	
+		inputs.caveVerticalFrequency = 3.5f;
+		inputs.baseElevation = .35f;
 		
 		return inputs;
 	}
@@ -310,10 +312,18 @@ public struct BiomeInputs
 		//cragginess
 		inputs.hilliness = .4f;
 		inputs.cragginess = 3.2f;
-		inputs.overhangness = .5f;
-		inputs.caveVerticalFrequency = 1.4f;
+		inputs.overhangness = 8.5f;
+		inputs.caveVerticalFrequency = 9.4f;
+		inputs.baseElevation = .6f;
 		
 		return inputs;
+	}
+	
+	public static BiomeInputs Lerp(BiomeInputs abi, BiomeInputs bbi, float t) {
+		t = t > 1 ? 1 : t;
+		t = t < 0 ? 0 : t;
+		
+		return BiomeInputs.Mix(abi, bbi, 1f - t, t);
 	}
 	
 	public static BiomeInputs Mix(BiomeInputs aBI, BiomeInputs bBi, float aWeight, float bWeight) {
@@ -330,6 +340,7 @@ public struct BiomeInputs
 		abi.cragginess *= k;
 		abi.overhangness *= k;
 		abi.caveVerticalFrequency *= k;
+		abi.baseElevation *= k;
 		return abi;
 	}
 	
@@ -338,6 +349,7 @@ public struct BiomeInputs
 		abi.cragginess += bbi.cragginess;
 		abi.overhangness += bbi.overhangness;
 		abi.caveVerticalFrequency += bbi.caveVerticalFrequency;
+		abi.baseElevation += bbi.baseElevation;
 		return abi;
 	}
 	

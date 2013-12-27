@@ -1,4 +1,5 @@
 #define FACE_AG
+//#define ONLY_HIGHEST_Y_FACES
 //#define NO_XZ
 //#define ONLY_Y_FACES
 //#define TESTRENDER
@@ -43,6 +44,9 @@ using System;
 // but not nec. applied--good.
 
 // OR (ONE TIME!) TRY TO MAKE CHUNKS THREADED JOBS... (why not?)
+
+// TODO: make a class that acts like a coord dictionary
+// but really uses a list and a 2D array--like we use in FaceAgg.
 
 public class Chunk : ThreadedJob
 {
@@ -171,8 +175,6 @@ public class Chunk : ThreadedJob
 
 //		Vector3 f = new Vector3 (0, 0, 0);
 //		Vector3[] ff = new Vector3[] { f, f, f, f, }; //fake
-		
-		Vector3 siz;
 
 		if (d <= Direction.xneg) 
 		{
@@ -426,7 +428,7 @@ public class Chunk : ThreadedJob
 	private FaceAggregator faceAggregatorAt(int index) 
 	{
 		if(	faceAggregators[index] == null) {
-			faceAggregators[index] = new FaceAggregator(index );
+			faceAggregators[index] = new FaceAggregator( );
 		}
 		return faceAggregators[index];
 	}
@@ -441,7 +443,8 @@ public class Chunk : ThreadedJob
 		return (int) dir % 2 == 0;	
 	}
 	
-	private void addCoordToFaceAggregorAtIndex(Coord co, BlockType type, Direction dir) {
+	private void addCoordToFaceAggregorAtIndex(Coord co, BlockType type, Direction dir) 
+	{
 		FaceAggregator fa = faceAggregatorAt(co.y);
 		fa.addFaceAtCoordBlockType(co, type, dir );
 		faceAggregators[co.y] = fa; // put back...
@@ -474,8 +477,23 @@ public class Chunk : ThreadedJob
 //					throw new Exception("in add y faces heights was zero");
 				
 				if (heights != null) {
-					foreach (Range1D h_range in heights) 
+//					foreach (Range1D h_range in heights) 
+//					{
+					
+					
+#if ONLY_HIGHEST_Y_FACES
+					int j = heights.Count - 1;	
+					int jend = heights.Count; // 1;
+#else
+					int j = 0;
+					int jend = heights.Count;
+#endif
+					
+					Range1D h_range;
+					for (; j < jend ; ++ j)
 					{
+						
+						h_range = heights[j];
 						#if TESTRENDER
 						if (height_index == heights.Count - 1)
 							break;
@@ -501,7 +519,18 @@ public class Chunk : ThreadedJob
 						ChunkIndex targetBlockIndex;
 						Block b;
 						// deal with the start heights
-						if (h_range.start != 0) //don't draw below bedrock
+						
+#if ONLY_HIGHEST_Y_FACES
+						bool no_lower_faces = false;
+#else
+						bool no_lower_faces = h_range.start != 0;
+#endif
+						
+						
+						
+//						
+						
+						if (no_lower_faces) //don't draw below bedrock
 						{
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
 							targetBlockIndex = new ChunkIndex(blockCoord);	
@@ -547,6 +576,9 @@ public class Chunk : ThreadedJob
 						// chunks ask noisepatchs for ranges at the chunk limits
 						// noise patches just deal with it at the noise patch limit...
 						
+//#if ONLY_HIGHEST_Y_FACES
+//							continue;
+//#endif
 
 						//XPOS
 						List<Range1D> adjRanges;

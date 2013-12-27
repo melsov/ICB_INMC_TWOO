@@ -7,6 +7,10 @@ public class TestRunner : MonoBehaviour {
 	
 //	private static bool dontRunGame = true;
 	private static bool dontRunGame = false;
+//	public const bool DontRunDoTerrainTestInstead = true;
+	public const bool DontRunDoTerrainTestInstead = false;
+//	public const bool RunGameOnlyOneNoisePatch = true;
+	public const bool RunGameOnlyOneNoisePatch = false;	
 	
 	// Use this for initialization
 	List<MeshSet> meshSets;

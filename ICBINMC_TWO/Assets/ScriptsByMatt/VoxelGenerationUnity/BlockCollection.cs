@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System.Collections;
 
 using System.ComponentModel;
@@ -95,7 +96,7 @@ public class BlockCollection
 		}
 	}
 
-	#if TERRAIN_TEST
+	
 	public Texture2D textureForTerrainAtXEqualsZero()
 	{
 		List<Color> colorData = new List<Color> ();
@@ -129,7 +130,7 @@ public class BlockCollection
 				continue;
 			}
 			NoisePatch np = noisePatches [nco];
-			if (np.textureSlice != null) {
+			if (np.terrainSlice != null) {
 				patchCount++;
 
 			}
@@ -137,36 +138,36 @@ public class BlockCollection
 
 		bug ("patch count was: " + patchCount);
 		int patchWidth = (int)(ChunkManager.CHUNKLENGTH * NoisePatch.CHUNKDIMENSION);
-		int tex2DWidth = (int)patchWidth * patchCount; // (ChunkManager.CHUNKLENGTH * patchCount * NoisePatch.CHUNKDIMENSION);
+		int tex2DWidth = (int)patchWidth * patchCount; 
 		Texture2D result = new Texture2D (tex2DWidth, (int)(ChunkManager.CHUNKHEIGHT));
 
 		int iterations = 0;
 
-		for (int zi = lowestZCoord; zi <= highestZCoord; zi++, iterations++ ) {
+		for (int zi = lowestZCoord; zi <= highestZCoord; zi++, iterations++ ) 
+		{
 			NoiseCoord nco = new NoiseCoord (0, zi);
 			if (!noisePatches.ContainsKey(nco)) {
 				continue;
 			}
 			NoisePatch np = noisePatches [nco];
-			if (np.textureSlice != null) {
-//				colorData.AddRange (np.textureSlice);
+			if (np.terrainSlice != null) 
+			{
 
-				int texSliceWidth = np.textureSlice.GetLength (1);
+				int texSliceWidth = np.terrainSlice.GetLength (1);
 
-				for (int j = 0; j < np.textureSlice.GetLength(0); ++j) {
-					for (int k = 0; k < texSliceWidth; ++k) {
-						result.SetPixel (k + patchWidth * iterations, j, np.textureSlice [j, k]);
+				for (int j = 0; j < np.terrainSlice.GetLength(0); ++j) 
+				{
+					for (int k = 0; k < texSliceWidth; ++k) 
+					{
+						result.SetPixel (k + patchWidth * iterations, j, np.terrainSlice [j, k]);
 					}
-
 				}
-
 			}
 		}
 
-//		result.SetPixels(colorData.ToArray());
 		return result;
 	}
-	#endif
+	
 
 	public NoisePatch noisePatchAtWorldCoord (Coord woco) {
 		NoiseCoord nco = noiseCoordForWorldCoord (woco);

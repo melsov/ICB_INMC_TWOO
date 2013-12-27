@@ -3768,3 +3768,198 @@ public class GraveYardCode {
 //
 //		calculatedMeshAlready = true;
 //	}
+
+
+// OLD 3D CAVES -- SIDELINED BECAUSE:
+// ITS MORE EFFICIENT TO 
+// AVOID CYCLINGING THROUGH Y DIMENSION
+//	private void populateBlocksFromNoise(Coord start, Coord range)
+//	{
+//		if (generatedBlockAlready)
+//			return;
+//
+//		// put saved blocks in first...
+////		updateBlocksArrayWithSavableBlocksList ();
+//		//...
+//		int x_start = (int)( start.x);
+//		int z_start = (int)( start.z);
+//		int y_start = (int)( start.y); 
+//
+//		int x_end = (int)(x_start + range.x);
+//		int y_end = (int)(y_start + range.y);
+//		int z_end = (int)(z_start + range.z);
+//
+//		Block curBlock = null;
+//		Block prevYBlock = null;
+//
+//		int surface_nudge = (int)(patchDimensions.y * .4f); 
+//		float rmf3DValue;
+//		int noiseAsWorldHeight;
+//		int perturbAmount;
+//		
+//		float heightScaler = 0f;
+//		float heightScalerSkewed = 0f;
+//		const float CAVEBASETHRESHOLD = .75f;
+//		const float CAVETHRESHOLDRANGE = 1f - CAVEBASETHRESHOLD + CAVEBASETHRESHOLD * .3f;
+//		
+//		const float RMF_TURBULENCE_SCALE = 2.0f;
+//		
+//#if TERRAIN_TEST
+//		
+//		Color airColor = Color.black;
+//		float coordColor = (float) (((int)Mathf.Abs(coord.z) % 4) / 4.0f);
+//		Color solidColor = new Color(coordColor + .5f, 1f - coordColor, coordColor, 1f );
+//		terrainSlice = new Color[range.y, range.z];
+//#endif
+//		
+//		BiomeInputs biomeInputs = biomeInputsAtCoord(0,0);
+//		
+//		//height map 2.0
+//		int[,] heightMapStarts = new int[patchDimensions.x, patchDimensions.z];
+//		int[,] heightMapEnds = new int[patchDimensions.x, patchDimensions.z];
+//		
+//#if TERRAIN_TEST
+//		if (TestRunner.DontRunDoTerrainTestInstead)
+//			x_end = x_start + 1;
+//#endif
+//		
+//		int xx = x_start;
+//		for (; xx < x_end ; xx++ ) 
+//		{
+//			int zz = z_start;
+//			for (; zz < z_end; zz++ ) 
+//			{
+////				float noise_val = 0.5f; // FLAT TEST get2DNoise(xx, zz);
+//			
+//#if FLAT_TOO
+//				float noise_val = .4f; // get2DNoise(xx, zz);
+//				biomeInputs = BiomeInputs.Pasture();
+//				
+//#else
+//				float noise_val = get2DNoise(xx, zz);
+//				biomeInputs =  BiomeInputs.Pasture(); // FOR TESTING // biomeInputsAtCoord(xx,zz, biomeInputs);
+//				int baseElevation =(int)(biomeInputs.baseElevation * patchDimensions.y);
+//				int elevationRange = (int)((patchDimensions.y - baseElevation ) * .5f * biomeInputs.hilliness);
+//				
+//#endif
+//				List<int> yHeights = new List<int> ();
+//
+//				int yy = y_start; // (int) ccoord.y;
+//				for (; yy < y_end; yy++) 
+//				{
+//					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
+//					{
+//						BlockType btype = BlockType.Air;
+//
+////						if (yy == 16)
+////							btype = BlockType.Grass;
+//
+//						
+//						heightScaler = (float)yy/(float)y_end;
+//						float caveIntensity = caveIntensityForHeightUpperLimit(yy, baseElevation + elevationRange);
+//						m_chunkManager.m_libnoiseNetHandler.Gain3D = caveIntensity * 1.3f; // TEST // 0.56f * (1.2f - heightScaler * heightScaler);
+//
+//						
+//#if FLAT_TOO
+//						rmf3DValue = 0.2f;
+//#elif NO_CAVES
+//						rmf3DValue = 0.2f;
+//#else
+//						rmf3DValue = getRMF3DNoise(xx, yy, zz, biomeInputs.caveVerticalFrequency * (1.0f - caveIntensity * 0.05f), noise_val); 
+//#endif
+////						noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * biomeInputs.hilliness);
+//						noiseAsWorldHeight =  (int)(noise_val * elevationRange + elevationRange + baseElevation);
+//						perturbAmount = (int) (rmf3DValue * biomeInputs.overhangness * 20);
+//
+//						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
+//						{ 
+//							if (yy == 0) {
+//								btype = BlockType.BedRock;
+////							} else if ( noiseAsWorldHeight + surface_nudge + perturbAmount > yy) { // solid block
+//							} else if ( noiseAsWorldHeight > yy) { // solid block
+//								
+//								heightScalerSkewed =  (1f - caveIntensity); //  heightScaler - .5f;
+//
+//#if NO_CAVES
+//								btype = BlockType.Grass;
+//#else
+//								if (rmf3DValue < CAVEBASETHRESHOLD + heightScalerSkewed * 3.0 * CAVETHRESHOLDRANGE) { // heightScalerSkewed * heightScalerSkewed * CAVETHRESHOLDRANGE) {
+//									btype = BlockType.Grass; 
+//								}
+//#endif
+//								
+//								
+//							}
+//						}
+//
+//#if TERRAIN_TEST
+//						if (TestRunner.DontRunDoTerrainTestInstead)
+//						{
+//							float rmf3Scaled = 0.5f + (rmf3DValue * 0.5f);
+//							if (btype == BlockType.Air)
+//								terrainSlice[yy,zz] = airColor;
+//							else if (rmf3DValue > .9f) 
+//								terrainSlice[yy,zz] = new Color(0f, rmf3Scaled - .5f, 0f, 1);
+//							else if (rmf3DValue < 0f) 
+//								terrainSlice[yy,zz] = new Color(.7f + rmf3Scaled, 0f, .3f, 1);
+//							else 
+//								terrainSlice[yy,zz] = new Color(rmf3Scaled, rmf3Scaled, rmf3Scaled, 1);
+//					
+////							terrainSlice[yy,zz] = btype == BlockType.Air ? airColor : solidColor;					
+//						}
+//#endif
+//						
+//						blocks [xx, yy, zz] = new Block (btype);
+//
+//					}
+//
+//					curBlock = blocks [xx, yy, zz];
+//					
+//					// HEIGHT MAP 2.0
+//				
+//					if (yy == 0 && curBlock.type != BlockType.Air) {
+//						heightMapStarts[xx,zz] = yy;
+//					} else {
+//						prevYBlock = blocks[xx, yy - 1, zz];
+//						if (prevYBlock.type != curBlock.type) 
+//						{
+//							if (curBlock.type == BlockType.Air) { // end of a solid stack of blocks
+//								int stackHeight = (yy - 1) + 1 - heightMapStarts[xx,zz];
+//								Range1D range_ = new Range1D(heightMapStarts[xx,zz], stackHeight);
+//								
+//								List<Range1D> currentHeights = heightMap[xx * patchDimensions.x + zz];
+//								if (currentHeights == null)
+//								{	
+////									bug ("got cur heights null. The range range was: " + range_.range);
+//									
+//									currentHeights = new List<Range1D>();
+//								}
+//								
+//								currentHeights.Add(range_);
+//								heightMap[xx * patchDimensions.x + zz] = currentHeights;
+//								
+//							}
+//							else if (prevYBlock.type == BlockType.Air) { // start of a solid stack of blocks
+//								heightMapStarts[xx,zz] = yy;
+//							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
+//						}
+//						
+//					}
+//				
+//					// HEIGHT MAP 2.0 END
+//
+//				} // end for yy
+//				if (yHeights.Count == 0)
+//					yHeights = null;
+//				ySurfaceMap [xx * patchDimensions.x + zz] = yHeights;
+//
+//			} // end for zz
+//
+//		} // end for xx
+//
+////		#if TERRAIN_TEST
+////		textureSlice = GetTexture ();
+////		#endif
+//
+//		generatedBlockAlready = true;
+//	}

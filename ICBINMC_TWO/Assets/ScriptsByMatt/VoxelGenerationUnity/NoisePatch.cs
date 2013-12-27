@@ -1,4 +1,6 @@
-﻿//#define FLAT_TOO
+﻿#define NO_CAVES
+//#define TERRAIN_TEST
+//#define FLAT_TOO
 //#define FLAT
 
 using UnityEngine;
@@ -22,6 +24,37 @@ using System.Diagnostics;
 
 using System.Runtime.Serialization.Formatters.Binary;
 
+// TODO: object wish list:
+// a Topography object. 
+// like a height map except that it 
+// holds sets of ranges that represent
+// complete coverage of a noise patch over the xz plane
+
+// sort of two types: top of range only: i.e. the ceiling is the sky
+// and ceiling and floor.
+// or: two types: ceiling and then the other type is floor.
+// all nps have at least one floor.
+
+// really face aggregators could do this job pretty well.
+
+// also can have xpos,neg z pos neg walls (analogous to ceiling and floors which are just ypos and neg walls)..
+
+// conveniently, (sets of?) FaceAggregators can really be walls.
+
+// how to find walls?
+// just keep track of the adjacency thing.
+
+// so FaceAggregators that take both north and south pos and neg sides of cubes are not convenient for this really.
+
+// TODO: make face aggregators take only one side.
+
+// could there be some kind of likely to be needed next status for these walls?
+// like could we know the wall that is flush with a wall? and especially in the case of floors,
+// what level is that floor at? (what is its lowest level) and if the player were at that level
+// which walls would we need?
+
+
+
 [Serializable]
 public class NoisePatch : ThreadedJob
 {
@@ -41,7 +74,7 @@ public class NoisePatch : ThreadedJob
 	public NoiseCoord coord {get; set;}
 	
 	public bool startedBlockSetup;
-	public bool generatedNoiseAlready {get; set;}
+//	public bool generatedNoiseAlready {get; set;}
 	public bool generatedBlockAlready {get; set;}
 
 	private ChunkManager m_chunkManager;
@@ -59,10 +92,16 @@ public class NoisePatch : ThreadedJob
 	private const float BIOMEFREQUENCY = 120f;
 	private const float NOISESCALE2D = 1f;
 	
-	#if TERRAIN_TEST
-//	public Color[] textureSlice;
-	public Color[,] textureSlice = new Color[patchDimensions.y, patchDimensions.z];
-	#endif
+	private static int CAVE_MAX_LIKELIHOOD_LEVEL = (int)(patchDimensions.y * .2f);
+	
+	const float CAVEBASETHRESHOLD = .75f;
+	const float CAVETHRESHOLDRANGE = 1f - CAVEBASETHRESHOLD + CAVEBASETHRESHOLD * .3f;
+	
+	const float RMF_TURBULENCE_SCALE = 2.0f;
+	
+//	#if TERRAIN_TEST
+	public Color[,] terrainSlice = new Color[patchDimensions.y, patchDimensions.z];
+//	#endif
 
 	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
 	{
@@ -123,7 +162,8 @@ public class NoisePatch : ThreadedJob
 		savedBlocks = (List<SavableBlock>) info.GetValue("SavedBlocks", typeof(List<SavableBlock>));
 		updateSavableAndNormalBlocksArray ();
 		generatedBlockAlready = false;
-		generatedNoiseAlready = false;
+//		generatedNoiseAlready = false;
+		startedBlockSetup = false;
 	}
 
 	private void addSavableBlock(Block _b, Coord patchRelCo) {
@@ -259,7 +299,7 @@ public class NoisePatch : ThreadedJob
 		if (!generatedBlockAlready)
 			return null;
 
-		return blocks [index.x, index.y, index.z];
+		return blockAtRelativeCoord(index); //  blocks [index.x, index.y, index.z];
 	}
 	
 	public List<Range1D> heightsListAtChunkCoordOffset(Coord chunkCo, Coord offset)
@@ -306,11 +346,47 @@ public class NoisePatch : ThreadedJob
 		return noiseCoords;
 	}
 
+	// TODO: bug. if block not on the ground--i.e. floating--we think that it is air...
 	
 	public Block blockAtWorldBlockCoord(Coord woco)
 	{
 		Coord relCo = patchRelativeBlockCoordForWorldBlockCoord (woco);
+		
+		return blockAtRelativeCoord(relCo);
+	}
+	
+	private Block blockAtRelativeCoord(Coord relCo) 
+	{
+		return new Block(blockTypeFromCoord(relCo));
+		
+		if (blocks[relCo.x, relCo.y, relCo.z] == null)
+			blocks[relCo.x, relCo.y, relCo.z] = new Block(blockTypeFromCoord(relCo));
+//			blocks[relCo.x, relCo.y, relCo.z] = new Block(BlockType.Air);
 		return blocks[relCo.x, relCo.y, relCo.z];
+	}
+	
+	private BlockType blockTypeFromCoord(Coord relCo)
+	{
+		List<Range1D> y_ranges = heightRangesAtCoord(relCo);
+		
+		// general note: a lot of work if we ever change the struct / data type that holds ranges!
+		
+		foreach(Range1D range in y_ranges)
+		{
+			RelationToRange relation = range.relationToRange(relCo.y);
+			if (relation == RelationToRange.WithinRange)
+			{
+				//pretending to check the 'range.blockType' thing (which actually doesn't exist right now)
+				return BlockType.Grass;
+			}
+			
+			//MUST ENSURE THAT RANGE LISTS ALWAYS GO FROM LOWEST TO HIGHEST
+			
+			if (relation == RelationToRange.AboveRange) // we won't find a range, this is an air block
+				return BlockType.Air;
+		}
+		
+		return BlockType.Air;
 	}
 
 	public void setBlockAtWorldCoord(Block bb, Coord woco) {
@@ -331,9 +407,13 @@ public class NoisePatch : ThreadedJob
 		bug("A list: " + str);
 	}
 	
+	private List<Range1D> heightRangesAtCoord(Coord relCo) {
+		return heightMap [relCo.x * patchDimensions.x + relCo.z];
+	}
+	
 	private void updateYSurfaceMapWithBlockAndRelCoord(Block bb, Coord relCo) 
 	{
-		List<Range1D> heights = heightMap [relCo.x * patchDimensions.x + relCo.z];
+		List<Range1D> heights = heightRangesAtCoord(relCo);
 
 		bool isAirBlock = bb.type == BlockType.Air; 
 		
@@ -499,49 +579,51 @@ public class NoisePatch : ThreadedJob
 	#endregion
 
 	void resetAlreadyDoneFlags () {
-		generatedNoiseAlready = false;
+//		generatedNoiseAlready = false;
 		generatedBlockAlready = false;
+		startedBlockSetup = false;
 	}
 	
 //	generateNoiseAndPopulateBlocksAsync
 	
 	public void populateBlocksAsync()
 	{
-		this.startedBlockSetup = true;
+		
 //		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
 //		generatedNoiseAlready = true;
 		this.Start ();
 	}
 
-	public void genNoiseOnMainThread() {
-//		doGenerateNoisePatch();
-	}
+//	public void genNoiseOnMainThread() {
+////		doGenerateNoisePatch();
+//	}
 
-	public void populateBlocksOnMainThread() { //TODO: very confusing. clarify the use of this...
-//		doGenerateNoisePatch();
-	}
+//	public void populateBlocksOnMainThread() { //TODO: very confusing. clarify the use of this...
+////		doGenerateNoisePatch();
+//	}
 
-	public void genNoiseAndPopulateBlocksOnMainThread() {
-//		doGenerateNoisePatch ();
-		doPopulateBlocksFromNoise ();
-	}
+//	public void genNoiseAndPopulateBlocksOnMainThread() {
+////		doGenerateNoisePatch ();
+//		doPopulateBlocksFromNoise ();
+//	}
 
-	public void doGenerateNoisePatch()
-	{
-//		if (generatedNoiseAlready)
-//			return;
+//	public void doGenerateNoisePatch()
+//	{
+////		if (generatedNoiseAlready)
+////			return;
+////
+////		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
+////
+////		m_chunkManager.noiseHandler.GenerateAltAtNoiseCoord (coord);
+//		
+//		//don't need. dif noise lib where we just access the values directly (i.e. no more separate noise map)
 //
-//		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
-//
-//		m_chunkManager.noiseHandler.GenerateAltAtNoiseCoord (coord);
-		
-		//don't need. dif noise lib where we just access the values directly (i.e. no more separate noise map)
-
-		generatedNoiseAlready = true;
-	}
+////		generatedNoiseAlready = true;
+//	}
 
 	public void populateBlocksFromNoise()
 	{
+		doPopulateBlocksFromNoise();
 //		Coord start = new Coord (0);
 //		Coord range = patchDimensions;
 //		populateBlocksFromNoise (start, range);
@@ -557,9 +639,13 @@ public class NoisePatch : ThreadedJob
 		Coord range = patchDimensions;
 		populateBlocksFromNoise (start, range);
 	}
-
+	
+	#region populate blocks
+	
 	private void populateBlocksFromNoise(Coord start, Coord range)
 	{
+		this.startedBlockSetup = true;
+		
 		if (generatedBlockAlready)
 			return;
 
@@ -578,25 +664,33 @@ public class NoisePatch : ThreadedJob
 		Block prevYBlock = null;
 
 		int surface_nudge = (int)(patchDimensions.y * .4f); 
-		float rmf3DValue;
+		float rmf3DValue = 0.2f;
 		int noiseAsWorldHeight;
 		int perturbAmount;
 		
 		float heightScaler = 0f;
 		float heightScalerSkewed = 0f;
-		const float CAVEBASETHRESHOLD = .95f;
-		const float CAVETHRESHOLDRANGE = 1f - CAVEBASETHRESHOLD + CAVEBASETHRESHOLD * .3f;
 		
+		float caveIntensity;
 		
-//		#if TERRAIN_TEST
-//		textureSlice = new Color[range.z, range.y];
-//		#endif
+#if TERRAIN_TEST
+		
+		Color airColor = Color.black;
+		float coordColor = (float) (((int)Mathf.Abs(coord.z) % 4) / 4.0f);
+		Color solidColor = new Color(coordColor + .5f, 1f - coordColor, coordColor, 1f );
+		terrainSlice = new Color[range.y, range.z];
+#endif
 		
 		BiomeInputs biomeInputs = biomeInputsAtCoord(0,0);
 		
 		//height map 2.0
 		int[,] heightMapStarts = new int[patchDimensions.x, patchDimensions.z];
 		int[,] heightMapEnds = new int[patchDimensions.x, patchDimensions.z];
+		
+#if TERRAIN_TEST
+		if (TestRunner.DontRunDoTerrainTestInstead)
+			x_end = x_start + 1;
+#endif
 		
 		int xx = x_start;
 		for (; xx < x_end ; xx++ ) 
@@ -609,123 +703,145 @@ public class NoisePatch : ThreadedJob
 #if FLAT_TOO
 				float noise_val = .4f; // get2DNoise(xx, zz);
 				biomeInputs = BiomeInputs.Pasture();
+				
 #else
 				float noise_val = get2DNoise(xx, zz);
-				biomeInputs = biomeInputsAtCoord(xx,zz, biomeInputs);
+				biomeInputs =  BiomeInputs.Pasture(); // FOR TESTING // biomeInputsAtCoord(xx,zz, biomeInputs);
+				int baseElevation =(int)(biomeInputs.baseElevation * patchDimensions.y);
+				int elevationRange = (int)((patchDimensions.y - baseElevation ) * .5f * biomeInputs.hilliness);
+				noiseAsWorldHeight =  (int)(noise_val * elevationRange + elevationRange + baseElevation);
+//				y_end = noiseAsWorldHeight + 1;
 #endif
-				List<int> yHeights = new List<int> ();
+				
+				List<Range1D> heightRanges = new List<Range1D>();
+				
+				//NO Y WAY!!
+				Range1D zero_ToSurface_range = new Range1D(0, noiseAsWorldHeight - 1);
+				heightRanges.Add(zero_ToSurface_range);
+				heightMap[xx * patchDimensions.x + zz] = heightRanges;
+				
+//				List<int> yHeights = new List<int> ();
 
-				int yy = y_start; // (int) ccoord.y;
-				for (; yy < y_end; yy++) 
-				{
-					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
-					{
-						BlockType btype = BlockType.Air;
-
-						if (yy == 16)
-							btype = BlockType.Grass;
-
-						
-						heightScaler = (float)yy/(float)y_end;
-						
-						m_chunkManager.m_libnoiseNetHandler.Gain3D = 0.26f * (1.2f - heightScaler * heightScaler);
-
-						
-#if FLAT_TOO
-						rmf3DValue = 0.2f;
-#else
-						
-						rmf3DValue = getRMF3DNoise(xx, yy, zz, biomeInputs.caveVerticalFrequency); // * (1f - heightScaler * heightScaler)); 
-						
-#endif
-						noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * biomeInputs.hilliness);
-						perturbAmount = (int) (rmf3DValue * patchDimensions.x * biomeInputs.overhangness);
-
-						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
-						{ 
-							if (yy == 0) {
-								btype = BlockType.BedRock;
-							} else if ( noiseAsWorldHeight + surface_nudge + perturbAmount > yy) { // solid block
-								
-								heightScalerSkewed = heightScaler - .5f;
-//								bool onlyDeepCavesTest = yy > patchDimensions.y * .3f;
+//				int yy = y_start; // (int) ccoord.y;
+//				for (; yy < y_end; yy++) 
+//				{
+//					if (blocks [xx, yy, zz] == null) // else, we apparently had a saved block...
+//					{
+//						BlockType btype = BlockType.Air;
+//
+////						if (yy == 16)
+////							btype = BlockType.Grass;
+//
+//#if NO_CAVES
+//#else
+//						heightScaler = (float)yy/(float)y_end;
+//						caveIntensity = caveIntensityForHeightUpperLimit(yy, baseElevation + elevationRange);
+//						m_chunkManager.m_libnoiseNetHandler.Gain3D = caveIntensity * 1.3f; // TEST // 0.56f * (1.2f - heightScaler * heightScaler);
+//#endif
+//
+//						
+//#if FLAT_TOO
+////						rmf3DValue = 0.2f;
+//#elif NO_CAVES
+////						rmf3DValue = 0.2f;
+//#else
+//						rmf3DValue = getRMF3DNoise(xx, yy, zz, biomeInputs.caveVerticalFrequency * (1.0f - caveIntensity * 0.05f), noise_val); 
+//						perturbAmount = (int) (rmf3DValue * biomeInputs.overhangness * 20);
+//#endif
+////						noiseAsWorldHeight = (int)((noise_val * .5f + .5f) * patchDimensions.y * biomeInputs.hilliness);
+//						
+//						
+//
+//						if (yy < patchDimensions.y - 4) // 4 blocks of air on top
+//						{ 
+//							if (yy == 0) {
+//								btype = BlockType.BedRock;
+////							} else if ( noiseAsWorldHeight + surface_nudge + perturbAmount > yy) { // solid block
+//							} else if ( noiseAsWorldHeight > yy) { // solid block
 //								
-//								if (onlyDeepCavesTest)  {
-//									btype = BlockType.Grass;
+//								
+//
+//#if NO_CAVES
+//								btype = BlockType.Grass;
+//#else
+//								heightScalerSkewed =  (1f - caveIntensity); //  heightScaler - .5f;
+//								if (rmf3DValue < CAVEBASETHRESHOLD + heightScalerSkewed * 3.0 * CAVETHRESHOLDRANGE) { // heightScalerSkewed * heightScalerSkewed * CAVETHRESHOLDRANGE) {
+//									btype = BlockType.Grass; 
 //								}
-//								//check for a cave (note: 'cragginess' now affecting cave shape...maybe don't want that)
-//								else
-								if (rmf3DValue < CAVEBASETHRESHOLD + heightScalerSkewed * heightScalerSkewed * CAVETHRESHOLDRANGE) {
-									btype = BlockType.Grass; 
-								}
-							}
-						}
-
-
-						blocks [xx, yy, zz] = new Block (btype);
-
-					}
-
-					curBlock = blocks [xx, yy, zz];
-					
-					// HEIGHT MAP 2.0
-				
-					if (yy == 0 && curBlock.type != BlockType.Air) {
-						heightMapStarts[xx,zz] = yy;
-					} else {
-						prevYBlock = blocks[xx, yy - 1, zz];
-						if (prevYBlock.type != curBlock.type) 
-						{
-							if (curBlock.type == BlockType.Air) { // end of a solid stack of blocks
-								int stackHeight = (yy - 1) + 1 - heightMapStarts[xx,zz];
-								Range1D range_ = new Range1D(heightMapStarts[xx,zz], stackHeight);
-								
-								List<Range1D> currentHeights = heightMap[xx * patchDimensions.x + zz];
-								if (currentHeights == null)
-								{	
-//									bug ("got cur heights null. The range range was: " + range_.range);
-									
-									currentHeights = new List<Range1D>();
-								}
-								
-								currentHeights.Add(range_);
-								heightMap[xx * patchDimensions.x + zz] = currentHeights;
-								
-							}
-							else if (prevYBlock.type == BlockType.Air) { // start of a solid stack of blocks
-								heightMapStarts[xx,zz] = yy;
-							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
-						}
-						
-					}
-				
-					// HEIGHT MAP 2.0 END
-
-					// Y SURFACE MAP
-//					if (yy > 0) {
-//						prevYBlock = blocks [xx, yy - 1, zz];
-//						if (prevYBlock.type != curBlock.type) {
-//							if (curBlock.type == BlockType.Air) {
-//								yHeights.Add (yy);
+//#endif
+//								
+//								
 //							}
-//							else if (prevYBlock.type == BlockType.Air) {
-//								yHeights.Add (yy - 1);
+//						}
+//
+//#if TERRAIN_TEST
+//						if (TestRunner.DontRunDoTerrainTestInstead)
+//						{
+//							float rmf3Scaled = 0.5f + (rmf3DValue * 0.5f);
+//							if (btype == BlockType.Air)
+//								terrainSlice[yy,zz] = airColor;
+//							else if (rmf3DValue > .9f) 
+//								terrainSlice[yy,zz] = new Color(0f, rmf3Scaled - .5f, 0f, 1);
+//							else if (rmf3DValue < 0f) 
+//								terrainSlice[yy,zz] = new Color(.7f + rmf3Scaled, 0f, .3f, 1);
+//							else 
+//								terrainSlice[yy,zz] = new Color(rmf3Scaled, rmf3Scaled, rmf3Scaled, 1);
+//					
+////							terrainSlice[yy,zz] = btype == BlockType.Air ? airColor : solidColor;					
+//						}
+//#endif
+//						
+//						blocks [xx, yy, zz] = new Block (btype);
+//
+//					}
+//
+//					curBlock = blocks [xx, yy, zz];
+//					
+//					// HEIGHT MAP 2.0
+//				
+//					if (yy == 0 && curBlock.type != BlockType.Air) {
+//						heightMapStarts[xx,zz] = yy;
+//					} else {
+//						prevYBlock = blocks[xx, yy - 1, zz];
+//						if (prevYBlock.type != curBlock.type) 
+//						{
+//							if (curBlock.type == BlockType.Air) { // end of a solid stack of blocks
+//								int stackHeight = (yy - 1) + 1 - heightMapStarts[xx,zz];
+//								Range1D range_ = new Range1D(heightMapStarts[xx,zz], stackHeight);
+//								
+//								List<Range1D> currentHeights = heightMap[xx * patchDimensions.x + zz];
+//								if (currentHeights == null)
+//								{	
+////									bug ("got cur heights null. The range range was: " + range_.range);
+//									
+//									currentHeights = new List<Range1D>();
+//								}
+//								
+//								currentHeights.Add(range_);
+//								heightMap[xx * patchDimensions.x + zz] = currentHeights;
+//								
+//							}
+//							else if (prevYBlock.type == BlockType.Air) { // start of a solid stack of blocks
+//								heightMapStarts[xx,zz] = yy;
 //							} // note: if there are torches or other transparent blocks we will have to accommodate them here/ change approach a little
 //						}
+//						
 //					}
-
-				} // end for yy
-				if (yHeights.Count == 0)
-					yHeights = null;
-				ySurfaceMap [xx * patchDimensions.x + zz] = yHeights;
+//				
+//					// HEIGHT MAP 2.0 END
+//
+//				} // end for yy
+//				if (yHeights.Count == 0)
+//					yHeights = null;
+//				ySurfaceMap [xx * patchDimensions.x + zz] = yHeights;
 
 			} // end for zz
 
 		} // end for xx
 
-		#if TERRAIN_TEST
-		textureSlice = GetTexture ();
-		#endif
+//		#if TERRAIN_TEST
+//		textureSlice = GetTexture ();
+//		#endif
 
 		generatedBlockAlready = true;
 	}
@@ -737,15 +853,43 @@ public class NoisePatch : ThreadedJob
 //		filter_value *= filter_value;
 		return cave_noise_val > filter_value;
 	}
+	
+	private static float caveIntensityForHeight(int yy) { // scale between 0 and 1
+		// caves are largest and most likely to exist at patchDim.y * .25 <--we just decided.	
+		int ydif = yy - CAVE_MAX_LIKELIHOOD_LEVEL;
+		ydif = ydif < 0 ? ydif * -1 : ydif;
+		int yrange = patchDimensions.y - CAVE_MAX_LIKELIHOOD_LEVEL;
+		
+		ydif = yrange - ydif;
+		
+//		return (float)( (ydif) /(float)(yrange));
+		return (float)( (ydif * ydif) /(float)(yrange * yrange));
+	}
+	
+	private static float caveIntensityForHeightUpperLimit(int yy, int upperLimitLevel) { // scale between 0 and 1
+		// caves are largest and most likely to exist at patchDim.y * .25 <--we just decided.	
+		yy = Mathf.Min(yy, upperLimitLevel);
+		int ydif = yy - CAVE_MAX_LIKELIHOOD_LEVEL;
+//		bool ydif_below = ydif < (int)( -CAVE_MAX_LIKELIHOOD_LEVEL * 0f);
+		ydif = ydif < 0 ? ydif * -1 : ydif;
+		int yrange = upperLimitLevel - CAVE_MAX_LIKELIHOOD_LEVEL;
+		
+//		ydif = yrange - ydif;
+		
+//		if (ydif_below)
+//			return (float)(1f - (ydif * ydif *ydif) /(float)(yrange * yrange * yrange));
+		return (float)(1f - (ydif * ydif) /(float)(yrange * yrange));
+	}
 
 	private float getSimplexNoise(int xx, int yy, int zz) {
 		return SimplexNoise.Noise.Generate ((float)((patchDimensions.x * coord.x + xx) / (float)patchDimensions.x), (float)yy / (float)patchDimensions.y, (float)((patchDimensions.z * coord.z + zz)/(float)patchDimensions.z)); 
 	}
 
-	private float getRMF3DNoise(int xx, int yy, int zz, float caveVerticalFrequency) {
-		return m_chunkManager.m_libnoiseNetHandler.GetRidgedMultiFractalValue ((float)((patchDimensions.x * coord.x + xx) / (float)patchDimensions.x), 
-			caveVerticalFrequency * (float)yy / (float)patchDimensions.y, 
-			(float)((patchDimensions.z * coord.z + zz)/(float)patchDimensions.z)); 
+	private float getRMF3DNoise(int xx, int yy, int zz, float caveVerticalFrequency, float turbulence) {
+		return m_chunkManager.m_libnoiseNetHandler.GetRidgedMultiFractalValue (
+			(float)((patchDimensions.x * coord.x + xx) / (float)patchDimensions.x) + turbulence, 
+			caveVerticalFrequency * (float)yy / (float)patchDimensions.y + turbulence, 
+			(float)((patchDimensions.z * coord.z + zz)/(float)patchDimensions.z) + turbulence); 
 	}
 	
 	private float getBiomeType(int xx, int zz) {
@@ -816,12 +960,12 @@ public class NoisePatch : ThreadedJob
 		else if (biomeNoiseValue > .05)
 			return BiomeInputs.CraggyMountains();
 		
-		//interpolate between
-		float pWeight = biomeNoiseValue - (-0.05f);
-		float cmWeight = 0.05f - biomeNoiseValue;
+		biomeNoiseValue += .5f;
 		
-		return BiomeInputs.Mix(BiomeInputs.Pasture() , BiomeInputs.CraggyMountains(), pWeight, cmWeight);
+		return BiomeInputs.Lerp(BiomeInputs.Pasture(), BiomeInputs.CraggyMountains(), biomeNoiseValue);
 	}
+	
+	#endregion
 
 	#region get texture
 

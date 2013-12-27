@@ -22,6 +22,10 @@ public struct CavePoint
 
 }
 
+public enum RelationToRange {
+	BelowRange, WithinRange, AboveRange
+}
+
 [Serializable]
 public struct Range1D
 {
@@ -60,6 +64,15 @@ public struct Range1D
 	
 	public bool contains(int index) {
 		return index >= this.start && index < this.extent();	
+	}
+	
+	public RelationToRange relationToRange(int index) {
+		if (this.contains(index))
+			return RelationToRange.WithinRange;
+		if (index < this.start)
+			return RelationToRange.BelowRange;
+		
+		return RelationToRange.AboveRange;
 	}
 		
 	public bool isOneBelowStart(int index) {

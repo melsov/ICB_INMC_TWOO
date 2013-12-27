@@ -19,6 +19,15 @@ using System.Threading;
 using System.Collections.Specialized;
 //using System.Runtime.InteropServices;
 
+//there's a FaceAggregator object.
+//it knows its vertices index.
+// and its vertices count (and hence its indices index and count)
+// 
+// Also, chunks have a MeshConstructor object
+// holds onto the vertices, ind, uvs lists.
+// can insert sets of verticies into the verts.
+// and then it will also increment the indices 
+// on the above side of the insertion point accordingly.
 
 public class FaceAggregator 
 {
@@ -28,19 +37,12 @@ public class FaceAggregator
 	
 	private const int FACETABLE_LOOKUP_SHIFT = ChunkManager.CHUNKHEIGHT * 88;
 	
-	public int levelForTesting;
-	
 	public FaceAggregator() 
 	{
 		// face type assumed to be xz (for now)
 		
 	}
-	
-	public FaceAggregator(int levelForTestingg) 
-	{
-		levelForTesting = levelForTestingg;
-		
-	}
+
 	
 	public void addFaceAtCoordBlockType(Coord coord, BlockType type, Direction dir)
 	{
@@ -86,14 +88,14 @@ public class FaceAggregator
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
 		
 		// assume we want the xz plane for now
-		return faceSetTable[coord.x + nudge_lookup, coord.z] - FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		return faceSetTable[coord.x * 2 + nudge_lookup, coord.z] - FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
 	private void newFaceSetAtCoord(Coord coord, BlockType type, Direction dir)
 	{
 		if (indexOfFaceSetAtCoord(coord, dir) > -1) //
 //			bug ("trying to add a new face set where there already was one? " + coord.toString());
-			throw new Exception("trying to add a new face set where there already was one? coord is: " + coord.toString() + "my level is: " + levelForTesting);
+			throw new Exception("trying to add a new face set where there already was one? coord is: " + coord.toString() );
 		
 		int faceSetsCount = faceSets.Count;
 		FaceSet fs = new FaceSet(type, dir, coord);
@@ -101,7 +103,7 @@ public class FaceAggregator
 		
 		
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
-		faceSetTable[coord.x + nudge_lookup, coord.z] = faceSetsCount + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		faceSetTable[coord.x * 2 + nudge_lookup, coord.z] = faceSetsCount + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
 	private void copyFaceSetIndexFromToCoord(Coord fromC, Coord toC, Direction dirForBothCoords) {
