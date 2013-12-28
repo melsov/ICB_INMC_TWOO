@@ -537,9 +537,10 @@ public class Chunk : ThreadedJob
 							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
 							
 #if FACE_AG
-							//face agg
 							addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos); 
-#else						
+#else
+							
+						
 							addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
 							starting_tri_index += 4;
 #endif
