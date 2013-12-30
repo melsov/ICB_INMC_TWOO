@@ -31,37 +31,90 @@ using System.Collections.Specialized;
 
 public class FaceAggregator 
 {
-	private int[,] faceSetTable = new int[(int) ChunkManager.CHUNKLENGTH * 2,(int) ChunkManager.CHUNKLENGTH]; // would have to change for xy or zy type aggregator
+	private int[,] faceSetTable; // = new int[(int) ChunkManager.CHUNKLENGTH * 2,(int) ChunkManager.CHUNKLENGTH]; // would have to change for xy or zy type aggregator
 	
 	private List<FaceSet> faceSets = new List<FaceSet> ();
 	
 	private const int FACETABLE_LOOKUP_SHIFT = ChunkManager.CHUNKHEIGHT * 88;
 	
-	public FaceAggregator() 
+	private Axis faceNormal;
+	
+	public FaceAggregator(Axis faceNormalAxis) 
 	{
 		// face type assumed to be xz (for now)
 		
+		int across_dim =(int) ChunkManager.CHUNKLENGTH * 2;
+		int up_dim =(int) ChunkManager.CHUNKLENGTH;
+		if (faceNormalAxis == Axis.X || faceNormalAxis == Axis.Z)
+		{
+			up_dim = (int)ChunkManager.CHUNKHEIGHT;
+		}
+		faceSetTable = new int[across_dim, up_dim];
+		
+		faceNormal = faceNormalAxis;
+	}
+	
+	public FaceAggregator()
+	{
+		
+	}
+	
+	public static FaceAggregator FaceAggregatorForXFaceNormal()
+	{
+		FaceAggregator facagg = new FaceAggregator();
+		facagg.faceNormal = Axis.X;
+		facagg.faceSetTable = new int[(int) ChunkManager.CHUNKLENGTH * 2, (int)ChunkManager.CHUNKHEIGHT];
+		return facagg;
+	}
+	
+	public static FaceAggregator FaceAggregatorForZFaceNormal()
+	{
+		FaceAggregator facagg = new FaceAggregator();
+		facagg.faceNormal = Axis.Z;
+		facagg.faceSetTable = new int[(int) ChunkManager.CHUNKLENGTH * 2, (int)ChunkManager.CHUNKHEIGHT];
+		return facagg;
+	}
+	
+	public static FaceAggregator FaceAggregatorForYFaceNormal()
+	{
+		FaceAggregator facagg = new FaceAggregator();
+		facagg.faceNormal = Axis.Y;
+		facagg.faceSetTable = new int[(int) ChunkManager.CHUNKLENGTH * 2, (int)ChunkManager.CHUNKLENGTH];
+		return facagg;
 	}
 
+	private AlignedCoord alignedCoordFromCoord(Coord co) {
+		if (faceNormal == Axis.X)
+			return new AlignedCoord(co.z, co.y);
+		if (faceNormal == Axis.Y)
+			return new AlignedCoord(co.x, co.z);
+
+		return new AlignedCoord(co.x, co.y);
+	}
 	
 	public void addFaceAtCoordBlockType(Coord coord, BlockType type, Direction dir)
 	{
-		if (coord.x != 0)
+		// TODO: raise exception if this seems to be the wrong dir...
+		AlignedCoord alco = alignedCoordFromCoord(coord);
+//		if (coord.x != 0)
+		if (alco.across != 0)
 		{
-			if (addCoordToFaceSetAtCoord(coord, coord.xMinusOne(), type, dir) )
+//			if (addCoordToFaceSetAtCoord(coord, coord.xMinusOne(), type, dir) )
+			if (addCoordToFaceSetAtCoord(alco, alco.acrossMinusOne(), type, dir) )
 				return;
 		}
-		if (coord.z != 0)
+//		if (coord.z != 0)
+		if (alco.up != 0)
 		{
-			if (addCoordToFaceSetAtCoord(coord, coord.zMinusOne(), type, dir) )
+			if (addCoordToFaceSetAtCoord(alco, alco.upMinusOne(), type, dir) )
 				return;
 		}
 		
 		// ok make a new face set...
-		newFaceSetAtCoord(coord, type, dir);
+		newFaceSetAtCoord(alco, type, dir);
 	}
 	
-	private bool addCoordToFaceSetAtCoord(Coord addMeCoord, Coord adjacentCoord, BlockType type, Direction dir)
+	private bool addCoordToFaceSetAtCoord(AlignedCoord addMeCoord, AlignedCoord adjacentCoord, BlockType type, Direction dir)
 	{
 		// if there is a face set here
 		int faceSetIndex = indexOfFaceSetAtCoord(adjacentCoord, dir);
@@ -83,17 +136,24 @@ public class FaceAggregator
 		return false;
 	}
 
-	private int indexOfFaceSetAtCoord(Coord coord, Direction dir)
+	private int indexOfFaceSetAtCoord(AlignedCoord coord, Direction dir)
 	{
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
 		
-		// assume we want the xz plane for now
-		return faceSetTable[coord.x * 2 + nudge_lookup, coord.z] - FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		int ret;
+		try {
+			ret = faceSetTable[coord.across * 2 + nudge_lookup, coord.up] - FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		} 
+		catch(IndexOutOfRangeException e)
+		{
+			throw new Exception("this index was: across " + (coord.across * 2 + nudge_lookup) + " up: " + coord.up + ". face table length was: dim 0: " +faceSetTable.GetLength(0) + " 1 " + faceSetTable.GetLength(1) + " coord was " + coord.toString() + "Direction was: " + dir + " my face axis is: " + faceNormal);
+		}
+		return ret;
 	}
 	
-	private void newFaceSetAtCoord(Coord coord, BlockType type, Direction dir)
+	private void newFaceSetAtCoord(AlignedCoord coord, BlockType type, Direction dir)
 	{
-		if (indexOfFaceSetAtCoord(coord, dir) > -1) //
+		if (indexOfFaceSetAtCoord(coord, dir) >= -1) //
 //			bug ("trying to add a new face set where there already was one? " + coord.toString());
 			throw new Exception("trying to add a new face set where there already was one? coord is: " + coord.toString() );
 		
@@ -103,13 +163,108 @@ public class FaceAggregator
 		
 		
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
-		faceSetTable[coord.x * 2 + nudge_lookup, coord.z] = faceSetsCount + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		faceSetTable[coord.across * 2 + nudge_lookup, coord.up] = faceSetsCount + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
-	private void copyFaceSetIndexFromToCoord(Coord fromC, Coord toC, Direction dirForBothCoords) {
+	private void copyFaceSetIndexFromToCoord(AlignedCoord fromC, AlignedCoord toC, Direction dirForBothCoords) {
 		int indexFrom = indexOfFaceSetAtCoord(fromC, dirForBothCoords);
-		faceSetTable[toC.x, toC.z] = indexFrom + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		
+		//WE THINK WE SHOULD ADD THIS HERE....
+		int nudge_across = ((int)dirForBothCoords % 2 == 0) ? 0 : 1;
+		
+		faceSetTable[toC.across * 2 + nudge_across, toC.up] = indexFrom + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		
+		//for some reason it was this way before....
+//		faceSetTable[toC.across , toC.up] = indexFrom + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
+	
+	private FaceSet faceSetAt(AlignedCoord alco, Direction dir) {
+		int index = indexOfFaceSetAtCoord(alco, dir);
+		bug ("got the index: " + index);
+		
+		if (index < 0)
+			return null;
+		
+		return faceSets[index];
+	}
+	
+	private Direction direction(bool positive) {
+		Direction result = Direction.xneg;
+		if (faceNormal == Axis.Y)
+			result = Direction.yneg;
+		else if (faceNormal == Axis.Z)
+			result = Direction.zneg;
+		
+		return (Direction)((int)result - (positive? 1 : 0));		
+	}
+	
+	public void removeBlockAtCoord(AlignedCoord alco)
+	{
+		FaceSet posFaceSet = faceSetAt(alco, direction(true) );
+		
+		if (posFaceSet != null)
+		{
+			posFaceSet.removeFaceAtCoord(alco);
+		}
+		
+		FaceSet negFaceSet = faceSetAt(alco, direction(false));
+		
+		if (negFaceSet != null)
+		{
+			negFaceSet.removeFaceAtCoord(alco);
+		}
+	}
+	
+	private MeshSet newMeshSetByRemovingBlockAtCoordDONTCALL(AlignedCoord alco, float verticalHeight)
+	{
+		
+		throw new Exception("don't call this anymore");
+		
+		int pos_vert_count_before = 0;
+		int neg_vert_count_before = 0;
+		
+		int pos_vert_count_after = 0; 
+		int neg_v_count_after = 0; 
+		
+		int pos_change = 0;
+		int neg_change = 0;
+		
+		MeshSet mset = MeshSet.emptyMeshSet();
+		
+		FaceSet posFaceSet = faceSetAt(alco, direction(true) );
+		
+		if (posFaceSet != null)
+		{
+			pos_vert_count_before = posFaceSet.vertexCount();
+			posFaceSet.removeFaceAtCoord(alco);
+			pos_vert_count_after = posFaceSet.vertexCount();
+		}
+		
+		FaceSet negFaceSet = faceSetAt(alco, direction(false));
+		
+		if (negFaceSet != null)
+		{
+			neg_vert_count_before = negFaceSet.vertexCount();
+			negFaceSet.removeFaceAtCoord(alco);
+			neg_v_count_after = negFaceSet.vertexCount();
+		}
+		
+		// rebuild the all facesets (instead, for now of trying to splice the verts/i/uv arrays)
+		mset = getFaceGeometry(verticalHeight);
+		
+		pos_change = pos_vert_count_after - pos_vert_count_before;
+		neg_change = neg_v_count_after - neg_vert_count_before;
+		
+		mset.deltaVertexCount = pos_change + neg_change;
+		
+		return mset;
+	}
+	
+//	public MeshSet newMeshSetByAddingBlockAtCoord(AlignedCoord alco, float verticalHeight)
+//	{
+//		
+////		FaceSet fs = 
+//	}
 	
 	public MeshSet getFaceGeometry(float verticalHeight)
 	{
@@ -149,7 +304,7 @@ public class FaceAggregator
 		for (int i=0; i< faceSets.Count; ++i) {
 			FaceSet fs = faceSets[i];
 			if (fs != null) {
-				bug("FACE AGGRTR: got a face set at: " + i);	
+//				bug("FACE AGGRTR: got a face set at: " + i);	
 //				fs.logStripsArray();
 //				bug (" quads: " + fs.getQuadsString());
 			} else {
@@ -195,7 +350,9 @@ public class FaceAggregator
 			FaceSet fs = faceSets[i];
 			if (fs != null) 
 			{
-				result.Add(fs.CalculateGeometry(4f));
+				MeshSet mset = fs.CalculateGeometry(4f);
+				
+				result.Add(mset);
 				
 			} else {
 				bug("face set was null");
@@ -276,15 +433,40 @@ public class FaceAggregatorTest
 		new Coord(0, 0, 0),
 		new Coord(0, 0, 1),
 		new Coord(1, 0, 0),
-		new Coord(0, 0, 5),
-		new Coord(5, 0, 0),
+		new Coord(0, 0, 5), // this one gets messed up....
+		new Coord(5, 0, 0), // no this one?
 		new Coord(2, 4, 3), 
 		new Coord(2, 4, 6),
 		new Coord(2, 4, 7),
 		new Coord(5, 4, 6),
-		new Coord(12, 4, 6),
-		new Coord(12, 4, 7),
-		new Coord(12, 4, 8),
+//		new Coord(12, 4, 6),
+//		new Coord(12, 4, 7),
+//		new Coord(12, 4, 8),
+		
+		new Coord(8, 0, 0),
+		new Coord(10, 0, 0),
+		new Coord(12, 0, 0),
+		
+		new Coord(14, 4, 15),
+		new Coord(14, 4, 14),
+		new Coord(14, 4, 12),
+		
+		new Coord(15, 4, 15),
+		new Coord(15, 4, 14),
+		new Coord(15, 4, 12),
+
+	};
+	
+	private static Coord[] removeCoords = new Coord[]{
+		
+//		new Coord(0, 0, 5),
+//		new Coord(0, 0, 7),
+//		new Coord(1, 0, 7),
+//		new Coord(5, 0, 9),
+//		
+//		new Coord(12, 4, 6),
+//		new Coord(12, 4, 7),
+//		new Coord(12, 4, 8),
 
 	};
 	
@@ -296,10 +478,13 @@ public class FaceAggregatorTest
 	
 	public void setUpTest()
 	{
-		fa = new FaceAggregator();
+		fa = new FaceAggregator(Axis.Y);
 		
-		Coord[] coords = new Coord[256];
-		for(int i = 0; i < 256 ; ++i)
+		int coord_count = 16 * 16;
+		int i = 16 * 0; // TODO: fix bug (if it matters which it probably does): if i > 0 we get a trying to add a face where there already was one
+		// the face is at aligned coord: 0,0.
+		Coord[] coords = new Coord[coord_count];
+		for(; i < coord_count ; ++i)
 		{
 			int z = i % 16;
 			int x = i / 16;
@@ -319,13 +504,16 @@ public class FaceAggregatorTest
 					include = false;
 					break;
 				}
-			}
+			} //dont remove for now
 			
 			if (include)
 				fa.addFaceAtCoordBlockType(co, BlockType.Grass, Direction.ypos);	
+
 		}
 		
-		fa.LogFaceSets();
+		
+		
+//		fa.LogFaceSets();
 //		bug (fa.faceSetTableToString());
 		
 //		fa.LogMeshResults();
@@ -333,6 +521,12 @@ public class FaceAggregatorTest
 	
 	public List<MeshSet> getMeshResults()
 	{
+		
+		foreach (Coord removeco in removeCoords)
+		{
+			fa.removeBlockAtCoord(new AlignedCoord(removeco.x, removeco.z) );
+		}
+		
 		return fa.getMeshResults();
 	}
 	

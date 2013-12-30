@@ -26,6 +26,28 @@ public enum RelationToRange {
 	BelowRange, WithinRange, AboveRange
 }
 
+public struct AlignedCoord
+{
+	public int across, up;
+	
+	public AlignedCoord(int _ac, int _up) {
+		across = _ac;
+		up = _up;
+	}
+	
+	public AlignedCoord acrossMinusOne() {
+		return new AlignedCoord(this.across - 1, this.up);	
+	}
+	
+	public AlignedCoord upMinusOne() {
+		return new AlignedCoord(this.across, this.up - 1);
+	}
+	
+	public string toString() {
+		return "Aligned coord: across: " + this.across + " up: " + this.up;
+	}
+}
+
 [Serializable]
 public struct Range1D
 {

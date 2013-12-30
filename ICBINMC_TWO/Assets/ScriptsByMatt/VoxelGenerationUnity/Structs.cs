@@ -19,14 +19,25 @@ public struct NeighborChunks
 	}
 }
 
+public enum Axis { X, Y, Z }
 
 public struct MeshSet
 {
 	public GeometrySet geometrySet;
 	public List<Vector2> uvs;
 	
+	public int deltaVertexCount;
+	
 	public MeshSet(GeometrySet gs, List<Vector2> _uvs) {
 		this.geometrySet = gs; this.uvs = _uvs;	
+		deltaVertexCount = 0;
+	}
+	
+	public static MeshSet emptyMeshSet() {
+		List<Vector3> vs = new List<Vector3>();
+		List<int> tris = new List<int>();
+		List<Vector2> uvs = new List<Vector2>();
+		return new MeshSet(new GeometrySet(tris, vs), uvs);
 	}
 }
 
@@ -50,6 +61,14 @@ public struct PTwo
 		this = new PTwo((int) sss, (int) ttt);	
 	}
 	
+	public static PTwo PTwoOne() {
+		return new PTwo(1,1);	
+	}
+	
+	public PTwo plusOne() {
+		return new PTwo(this.s + 1, this.t + 1);	
+	}
+	
 	public static PTwo newPTwoWidthHeight (int width, int height) {
 		if (width < 0 || height < 0)
 			UnityEngine.Debug.LogError("a negative width or height when you apparently meant otherwise?");
@@ -58,6 +77,10 @@ public struct PTwo
 	
 	public static PTwo PTwoXZFromCoord(Coord co) {
 		return new PTwo(co.x, co.z);	
+	}
+	
+	public static PTwo PTwoFromAlignedCoord(AlignedCoord alco) {
+		return new PTwo(alco.across, alco.up);	
 	}
 	
 	public int area() {
@@ -165,6 +188,10 @@ public struct Quad
 		return new Quad(point, new PTwo(1,1) );	
 	}
 	
+	public static Quad UnitQuadWithAlignedCoord(AlignedCoord alco) {
+		return new Quad(PTwo.PTwoFromAlignedCoord(alco), new PTwo(1,1));	
+	}
+	
 	public static Quad QuadWithOriginAndExtent(PTwo origin, PTwo extent) {
 		return new Quad( origin, extent - origin);	
 	}
@@ -186,7 +213,7 @@ public struct Quad
 	}
 	
 	public Quad expandedToContainPoint(PTwo point) {
-		return Quad.QuadWithOriginAndExtent(PTwo.Min(this.origin, point) , PTwo.Max(this.extent(), point) );
+		return Quad.QuadWithOriginAndExtent(PTwo.Min(this.origin, point) , PTwo.Max(this.extent(), point.plusOne()) );
 	}
 	
 	public Quad upperLeftQuarter() {
@@ -226,16 +253,22 @@ public struct Strip
 	
 	public int quadIndex;
 	
+	private static int QUAD_INDEX_DEFAULT = -1;
+	
 	public Strip(Range1D rr, IndexSet iset, int ww) {
-		range = rr; indexSet = iset; width = ww; quadIndex = -1;
+		range = rr; indexSet = iset; width = ww; quadIndex = QUAD_INDEX_DEFAULT;
 	}
 	
 	public Strip(Range1D rr, IndexSet iset) {
-		range = rr; indexSet = iset; width = 1; quadIndex = -1;
+		range = rr; indexSet = iset; width = 1; quadIndex = QUAD_INDEX_DEFAULT;
 	}
 	
 	public Strip(Range1D rr) {
-		range = rr; indexSet = IndexSet.theErsatzNullIndexSet(); width = 1;	quadIndex = -1;
+		range = rr; indexSet = IndexSet.theErsatzNullIndexSet(); width = 1;	quadIndex = QUAD_INDEX_DEFAULT;
+	}
+	
+	public void resetQuadIndex() {
+		quadIndex = QUAD_INDEX_DEFAULT;
 	}
 	
 	public static Strip theErsatzNullStrip() {

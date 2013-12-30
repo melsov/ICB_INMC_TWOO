@@ -1,4 +1,6 @@
 #define FACE_AG
+#define FACE_AG_XZ
+//#define NO_MESHBUILDER
 //#define ONLY_HIGHEST_Y_FACES
 //#define NO_XZ
 //#define ONLY_Y_FACES
@@ -73,10 +75,13 @@ public class Chunk : ThreadedJob
 
 	private int random_new_chunk_color_int_test;
 
-	private static int[] m_meshGenPhaseOneDirections = new int[] {}; // {1, 4, 5}; // {0, 1, 4, 5}; // (Direction enum)
+//	private static int[] m_meshGenPhaseOneDirections = new int[] {}; // {1, 4, 5}; // {0, 1, 4, 5}; // (Direction enum)
 	
+#if NO_MESHBUILDER
 	private FaceAggregator[] faceAggregators = new FaceAggregator[CHUNKHEIGHT];
-	
+#else
+	private MeshBuilder meshBuilder = new MeshBuilder();
+#endif
 	public const float VERTEXSCALE = 1f;
 	
 	public const int TEXTURE_ATLAS_TILES_PER_DIM = 4;
@@ -425,6 +430,7 @@ public class Chunk : ThreadedJob
 		calculatedMeshAlready = true;
 	}
 	
+#if NO_MESHBUILDER
 	private FaceAggregator faceAggregatorAt(int index) 
 	{
 		if(	faceAggregators[index] == null) {
@@ -432,7 +438,7 @@ public class Chunk : ThreadedJob
 		}
 		return faceAggregators[index];
 	}
-	
+#endif
 //	private void setFaceAggrefatorsAt(FaceAggregator fa, int index) {
 ////		index = (index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 );
 ////		faceAggregators[(index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 )] = fa;
@@ -443,16 +449,41 @@ public class Chunk : ThreadedJob
 		return (int) dir % 2 == 0;	
 	}
 	
+	private void addRangeToFaceAggregatorAtXZ(List<Range1D> ranges, BlockType type, Direction dir, int x, int z)
+	{
+		// todo: make 'addRange func.s in FaceSet and FAgg
+		//TODO: make sure that all ranges are of one block type.
+//		bug ("add range was called Direction was: " + dir);
+		foreach(Range1D range in ranges)
+		{
+			int j = range.start;
+			int end = range.extent();
+			while(j < end)
+			{
+				addCoordToFaceAggregorAtIndex(new Coord	(x, j, z), type, dir);
+				++j;
+			}
+		}
+	}
+	
 	private void addCoordToFaceAggregorAtIndex(Coord co, BlockType type, Direction dir) 
 	{
+#if NO_MESHBUILDER
 		FaceAggregator fa = faceAggregatorAt(co.y);
 		fa.addFaceAtCoordBlockType(co, type, dir );
 		faceAggregators[co.y] = fa; // put back...
-//		setFaceAggrefatorsAt(fa, co.y);
+#else
+		meshBuilder.addCoordToFaceAggregatorAtIndex(co, type, dir);
+#endif
+
 	}
 	
 	private void resetFaceAggregatorsArray() {
+#if NO_MESHBUILDER
 		faceAggregators = new FaceAggregator[ CHUNKHEIGHT];	
+#else
+		meshBuilder.resetFaceAggregators();
+#endif
 	}
 	
 	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
@@ -527,9 +558,6 @@ public class Chunk : ThreadedJob
 #endif
 						
 						
-						
-//						
-						
 						if (no_lower_faces) //don't draw below bedrock
 						{
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
@@ -550,7 +578,7 @@ public class Chunk : ThreadedJob
 						targetBlockIndex = new ChunkIndex (extentBlockCoord) ; //(xx, h_range.extentMinusOne() , zz);	
 						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, extentBlockCoord);
 #if FACE_AG
-						addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);					
+						addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);
 #else
 						
 						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
@@ -577,9 +605,7 @@ public class Chunk : ThreadedJob
 						// chunks ask noisepatchs for ranges at the chunk limits
 						// noise patches just deal with it at the noise patch limit...
 						
-//#if ONLY_HIGHEST_Y_FACES
-//							continue;
-//#endif
+
 
 						//XPOS
 						List<Range1D> adjRanges;
@@ -590,11 +616,14 @@ public class Chunk : ThreadedJob
 						}
 						
 						List<Range1D> exposedRanges = exposedRangesWithinRange(h_range, adjRanges, heights.Count > 1);
+						
+#if FACE_AG_XZ
+						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
+#else
 						addMeshDataForExposedRanges(exposedRanges, Direction.xneg, ref starting_tri_index, xx, zz);
+#endif
 						
-#if NO_XZ
-#else						
-						
+
 						//ZPOS
 						if (zz == CHLEN - 1) {
 							adjRanges = m_noisePatch.heightsListAtChunkCoordOffset(this.chunkCoord, new Coord(xx, 0, zz + 1));
@@ -603,17 +632,11 @@ public class Chunk : ThreadedJob
 						}
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+#if FACE_AG_XZ
+						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
+#else
 						addMeshDataForExposedRanges(exposedRanges, Direction.zneg, ref starting_tri_index, xx, zz);
-						
-						//ZPOS
-						if (zz == CHLEN - 1) {
-							adjRanges = m_noisePatch.heightsListAtChunkCoordOffset(this.chunkCoord, new Coord(xx, 0, zz + 1));
-						} else {
-							adjRanges = ySurfaceMap[xx * CHLEN + zz + 1];
-						}
-						
-						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
-						addMeshDataForExposedRanges(exposedRanges, Direction.zneg, ref starting_tri_index, xx, zz);
+#endif
 						
 						//XNEG
 						if (xx == 0) {
@@ -622,11 +645,16 @@ public class Chunk : ThreadedJob
 							adjRanges = ySurfaceMap[(xx - 1) * CHLEN + zz];
 						}
 						
-						//TODO: DONE? BUG: maybe something off by one with height maps...
-						// also TODO: FaceAggs should deal with only one face slice: so the upward faces of level n and downward of n+1
+						//TODO: BUG: blocks can't be added if they are not right on top of other blocks. (index out of range exception)
+						// it wasn't always this way...
+						// also TODO: FaceAggs should deal with only one face slice (this is in question): so the upward faces of level n and downward of n+1
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+#if FACE_AG_XZ
+						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
+#else
 						addMeshDataForExposedRanges(exposedRanges, Direction.xpos, ref starting_tri_index, xx, zz);
+#endif
 						
 						//ZNEG
 						if (zz == 0) {
@@ -636,8 +664,12 @@ public class Chunk : ThreadedJob
 						}
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
+#if FACE_AG_XZ
+						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
+#else
 						addMeshDataForExposedRanges(exposedRanges, Direction.zpos, ref starting_tri_index, xx, zz);
 #endif
+
 						
 						// COMBINE GEOM?? (USING YET ANOTHER SET OF LISTS.)
 						// have an array of CHLEN lists per each dimension.
@@ -664,6 +696,7 @@ public class Chunk : ThreadedJob
 	
 	private void addAggregatedFaceGeomToMesh(int starting_tri_index) 
 	{
+#if NO_MESHBUILDER
 		FaceAggregator fa;
 		for (int i = 0; i < faceAggregators.Length ; ++i)
 		{
@@ -686,6 +719,14 @@ public class Chunk : ThreadedJob
 				uvcoords_list.AddRange(mset.uvs);
 			}
 		}
+#else
+		MeshSet mesh_set = meshBuilder.compileGeometry(ref starting_tri_index);
+		
+		triangles_list.AddRange(mesh_set.geometrySet.indices);
+		uvcoords_list.AddRange(mesh_set.uvs);
+		vertices_list.AddRange(mesh_set.geometrySet.vertices);
+#endif
+		
 	}
 	
 	private void addMeshDataForExposedRanges(List<Range1D> exposedRanges, Direction camFacingDir, ref int starting_tri_i, int xx, int zz)

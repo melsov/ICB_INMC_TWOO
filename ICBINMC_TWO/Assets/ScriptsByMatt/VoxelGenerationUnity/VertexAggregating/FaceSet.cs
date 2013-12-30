@@ -36,7 +36,7 @@ public class FaceSet
 	private Quad faceSetLimits = Quad.theErsatzNullQuad();
 	private List<Quad> quads = new List<Quad>();
 	
-	private int[,] quadTable = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
+	private int[,] quadTable; // = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
 	
 	private bool[,] filledFaces = new bool[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
 	
@@ -52,7 +52,7 @@ public class FaceSet
 	
 //	private int internalTriIndex = 0;
 	
-	public FaceSet(BlockType _type, Direction _dir, Coord initialCoord)
+	public FaceSet(BlockType _type, Direction _dir, AlignedCoord initialCoord)
 	{
 		blockType = _type;	
 		blockFaceDirection = _dir;
@@ -60,6 +60,13 @@ public class FaceSet
 		addCoord(initialCoord);
 		
 //		MAX_FACES = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH); // for now
+		
+		if (_dir == Direction.yneg || _dir == Direction.ypos)
+		{
+			quadTable  = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];	
+		} else {
+			quadTable  = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKHEIGHT];	
+		}
 	}
 	
 	private int quadIndexAtCoord(PTwo coord) {
@@ -68,6 +75,7 @@ public class FaceSet
 	
 	private int addNewQuadAtCoord(Quad qq, PTwo coord) {
 		int curQuadCount = quads.Count + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
+		
 		quadTable[coord.s, coord.t] = curQuadCount ;
 		quads.Add(qq);
 		
@@ -82,22 +90,124 @@ public class FaceSet
 		quadTable[toCo.s, toCo.t] = quadTable[fromCo.s, fromCo.t];	
 	}
 	
-	public void addCoord(Coord co)
+	
+	//reference
+//	Range1D rOD = Range1D.theErsatzNullRange();
+//		if (isAirBlock)
+//		{
+//			bool checkGotAContainingRange = false;
+//			
+//			for (; heightsIndex < heights.Count ; ++heightsIndex)
+//			{
+//				
+//				rOD = heights[heightsIndex];
+//				if (rOD.contains(relCo.y))
+//				{
+//					
+//					checkGotAContainingRange = true;
+//					if (relCo.y == rOD.start) {
+//						rOD.start ++;	
+//						rOD.range--; // corner case: range now zero: (check for this later)
+//					} else if (relCo.y == rOD.extentMinusOne() ) {
+//						rOD.range--;
+//					} else {
+//						int newBelowRange = relCo.y - 1 + 1 - rOD.start;
+//						Range1D newAboveRange = new Range1D(relCo.y + 1, rOD.range - newBelowRange - 1);
+//						rOD.range = newBelowRange;
+//						heights.Insert(heightsIndex + 1, newAboveRange);
+//					}
+//					
+//					if (rOD.range == 0) // no more blocks here
+//					{
+//						heights.RemoveAt(heightsIndex);	
+//					}
+//					else
+//					{
+//						// need to put back???
+//						heights[heightsIndex] = rOD;
+//					}
+//					
+//					break;
+//				}
+//			}
+//			
+//			if (!checkGotAContainingRange)
+//			{
+//				throw new Exception("confusing: we didn't find the height range where an air block was being added");
+//			}
+	// end reference
+	
+	private List<Strip> rangesWithRemovedFaceAt(int removeLevel, List<Strip> strips)
+	{
+		int i = 0;
+//		Range1D range = Range1D.theErsatzNullRange();
+		for (; i < strips.Count; ++i)
+		{
+			Strip str = strips[i];
+			Range1D ra = str.range;
+			if (ra.contains(removeLevel) ) {
+				// split range	
+				if (ra.start == removeLevel)
+				{
+					ra.start++;
+					ra.range--;
+					str.range = ra;
+					strips[i] = str;
+				} else if (ra.extentMinusOne() == removeLevel) {
+					ra.range--;	
+					str.range = ra;
+					strips[i] = str;
+				} else {
+					Range1D new_above = str.range.subRangeAbove(removeLevel);
+					Range1D new_below = str.range.subRangeBelow(removeLevel);
+					
+//					if (Range1D.Equal(new_above, Range1D.theErsatzNullRange())) {
+//						throw new Exception("range above is ersatz null");	
+//					}
+//					
+//					if (Range1D.Equal(new_below, Range1D.theErsatzNullRange())) {
+//						throw new Exception("range below is ersatz null");	
+//					}
+					
+					str.range = new_below;
+					strips[i] = str;
+					Strip newaboveStrip = new Strip(new_above);
+					strips.Insert(i + 1, newaboveStrip);
+					
+				}
+				break;
+			}
+		}
+		return strips;
+		
+	}
+	
+	public int vertexCount() {
+		return (int)(quads.Count * 4);	
+	}
+	
+	public void removeFaceAtCoord(AlignedCoord alco) 
+	{
+		List<Strip> strips = stripsArray[alco.across];
+		stripsArray[alco.across] = rangesWithRemovedFaceAt(alco.up, strips);
+	}
+	
+	public void addCoord(AlignedCoord co)
 	{
 		// ADD/ADJUST STRIPS
 		
 		// for later...
-		filledFaces[co.x, co.z] = true; 
+//		filledFaces[co.across, co.up] = true; 
 		if (faceSetLimits.isErsatzNull() ) {
-			faceSetLimits = new Quad( PTwo.PTwoXZFromCoord(co), new PTwo(1,1) );	
+			faceSetLimits = Quad.UnitQuadWithAlignedCoord(co);  //( PTwo.PTwoXZFromCoord(co), new PTwo(1,1) );	
 		} else {
-			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.x, co.z) );
+			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.across, co.up) );
 		}
 		
 		///
 		//...	assume we're dealing with xz faces and z neg is 'up' x pos is 'right'
-		int stripsIndex = co.x;
-		int addAtHeight = co.z;
+		int stripsIndex = co.across;
+		int addAtHeight = co.up;
 		
 		List<Strip> strips = stripsAtIndex(stripsIndex);
 		
@@ -113,6 +223,13 @@ public class FaceSet
 		for(int i = 0; i < strips.Count ; ++i)
 		{
 			Strip str = strips[i];
+			
+			//check contains (sanity check)
+			if (str.range.contains(addAtHeight) )
+			{
+				throw new Exception("trying to add a coord that we already have? (strip contains)");	
+			}
+			
 			if 	(str.range.isOneAboveRange(addAtHeight) )
 			{
 				str.range.range++; // = str.range.extendRangeByOne();
@@ -152,110 +269,115 @@ public class FaceSet
 		stripsArray[stripsIndex] = strips; // put it back!
 	}
 	
-	private List<Quad> quadsForArea(Quad area, ref List<Quad> out_quads) // make a quad (if possible) from a given area
+	private void optimizeStripsTestVersion()
 	{
-		// THIS CAUSES AN 'OUT OF MEMORY' ERROR!
 		
-		if (iterationSafety > 1000) {
-			return new List<Quad>();	
-		}
-		
-		iterationSafety ++;
-		
-		if (areaIsFilled(area))
+		int horizontalDim = 0;
+		List<Strip> currentStrips;
+//		List<Strip> lastStrips;
+		for(; horizontalDim < stripsArray.Length ; ++horizontalDim)
 		{
-			List<Quad> ret = new List<Quad>();
-			ret.Add(area);
-			return ret;
-		} else if (area.dimensions.area() == 1) {
-			return new List<Quad>();	
-		}
-		
-		if (area.dimensions.t > 1)
-		{
-			if (area.dimensions.s > 1)
+			currentStrips = stripsArray[horizontalDim];
+			if (currentStrips == null)
 			{
-				Quad ULQuad = area.upperLeftQuarter();
-				out_quads.AddRange(quadsForArea(ULQuad, ref out_quads) );
+				bug ("null strips array at horiz dim: " + horizontalDim);
+				continue;
 			}
 			
-			Quad URQuad = area.upperRightQuarter();
-			out_quads.AddRange(quadsForArea(URQuad, ref out_quads) );
+			foreach(Strip sturip in currentStrips){
+				Quad qq = Quad.QuadFromStrip(sturip, horizontalDim);
+				addNewQuadAtCoord(qq, new PTwo(horizontalDim, sturip.range.start));
+			}
 		}
-		
-		if (area.dimensions.s > 1) {
-			Quad LLQuad = area.lowerLeftQuarter();
-			out_quads.AddRange(quadsForArea(LLQuad, ref out_quads) );
-		}
-		
-		Quad LRQuad = area.lowerRightQuarter();
-		out_quads.AddRange(quadsForArea(LRQuad, ref out_quads) );
-		
-		return out_quads;
-
+		bug ("there are now: " + quads.Count + " quads");
 	}
 	
-	private bool areaIsFilled(Quad area) 
-	{
-		if (area.dimensions.area() == 0)
-			return false;
-		
-		int i = area.origin.s;
-		int end = area.extent().s;
-		int jend = area.extent().t;
-		int jstart = area.origin.t;
-		int j;
-		for(; i < end ; ++i)
-		{
-			j = jstart;
-			for(; j < jend ; ++j)
-			{
-				if (!filledFaces[i, j])
-					return false;
-			}
-			
+	private void resetStripsQuadIndices() {
+		foreach	(List<Strip> strips in stripsArray) {
+			if (strips != null)
+				foreach(Strip ss in strips) {
+					ss.resetQuadIndex();	
+				}
 		}
-		return true;
 	}
 	
 	private void optimizeStrips()
 	{
+		//clear quads
+		quads.Clear();
+		resetStripsQuadIndices(); 
+		
+//		List<Quad> tempQuads = new List<Quad>();
+//		quads = quadsForArea(faceSetLimits, ref quads);
+//		return;
+//		optimizeStripsTestVersion(); 
+//		return;///!!!!
+		
+		
+		// deal with the case where there's only one list of strips
+		if (faceSetLimits.dimensions.s == 1) {
+			List<Strip> the_strips = stripsArray[faceSetLimits.origin.s  ];
+			foreach(Strip stripp in the_strips) {
+				Quad quadd = Quad.QuadFromStrip(stripp, faceSetLimits.origin.s);
+				addNewQuadAtCoord(quadd, new PTwo(faceSetLimits.origin.s, stripp.range.start) );
+			}
+			return;
+		}
+		
+		
 		// ENHANCED NAIVE METHOD
 		// MAKE A LIST OF QUADS FROM THE LISTS OF STRIPS.
-		// (ADMITTEDLY: WE GOT NOTHING OUT OF USING QUADS INSTEAD OF STRIPS WITH LENGTH...)
-		int horizontalDim = 1;
+		// (ADMITTEDLY: WE GOT NOTHING OUT OF USING QUADS INSTEAD OF STRIPS WITH WIDTHS...)
+		
+		int horizDimStart = faceSetLimits.origin.s + 1;
+		PTwo faceLimitsExtent = faceSetLimits.extent(); // + new PTwo(1,1);
+		int horizDimEnd = faceLimitsExtent.s;
+		
+		if (horizDimEnd > stripsArray.Length )
+			throw new Exception("wha extents greater than strips array length?");
+		
+
+		int horizontalDim = horizDimStart;
 		List<Strip> currentStrips;
 		List<Strip> lastStrips;
-		for(; horizontalDim < stripsArray.Length ; ++horizontalDim)
+		for(; horizontalDim < horizDimEnd ; ++horizontalDim)
 		{
 			currentStrips = stripsArray[horizontalDim];
 			lastStrips = stripsArray[horizontalDim - 1];
 			
-			// corner case
-			if (lastStrips == null && horizontalDim == stripsArray.Length - 1)
+			//			if (horizontalDim == horizDimEnd - 1) // THROWING UP HANDS WAY!
+			//			{
+			if (lastStrips == null && horizontalDim == horizDimEnd - 1)
 			{
 				if (currentStrips != null)
 					foreach(Strip lastRowStrip in currentStrips)
 					{
 						Quad lq = Quad.QuadFromStrip(lastRowStrip, horizontalDim);
 						addNewQuadAtCoord(lq, new PTwo(horizontalDim, lastRowStrip.range.start) );
-						
 					}
+				
+				// THROWING UP HANDS WAY!
+//				break; // doesn't help??
 			}
 			
-			if ( lastStrips == null ) //currentStrips == null) // ||
-				continue;
+			int lastStripsCount = 0;
+			if ( lastStrips != null ) //currentStrips == null) // ||
+				lastStripsCount = lastStrips.Count;
 			
+			// TODO: test whether we got any overlapping quads...
 			
 			for(int j = 0 ; j < lastStrips.Count ; ++j) 
 			{
 				Strip lstp = lastStrips[j];
 				
-				//QUAD WAY
 				if (horizontalDim == 1)
 				{
 					Quad qq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
 					lstp.quadIndex = addNewQuadAtCoord(qq, new PTwo(horizontalDim - 1, lstp.range.start) );
+					
+					if (lstp.quadIndex < 0)
+						bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString());
+					
 					lastStrips[j] = lstp;
 				}
 				
@@ -265,34 +387,58 @@ public class FaceSet
 					Strip stp = currentStrips[i];
 					
 					
-					if (Range1D.Equal(stp.range, lstp.range) ) // truly naive only 2 wide is pos!
+					if (Range1D.Equal(stp.range, lstp.range) ) 
 					{
-						
 						// has a quad index?
 						if (lstp.quadIndex != -1)
 						{
-							Quad qua = quads[ lstp.quadIndex];
+							//TEST
+							Quad qua;
+							try {
+								qua = quads[lstp.quadIndex];
+							} catch(ArgumentOutOfRangeException e) {
+								throw new Exception("argument out of range. index was: " + lstp.quadIndex );		
+							}
+							
 							qua.dimensions.s++;
-							quads[lstp.quadIndex] = qua;
+							
+							if (lstp.quadIndex < 0)
+								bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString() + "else from lstp qI == -1" + "\n BTW: the shift number is: " + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER);
+							
+							try {
+								quads[lstp.quadIndex] = qua;
+							} catch(IndexOutOfRangeException e) {
+								throw new Exception("index out of range. index was: " + lstp.quadIndex );		
+							}
 							stp.quadIndex = lstp.quadIndex;
+							
 						} else {
 							// make a new quad with these two 
-							lstp.width ++;
+							
 							Quad doubleWidthqq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
+							doubleWidthqq.dimensions.s = 2;
 							lstp.quadIndex = addNewQuadAtCoord(doubleWidthqq, new PTwo(horizontalDim - 1, lstp.range.start) );
+							
+							if (lstp.quadIndex < 0)
+								bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString() + "else from lstp qI == -1" + "\n BTW: the shift number is: " + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER);
+							
 							stp.quadIndex = lstp.quadIndex;
 							
 						}
-//						lstp.width++;
-//						currentStrips.RemoveAt(i);
-//						i--;
-//						lastStrips[j] = lstp;
-						
 					} 
-					else {
+					else 
+					{
 						// new quad with stp
-						Quad sq = Quad.QuadFromStrip(stp, horizontalDim);
-						stp.quadIndex = addNewQuadAtCoord(sq, new PTwo(horizontalDim, stp.range.start) );
+						// only if its the last time around
+//						if (horizontalDim == stripsArray.Length - 1)
+						if (horizontalDim == horizDimEnd - 1)
+						{
+							Quad sq = Quad.QuadFromStrip(stp, horizontalDim);
+							stp.quadIndex = addNewQuadAtCoord(sq, new PTwo(horizontalDim, stp.range.start) );
+							
+							if (stp.quadIndex < 0)
+								bug ("the quad index less than zero: " + stp.quadIndex + " strip is: " + stp.toString());
+						}
 					}
 					
 					
@@ -324,6 +470,8 @@ public class FaceSet
 		
 		bool faceIsOnPosSide = ((int) this.blockFaceDirection % 2 == 0);
 		
+		bool isZFace = (blockFaceDirection >= Direction.zpos); // must flip tri indices if z face!!
+		
 		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
 		
 		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
@@ -347,15 +495,23 @@ public class FaceSet
 			int curLLindex = curULindex + 1;
 			int curURindex = curULindex + 2;
 			int curLRindex = curULindex + 3;
+			
+			//TODO: switch vecs for XY and ZY cases
 				
-			Vector3 ulVec = new Vector3((float) quad.origin.s - half_unit, 
+//			Vector3 ulVec = new Vector3((float) quad.origin.s - half_unit, 
+//				verticalHeight, 
+//				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
+			Vector3 ulVec = positionVectorForAcrossUpVertical((float)quad.origin.s - half_unit, 
 				verticalHeight, 
 				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(ulVec);
 			vertsAddedByStrip++;
 			returnUVS.Add(monoUVValue);
 		
-			Vector3 llVec = new Vector3((float) quad.origin.s - half_unit, 
+//			Vector3 llVec = new Vector3((float) quad.origin.s - half_unit, 
+//				verticalHeight, 
+//				(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
+			Vector3 llVec = positionVectorForAcrossUpVertical((float) quad.origin.s - half_unit, 
 				verticalHeight, 
 				(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(llVec);
@@ -364,14 +520,20 @@ public class FaceSet
 		
 			returnUVS.Add(monoUVValue);
 
-			Vector3 urVec = new Vector3((float) quad.extent().s - half_unit, 
+//			Vector3 urVec = new Vector3((float) quad.extent().s - half_unit, 
+//				verticalHeight, 
+//				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
+			Vector3 urVec = positionVectorForAcrossUpVertical((float) quad.extent().s - half_unit, 
 				verticalHeight, 
 				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(urVec);
 			vertsAddedByStrip++;
 			returnUVS.Add( monoUVValue); // + Vector2.Scale(uvURTexDim, uvScalingVec) );
 			
-			Vector3 lrVec = new Vector3((float)quad.extent().s - half_unit, 
+//			Vector3 lrVec = new Vector3((float)quad.extent().s - half_unit, 
+//				verticalHeight, 
+//				(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
+			Vector3 lrVec = positionVectorForAcrossUpVertical((float)quad.extent().s - half_unit, 
 				verticalHeight, 
 				(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(lrVec);
@@ -380,7 +542,7 @@ public class FaceSet
 			
 			int[] tris;
 			
-			if (faceIsOnPosSide) {
+			if (faceIsOnPosSide != isZFace) { // if Z face we want the opposite
 				tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
 			} else {
 				tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
@@ -397,6 +559,18 @@ public class FaceSet
 		
 		return new MeshSet(geomset, returnUVS);
 		
+	}
+	
+	private Vector3 positionVectorForAcrossUpVertical(float across,  float vertical, float up)
+	{
+		if (blockFaceDirection <= Direction.xneg) {
+			return new Vector3(vertical, up, across); // we haven't actually figured whether vertical height corresponds to the right side of the cube!	
+		}
+		if (blockFaceDirection <= Direction.yneg) {
+			return new Vector3(across, vertical, up); // the original case	
+		}
+		
+		return new Vector3(across, up, vertical);
 	}
 	
 //	private List<Vector3> collectedVectors()
@@ -496,7 +670,7 @@ public class FaceSetTest
 	public FaceSetTest()
 	{
 		bug ("BEGIN FACE SET TEST");
-		FaceSet fs = new FaceSet(BlockType.Grass, Direction.ypos, new Coord(0,2,0));
+		FaceSet fs = new FaceSet(BlockType.Grass, Direction.ypos, new AlignedCoord(0,0));
 		
 		Coord[] coords = new Coord[256];
 		for(int i = 0; i < 256 ; ++i)
@@ -509,7 +683,7 @@ public class FaceSetTest
 		
 		
 		foreach (Coord co in coords) {
-			fs.addCoord(co);	
+			fs.addCoord(new AlignedCoord(co.x, co.z));	
 		}
 		
 		MeshSet mset = fs.CalculateGeometry(2);
@@ -945,3 +1119,71 @@ public class FaceSetTest
 //			new Coord(4, 2, 1),
 //			new Coord(4, 2, 2),
 //		};
+
+//	private List<Quad> quadsForArea(Quad area, ref List<Quad> out_quads) // make a quad (if possible) from a given area
+//	{
+//		// THIS CAUSES AN 'OUT OF MEMORY' ERROR!
+////		throw new Exception("we don't want to run this func. it causes an out of memory error, it seems");
+//		if (iterationSafety > 1000) {
+//			return new List<Quad>();	
+//		}
+//		
+//		iterationSafety ++;
+//		
+//		if (areaIsFilled(area))
+//		{
+//			List<Quad> ret = new List<Quad>();
+//			ret.Add(area);
+//			return ret;
+//		} else if (area.dimensions.area() == 1) {
+//			return new List<Quad>();	
+//		}
+//		
+//		if (area.dimensions.t > 1)
+//		{
+//			if (area.dimensions.s > 1)
+//			{
+//				Quad ULQuad = area.upperLeftQuarter();
+//				out_quads.AddRange(quadsForArea(ULQuad, ref out_quads) );
+//			}
+//			
+//			Quad URQuad = area.upperRightQuarter();
+//			out_quads.AddRange(quadsForArea(URQuad, ref out_quads) );
+//		}
+//		
+//		if (area.dimensions.s > 1) {
+//			Quad LLQuad = area.lowerLeftQuarter();
+//			out_quads.AddRange(quadsForArea(LLQuad, ref out_quads) );
+//		}
+//		
+//		Quad LRQuad = area.lowerRightQuarter();
+//		out_quads.AddRange(quadsForArea(LRQuad, ref out_quads) );
+//		
+//		return out_quads;
+//
+//	}
+//	
+//	private bool areaIsFilled(Quad area) 
+//	{
+//		if (area.dimensions.area() == 0)
+//			return false;
+//		
+//		int i = area.origin.s;
+//		int end = area.extent().s;
+//		int jend = area.extent().t;
+//		int jstart = area.origin.t;
+//		int j;
+//		for(; i < end ; ++i)
+//		{
+//			j = jstart;
+//			for(; j < jend ; ++j)
+//			{
+//				if (!filledFaces[i, j])
+//					return false;
+//			}
+//			
+//		}
+//		return true;
+//	}
+
+//	

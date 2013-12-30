@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 
 
 public class TestRunner : MonoBehaviour {
@@ -12,12 +13,14 @@ public class TestRunner : MonoBehaviour {
 //	public const bool RunGameOnlyOneNoisePatch = true;
 	public const bool RunGameOnlyOneNoisePatch = false;	
 	
+	private bool doRunTest = true;
+	
 	// Use this for initialization
 	List<MeshSet> meshSets;
 	
-	static Color orthoXColor = new Color(1.0f, .3f, .5f, 1f);
-	static Color orthoZColor = new Color(.9f, .5f, .1f, 1f);
-	static Color diagColor = new Color(.5f, .7f, .8f, 1f);	
+	static Color orthoXColor = new Color(.1f, .3f, .5f, 1f);
+	static Color orthoZColor = new Color(.4f, .5f, .1f, 1f);
+	static Color diagColor = new Color(.5f, .2f, .8f, 1f);	
 	
 	void Start () 
 	{
@@ -37,7 +40,7 @@ public class TestRunner : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		if (dontRunGame)
+		if (doRunTest && dontRunGame)
 			drawMeshSets();
 	}
 	
@@ -50,11 +53,31 @@ public class TestRunner : MonoBehaviour {
 		Vector3 bb;
 		Vector3 cc;
 		
+		Color add_color;
+		int meshSetCount = 0;
+		float color_cycle = 0f;
+		float color_cycle2 = .5f;
+		
+		if (meshSets == null)
+		{
+			UnityEngine.Object[] objects = FindObjectsOfType (typeof(GameObject));
+			foreach (GameObject go in objects) {
+				go.SendMessage ("OnPauseGame", SendMessageOptions.DontRequireReceiver);
+			}
+			doRunTest = false;
+			throw new Exception("mesh sets was null");
+			
+			
+		}
+		
 		foreach(MeshSet mset in meshSets)
 		{
 			verts = mset.geometrySet.vertices;
 			indices = mset.geometrySet.indices;
 			
+			float cos_col1 = (float) Mathf.Cos (color_cycle * 3.14159f);
+			float cos_col2 = (float) Mathf.Cos (color_cycle2 * 3.14159f * .75f);
+			add_color = new Color( (cos_col1 + cos_col2) * .5f , cos_col1 , cos_col2 , 1f);
 			int i = 0;
 			for(;i< indices.Count; i += 3)
 			{
@@ -63,17 +86,19 @@ public class TestRunner : MonoBehaviour {
 					aa = verts[indices[i]];
 					bb = verts[indices[i+1]];
 					cc = verts[indices[i+2]];
-					drawLineChooseColor(aa,bb);
-					drawLineChooseColor(bb,cc);
-					drawLineChooseColor(cc,aa);
+					drawLineChooseColor(aa,bb, add_color);
+					drawLineChooseColor(bb,cc, add_color);
+					drawLineChooseColor(cc,aa, add_color);
 				}
 			}
-			
+			meshSetCount += 1;
+			color_cycle = (float)((int)(meshSetCount * 4) % 7)/7f;
+			color_cycle2 = (float)((int)(meshSetCount * 6) % 11)/11f;
 		}
 		
 	}
 	
-	static void drawLineChooseColor(Vector3 aa, Vector3 bb)
+	static void drawLineChooseColor(Vector3 aa, Vector3 bb, Color addColor)
 	{
 		Color col = diagColor;
 		if (aa.x == bb.x) // along z
@@ -81,6 +106,7 @@ public class TestRunner : MonoBehaviour {
 		else if (aa.z == bb.z) // along x
 			col = orthoXColor;
 		
+		col += addColor;
 		debugLineV(aa,bb,col);
 	}
 	

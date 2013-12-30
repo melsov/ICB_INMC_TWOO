@@ -1,16 +1,8 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/MeshBuilder.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceAggregator.cs">
     <Files>
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="347" Column="3" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/MeshBuilder.cs" Line="31" Column="2" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Chunk.cs" Line="451" Column="36" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/BlockCollection.cs" Line="90" Column="36" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structs.cs" Line="302" Column="35" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceAggregator.cs" Line="30" Column="57" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceSet.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/CoordStructs.cs" Line="1" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceAggregator.cs" Line="493" Column="15" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

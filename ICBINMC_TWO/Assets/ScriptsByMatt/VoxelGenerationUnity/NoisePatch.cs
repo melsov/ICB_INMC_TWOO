@@ -720,6 +720,8 @@ public class NoisePatch : ThreadedJob
 				heightRanges.Add(zero_ToSurface_range);
 				heightMap[xx * patchDimensions.x + zz] = heightRanges;
 				
+				// NOTE: still need a  way of adding the saved blocks! (TODO:)
+				
 //				List<int> yHeights = new List<int> ();
 
 //				int yy = y_start; // (int) ccoord.y;
