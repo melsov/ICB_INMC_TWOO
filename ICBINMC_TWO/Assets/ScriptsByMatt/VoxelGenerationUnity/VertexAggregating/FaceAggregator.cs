@@ -39,6 +39,9 @@ public class FaceAggregator
 	
 	private Axis faceNormal;
 	
+	public int baseTriangleIndex;
+	public MeshSet meshSet;
+	
 	public FaceAggregator(Axis faceNormalAxis) 
 	{
 		// face type assumed to be xz (for now)
@@ -198,20 +201,40 @@ public class FaceAggregator
 		return (Direction)((int)result - (positive? 1 : 0));		
 	}
 	
-	public void removeBlockAtCoord(AlignedCoord alco)
-	{
-		FaceSet posFaceSet = faceSetAt(alco, direction(true) );
-		
-		if (posFaceSet != null)
-		{
-			posFaceSet.removeFaceAtCoord(alco);
+	public int totalVertices() {
+		int result = 0;
+		foreach(FaceSet fs in faceSets) {
+			result += fs.vertexCount();	
 		}
 		
-		FaceSet negFaceSet = faceSetAt(alco, direction(false));
-		
-		if (negFaceSet != null)
+		return result;
+	}
+	
+	public void removeBlockAtCoord(AlignedCoord alco)
+	{
+		removeBlockFaceAtCoord(alco, true, true);
+	}
+	
+	public void removeBlockFaceAtCoord(AlignedCoord alco, bool removePosFace, bool removeNegFace)
+	{
+		if (removePosFace)
 		{
-			negFaceSet.removeFaceAtCoord(alco);
+			FaceSet posFaceSet = faceSetAt(alco, direction(true) );
+			
+			if (posFaceSet != null)
+			{
+				posFaceSet.removeFaceAtCoord(alco);
+			}
+		}
+		
+		if (removeNegFace)
+		{
+			FaceSet negFaceSet = faceSetAt(alco, direction(false));
+			
+			if (negFaceSet != null)
+			{
+				negFaceSet.removeFaceAtCoord(alco);
+			}
 		}
 	}
 	
@@ -295,7 +318,9 @@ public class FaceAggregator
 			
 		}
 
-		return new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs);
+		MeshSet ret_mset = new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs);
+		this.meshSet = ret_mset;
+		return ret_mset;
 	}
 	
 	#region debugging
@@ -430,36 +455,36 @@ public class FaceAggregatorTest
 	
 	private static Coord[] excludedCoords = new Coord[]{
 		
-		new Coord(0, 0, 0),
-		new Coord(0, 0, 1),
-		new Coord(1, 0, 0),
-		new Coord(0, 0, 5), // this one gets messed up....
-		new Coord(5, 0, 0), // no this one?
-		new Coord(2, 4, 3), 
-		new Coord(2, 4, 6),
-		new Coord(2, 4, 7),
-		new Coord(5, 4, 6),
+//		new Coord(0, 0, 0),
+//		new Coord(0, 0, 1),
+//		new Coord(1, 0, 0),
+//		new Coord(0, 0, 5), // this one gets messed up....
+//		new Coord(5, 0, 0), // no this one?
+//		new Coord(2, 4, 3), 
+//		new Coord(2, 4, 6),
+//		new Coord(2, 4, 7),
+//		new Coord(5, 4, 6),
 //		new Coord(12, 4, 6),
 //		new Coord(12, 4, 7),
 //		new Coord(12, 4, 8),
-		
-		new Coord(8, 0, 0),
-		new Coord(10, 0, 0),
-		new Coord(12, 0, 0),
-		
-		new Coord(14, 4, 15),
-		new Coord(14, 4, 14),
-		new Coord(14, 4, 12),
-		
-		new Coord(15, 4, 15),
-		new Coord(15, 4, 14),
-		new Coord(15, 4, 12),
+//		
+//		new Coord(8, 0, 0),
+//		new Coord(10, 0, 0),
+//		new Coord(12, 0, 0),
+//		
+//		new Coord(14, 4, 15),
+//		new Coord(14, 4, 14),
+//		new Coord(14, 4, 12),
+//		
+//		new Coord(15, 4, 15),
+//		new Coord(15, 4, 14),
+//		new Coord(15, 4, 12),
 
 	};
 	
 	private static Coord[] removeCoords = new Coord[]{
 		
-//		new Coord(0, 0, 5),
+		new Coord(0, 0, 5),
 //		new Coord(0, 0, 7),
 //		new Coord(1, 0, 7),
 //		new Coord(5, 0, 9),
@@ -521,13 +546,19 @@ public class FaceAggregatorTest
 	
 	public List<MeshSet> getMeshResults()
 	{
-		
+//		fa.getMeshResults(); // calling this twice produces odd results: mesh loses some quads.
+		int vertsbefore = fa.totalVertices();
+		bug ("verts before: " + vertsbefore);
 		foreach (Coord removeco in removeCoords)
 		{
 			fa.removeBlockAtCoord(new AlignedCoord(removeco.x, removeco.z) );
 		}
 		
-		return fa.getMeshResults();
+		List<MeshSet> ret = fa.getMeshResults();
+		
+		bug("verts after: " + fa.totalVertices() );
+		
+		return ret;
 	}
 	
 	private void bug(string strr) {

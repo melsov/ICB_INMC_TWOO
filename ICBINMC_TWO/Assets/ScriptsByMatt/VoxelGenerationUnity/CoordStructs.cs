@@ -53,15 +53,19 @@ public struct Range1D
 {
 	public int start, range;
 	
-	public bool backScratchedX, backScratchedZ;
+	public BlockType blockType;
+
 	//TODO: move the above accounting variables to another struct
 	//that owns a range1d——and replace a bunch of code so that it deals with this new struct
 	
+	public Range1D(int _start, int _range, BlockType btype) 
+	{
+		start = _start; range = _range;	blockType = btype;
+	}
+	
 	public Range1D(int _start, int _range) 
 	{
-		start = _start; range = _range;		
-		backScratchedX = false;
-		backScratchedZ = false;
+		this = new Range1D(_start, _range, BlockType.Grass);
 	}
 	
 	public int extent() {
@@ -409,6 +413,10 @@ public struct Coord
 		return (cc.x * cc.y * cc.z);
 	}
 	
+	public static int SumOfComponents(Coord coco) {
+		return coco.x + coco.y + coco.z;	
+	}
+	
 	public Coord xMinusOne() {
 		return new Coord(this.x - 1, this.y, this.z);
 	}
@@ -419,6 +427,13 @@ public struct Coord
 	
 	public Coord zMinusOne() {
 		return new Coord(this.x, this.y, this.z - 1);
+	}
+	
+	public static Coord Not(Coord  aa) {
+		aa.x = (aa.x != 0)? 0 : 1;
+		aa.y = (aa.y != 0)? 0 : 1;
+		aa.z = (aa.z != 0)? 0 : 1;
+		return aa;
 	}
 }
 

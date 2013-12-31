@@ -1,5 +1,5 @@
 #define TEST_LIBNOISENET
-
+//#define FAST_BLOCK_REPLACE
 
 
 
@@ -321,8 +321,14 @@ public class ChunkManager : MonoBehaviour
 		}
 
 		blocks [blockCoord] = destroyMe; // get NoisePatch to update lists.
-
+		
+		
+#if FAST_BLOCK_REPLACE
+		Coord chunkRelCo = chunkRelativeCoord(blockCoord);
+		ch.editBlockAtCoord(chunkRelCo, BlockType.Air);
+#else
 		updateChunk (ch);
+#endif
 
 		// also update any chunks touching the destroyed block
 		foreach (Chunk adjCh in chunksTouchingBlockCoord(blockCoord) )

@@ -61,6 +61,7 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\LibNoiseNetHandler.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoiseHandler.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoisePatch.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\LookupTable2D.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\Generator\Billow.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\Generator\Checker.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\Generator\Const.cs" />

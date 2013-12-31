@@ -80,7 +80,7 @@ public class Chunk : ThreadedJob
 #if NO_MESHBUILDER
 	private FaceAggregator[] faceAggregators = new FaceAggregator[CHUNKHEIGHT];
 #else
-	private MeshBuilder meshBuilder = new MeshBuilder();
+	private MeshBuilder meshBuilder;
 #endif
 	public const float VERTEXSCALE = 1f;
 	
@@ -91,6 +91,8 @@ public class Chunk : ThreadedJob
 		vertices_list = new List<Vector3> ();
 		triangles_list = new List<int> ();
 		uvcoords_list = new List<Vector2> ();
+		
+		meshBuilder = new MeshBuilder(this);
 	}
 
 	protected override void ThreadFunction()
@@ -101,11 +103,28 @@ public class Chunk : ThreadedJob
 //			MonoBehaviour monbeha = meshHoldingGameObject.GetComponent<MonoBehaviour> ();
 //			monbeha.StartCoroutine (makeMeshCoro ()); //mesh holding GO is a unity object...
 	}
+	
 
+	
 	protected override void OnFinished()
 	{
 //		if (calculatedMeshAlready)
 //			applyMesh ();
+	}
+	
+	public void editBlockAtCoord(Coord relCo, BlockType btype) {
+		MeshSet mset;
+		if (btype == BlockType.Air)
+		{
+			mset = meshBuilder.newMeshSetByRemovingBlockAtCoord(relCo);
+		}
+		else 
+		{
+			mset = meshBuilder.newMeshSetByAddingBlockAtCoord(relCo, btype);
+		}
+		
+		applyMeshToGameObjectWithMeshSet(mset);
+		clearMeshLists(); // why not now...
 	}
 
 	Block nextBlock(Direction d, ChunkIndex ci)
@@ -992,6 +1011,26 @@ public class Chunk : ThreadedJob
 //		vertices_list.Clear ();
 //		uvcoords_list.Clear ();
 //		triangles_list.Clear ();
+	}
+	
+	// TODO: consolidate all of these duplicate funcs.
+	public void applyMeshToGameObjectWithMeshSet(MeshSet mset) 
+	{
+		GameObject _gameObj = meshHoldingGameObject;
+		Mesh mesh = new Mesh();
+		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
+
+		mesh.Clear ();
+		mesh.vertices = mset.geometrySet.vertices.ToArray ();
+		mesh.uv = mset.uvs.ToArray ();
+		mesh.triangles = mset.geometrySet.indices.ToArray ();
+
+
+		mesh.RecalculateNormals();
+		mesh.RecalculateBounds();
+		mesh.Optimize();
+
+		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
 	}
 
 	public IEnumerator applyMeshToGameObjectCoro()
