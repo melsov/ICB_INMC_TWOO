@@ -262,9 +262,11 @@ public class Chunk : ThreadedJob
 			cY = tile_length; //<-- silly // * 2;
 			break;
 		case BlockType.Dirt:
+			cX = tile_length * 3;
 			cY = tile_length * 3;
 			break;
 		case BlockType.BedRock:
+			cX = tile_length * 3;
 			cY = tile_length * 2; //silly value at the moment
 			break;
 		default: //GRASS
@@ -522,7 +524,11 @@ public class Chunk : ThreadedJob
 				heights = ySurfaceMap [xx * CHLEN + zz];
 				
 				if (heights == null)
-					throw new Exception("in add y faces heights was Null");
+				{
+//					continue; // possible with structure maps
+					throw new Exception("in add y faces heights was Null");	
+				}
+				
 //				else if (heights.Length == 0)
 //					throw new Exception("in add y faces heights was zero");
 				
@@ -823,11 +829,11 @@ public class Chunk : ThreadedJob
 				else if (debug) {
 					throw new Exception ("wha? trying to add a range not contained by the original range?? : new range: " + remainderRange.toString() + "orig range: " + _range.toString() );	
 				}
-				
+					
 				
 			}
 			else if (shouldDebug) {
-				bug ("skipped a range below because it was ersatz null");	
+//				bug ("skipped a range below because it was ersatz null");	
 			}
 			
 			remainderRange = remainderRange.subRangeAboveRange(adjacentRange);
@@ -843,8 +849,8 @@ public class Chunk : ThreadedJob
 		
 		if (!Range1D.Equal(remainderRange, Range1D.theErsatzNullRange()) )
 		{
-			if (debug || shouldDebug)
-				bug ("adding theh last remainder range: " + remainderRange.toString());
+//			if (debug || shouldDebug)
+//				bug ("adding theh last remainder range: " + remainderRange.toString());
 			if (remainderRange.start == Range1D.theErsatzNullRange().start )
 					throw new Exception ("remainder range is funky but we are adding iti now" + remainderRange.toString());
 			

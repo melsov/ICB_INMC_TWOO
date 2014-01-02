@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿//#define NO_OPTIMIZATION
+
+using UnityEngine;
 using System.Collections;
 
 using System.Collections.Generic;
@@ -227,7 +229,13 @@ public class FaceSet
 			//check contains (sanity check)
 			if (str.range.contains(addAtHeight) )
 			{
-				throw new Exception("trying to add a coord that we already have? (strip contains)");	
+//				throw new Exception("trying to add a coord that we already have? (strip contains)");
+				
+				// TODO: with this and with face agg. figure out the smart thing to do when we are
+				// told to add a face where there already was one...
+				// here , since faces are of one type,
+				// should just ignore right?
+				continue;
 			}
 			
 			if 	(str.range.isOneAboveRange(addAtHeight) )
@@ -269,18 +277,23 @@ public class FaceSet
 		stripsArray[stripsIndex] = strips; // put it back!
 	}
 	
-	private void optimizeStripsTestVersion()
+	private void optimizeStripsSafeVersion()
 	{
 		
-		int horizontalDim = 0;
+		int horizDimStart = faceSetLimits.origin.s;
+		int horizDimEnd = faceSetLimits.extent().s;
+		
+		int horizontalDim = horizDimStart; // 0;
 		List<Strip> currentStrips;
-//		List<Strip> lastStrips;
-		for(; horizontalDim < stripsArray.Length ; ++horizontalDim)
+		
+		if (horizDimEnd > stripsArray.Length)
+			throw new Exception("the limits were greater than strips array length. what's up with that?");
+
+		for(; horizontalDim < horizDimEnd ; ++horizontalDim)
 		{
 			currentStrips = stripsArray[horizontalDim];
 			if (currentStrips == null)
 			{
-				bug ("null strips array at horiz dim: " + horizontalDim);
 				continue;
 			}
 			
@@ -289,7 +302,6 @@ public class FaceSet
 				addNewQuadAtCoord(qq, new PTwo(horizontalDim, sturip.range.start));
 			}
 		}
-		bug ("there are now: " + quads.Count + " quads");
 	}
 	
 	private void resetStripsQuadIndices() {
@@ -306,13 +318,13 @@ public class FaceSet
 		//clear quads
 		quads.Clear();
 		resetStripsQuadIndices(); 
+
 		
-//		List<Quad> tempQuads = new List<Quad>();
-//		quads = quadsForArea(faceSetLimits, ref quads);
-//		return;
-//		optimizeStripsTestVersion(); 
-//		return;///!!!!
+#if NO_OPTIMIZATION
+		optimizeStripsSafeVersion(); 
+		return;///!!!!
 		
+#endif
 		
 		// deal with the case where there's only one list of strips
 		if (faceSetLimits.dimensions.s == 1) {

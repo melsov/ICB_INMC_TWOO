@@ -62,6 +62,7 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoiseHandler.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoisePatch.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\LookupTable2D.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\RangeTable.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\Generator\Billow.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\Generator\Checker.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\Generator\Const.cs" />
@@ -98,6 +99,7 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\noise2d.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\SimplexNoise\Noise.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structs.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structures\StructureBase.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceAggregator.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceSet.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\MeshBuilder.cs" />

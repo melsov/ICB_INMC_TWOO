@@ -65,7 +65,7 @@ public class NoisePatch : ThreadedJob
 	private static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
 	private int BLOCKSPERPATCHLENGTH;
 
-	private static Coord patchDimensions =new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
+	public static Coord patchDimensions =new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
 					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
 					CHUNKLENGTH * CHUNKDIMENSION);
 
@@ -84,6 +84,7 @@ public class NoisePatch : ThreadedJob
 
 	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
 	private List<Range1D>[] heightMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
+//	private List<Range1D>[] structureMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	
 	private BiomeTypeCorners biomeCorners;
 	
@@ -102,7 +103,12 @@ public class NoisePatch : ThreadedJob
 //	#if TERRAIN_TEST
 	public Color[,] terrainSlice = new Color[patchDimensions.y, patchDimensions.z];
 //	#endif
-
+	
+	private List<StructureBase> structures = new List<StructureBase>();
+	private StructuresForNeighbors structuresForNeighbors = StructuresForNeighbors.MakeNew();
+	
+	private List<Coord> patchRelativeChCosToRebuild = new List<Coord>();
+	
 	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
 	{
 		coord = _noiseCo;
@@ -220,6 +226,12 @@ public class NoisePatch : ThreadedJob
 	{
 		generatedBlockAlready = true;
 		m_chunkManager.noisePatchFinishedSetup (this);
+		
+		throw new Exception("NOISE PATCH ON FINISHED WAS CALLED??"); // this func is not called (understandably)
+//		b.bug("NOISE PATCH ON FINISHED WAS CALLED??");
+		
+		if (this.patchRelativeChCosToRebuild.Count > 0)
+			this.m_chunkManager.rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(this.coord, this.patchRelativeChCosToRebuild); //test want but maybe not here (go to main thread)		
 	}
 
 	#endregion
@@ -358,11 +370,12 @@ public class NoisePatch : ThreadedJob
 	private Block blockAtRelativeCoord(Coord relCo) 
 	{
 		return new Block(blockTypeFromCoord(relCo));
-		
+		/*
 		if (blocks[relCo.x, relCo.y, relCo.z] == null)
 			blocks[relCo.x, relCo.y, relCo.z] = new Block(blockTypeFromCoord(relCo));
 //			blocks[relCo.x, relCo.y, relCo.z] = new Block(BlockType.Air);
 		return blocks[relCo.x, relCo.y, relCo.z];
+		*/
 	}
 	
 	private BlockType blockTypeFromCoord(Coord relCo)
@@ -370,22 +383,36 @@ public class NoisePatch : ThreadedJob
 		List<Range1D> y_ranges = heightRangesAtCoord(relCo);
 		
 		// general note: a lot of work if we ever change the struct / data type that holds ranges!
-		
+		int count = 0;
 		foreach(Range1D range in y_ranges)
 		{
 			RelationToRange relation = range.relationToRange(relCo.y);
 			if (relation == RelationToRange.WithinRange)
 			{
-				//pretending to check the 'range.blockType' thing (which actually doesn't exist right now)
-				return BlockType.Grass;
+				//NOT pretending to check the 'range.blockType' thing (which actually doesn't exist right now)
+				return range.blockType; //  BlockType.Grass;
 			}
 			
 			//MUST ENSURE THAT RANGE LISTS ALWAYS GO FROM LOWEST TO HIGHEST
 			
-			if (relation == RelationToRange.AboveRange) // we won't find a range, this is an air block
-				return BlockType.Air;
+			//weird effects
+			//bug when trying to destroy a block that 's part of a structure.
+			//test turn off
+//			if (relation == RelationToRange.AboveRange) 
+//			{
+//				if (count < y_ranges.Count - 1)
+//				{
+//					RelationToRange relationNextOne = y_ranges[count + 1].relationToRange(relCo.y);
+//					if (relationNextOne == RelationToRange.BelowRange)
+//					{
+//						b.bug("block was air because it was below a range: " + y_ranges[count + 1].toString() );
+//						return BlockType.Air;
+//					}
+//				}
+//			}
+			++count;
 		}
-		
+		b.bug("block was air because we went through all of the ranges");
 		return BlockType.Air;
 	}
 
@@ -429,18 +456,19 @@ public class NoisePatch : ThreadedJob
 				rOD = heights[heightsIndex];
 				if (rOD.contains(relCo.y))
 				{
-					
 					checkGotAContainingRange = true;
 					if (relCo.y == rOD.start) {
 						rOD.start ++;	
 						rOD.range--; // corner case: range now zero: (check for this later)
+						heights[heightsIndex] = rOD;
 					} else if (relCo.y == rOD.extentMinusOne() ) {
 						rOD.range--;
 					} else {
 						int newBelowRange = relCo.y - 1 + 1 - rOD.start;
-						Range1D newAboveRange = new Range1D(relCo.y + 1, rOD.range - newBelowRange - 1);
+						Range1D newAboveRange = new Range1D(relCo.y + 1, rOD.range - newBelowRange - 1, rOD.blockType);
 						rOD.range = newBelowRange;
 						heights.Insert(heightsIndex + 1, newAboveRange);
+						heights[heightsIndex] = rOD;
 					}
 					
 					if (rOD.range == 0) // no more blocks here
@@ -464,36 +492,47 @@ public class NoisePatch : ThreadedJob
 		}
 		else
 		{
-			
+			bool dealtWithBlock = false;
 			for (; heightsIndex < heights.Count ; ++heightsIndex)
 			{
 				rOD = heights[heightsIndex];
+				
 				if (rOD.isOneAboveRange(relCo.y) )
 				{
-					rOD.range++;
-					
-					//is there another range just above relCo y?
-					if (heightsIndex < heights.Count - 1)
+					//same type??s
+					if (rOD.blockType == bb.type)
 					{
-						Range1D nextRangeAbove = heights[heightsIndex + 1];
-						if (nextRangeAbove.isOneBelowStart(relCo.y))
+						rOD.range++;
+						
+						//is there another range just above relCo y?
+						if (heightsIndex < heights.Count - 1)
 						{
-							//combine above and below
-							rOD.range += nextRangeAbove.range;
-							heights.RemoveAt(heightsIndex + 1);
+							Range1D nextRangeAbove = heights[heightsIndex + 1];
+							if (nextRangeAbove.isOneBelowStart(relCo.y) && nextRangeAbove.blockType == bb.type)
+							{
+								//combine above and below
+								rOD.range += nextRangeAbove.range;
+								heights.RemoveAt(heightsIndex + 1);
+							}
 						}
+						
+						heights[heightsIndex] = rOD;
+						dealtWithBlock = true;
 					}
 					
-					heights[heightsIndex] = rOD;
 										
 					break;
 					
 				}
 				else if (rOD.isOneBelowStart(relCo.y)) 
 				{
-					rOD.start--;
-					rOD.range++;
-					heights[heightsIndex] = rOD;
+					if (rOD.blockType == bb.type)
+					{
+						rOD.start--;
+						rOD.range++;
+						heights[heightsIndex] = rOD;
+						dealtWithBlock = true;
+					}
 										
 					break;
 					// we already checked if the relCo y was one above the previous range (if it existed)
@@ -519,8 +558,9 @@ public class NoisePatch : ThreadedJob
 					}
 					
 					//case 2
-					Range1D rangeForRelCoY = new Range1D(relCo.y, 1);
+					Range1D rangeForRelCoY = new Range1D(relCo.y, 1, bb.type);
 					heights.Insert(heightsIndex + 1, rangeForRelCoY);
+					dealtWithBlock = true;
 															
 					break;
 				}
@@ -528,6 +568,11 @@ public class NoisePatch : ThreadedJob
 				if (rOD.contains(relCo.y) )
 					throw new Exception("confusing: adding a block to an already solid area??");
 				
+			}
+			
+			if (!dealtWithBlock) {
+				Range1D rangeForRelCoY = new Range1D(relCo.y, 1, bb.type);
+				heights.Insert(heightsIndex + 1, rangeForRelCoY);
 			}
 		}
 		heightMap [relCo.x * patchDimensions.x + relCo.z] = heights;
@@ -551,9 +596,10 @@ public class NoisePatch : ThreadedJob
 		{
 			int startRange = startIndex + patchDimensions.x * i;
 			retList.AddRange ( heightMap.Skip(startRange).Take(CHUNKLENGTH));
+			
+			// structures
+//			List<Range1D> chunk_structrs = (List<Range1D>) structureMap.Skip(startRange).Take(CHUNKLENGTH);
 		}
-		
-		List<Range1D> test = retList[0];
 	
 		return retList.ToArray ();
 	}
@@ -642,6 +688,7 @@ public class NoisePatch : ThreadedJob
 	
 	#region populate blocks
 	
+	
 	private void populateBlocksFromNoise(Coord start, Coord range)
 	{
 		this.startedBlockSetup = true;
@@ -684,13 +731,15 @@ public class NoisePatch : ThreadedJob
 		BiomeInputs biomeInputs = biomeInputsAtCoord(0,0);
 		
 		//height map 2.0
-		int[,] heightMapStarts = new int[patchDimensions.x, patchDimensions.z];
-		int[,] heightMapEnds = new int[patchDimensions.x, patchDimensions.z];
+//		int[,] heightMapStarts = new int[patchDimensions.x, patchDimensions.z];
+//		int[,] heightMapEnds = new int[patchDimensions.x, patchDimensions.z];
 		
 #if TERRAIN_TEST
 		if (TestRunner.DontRunDoTerrainTestInstead)
 			x_end = x_start + 1;
 #endif
+		
+		List<StructureBase> structurz = new List<StructureBase>();
 		
 		int xx = x_start;
 		for (; xx < x_end ; xx++ ) 
@@ -716,9 +765,47 @@ public class NoisePatch : ThreadedJob
 				List<Range1D> heightRanges = new List<Range1D>();
 				
 				//NO Y WAY!!
-				Range1D zero_ToSurface_range = new Range1D(0, noiseAsWorldHeight - 1);
+				
+				// TODO: (pos.) make height map a class with an accessor that imitates the array that it currently is
+				// this class also know its height range and has some way of knowing it coverage in the noisePatch
+				// like whether the it spans the noise patch (no drop offs/overhangs) or (if only partial coverage) somehow describes
+				// the extent of partial coverage...
+				
+				Range1D zero_ToSurface_range = new Range1D(0, noiseAsWorldHeight);
 				heightRanges.Add(zero_ToSurface_range);
+				
+				
+				
+				// add a structure on the surface maybe
+				// fake test...
+				if (xx == 62 && zz == 12)
+				{
+					PTwo patchRelCo = new PTwo(xx, zz);
+					Plinth pl = new Plinth(patchRelCo, noiseAsWorldHeight, noise_val + 5f); // silliness
+					structurz.Add(pl);
+					
+//					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
+				}
+				
 				heightMap[xx * patchDimensions.x + zz] = heightRanges;
+				
+				//generated phenomena notes:
+				/*
+				 * Generated phenomena objects (structures) 
+				  * keep a table2d of lists of ranges 
+				  * and to make them, you would often feed them a seed number
+				  * they have a point of origin which can be negative (lower xz corner)
+				  * and the table dimensions adjust to accommodate only the positive side.
+				  * 
+				  * noisepatches--
+				  * when noise patches come into being, they ask the four noise patches next to them xz pos neg
+				  * for any of their structures.
+				  * and when they generate from noise, they keep a list of the structures that they want to give to 
+				  * each of their neighbors.
+				  * they always ask their neighbors for the structures, (and if those noisepatches exist, great if not see below)
+				  * and always try to give all of the structures that they have once they've generated them.
+				*/
+				//end generated phenomena nots
 				
 				// NOTE: still need a  way of adding the saved blocks! (TODO:)
 				
@@ -840,12 +927,266 @@ public class NoisePatch : ThreadedJob
 			} // end for zz
 
 		} // end for xx
-
+		
+		//add stucturs
+		addStructuresToHeightMap(structurz);
+		
+		//any structures for me from neighbors?
+		getStructuresFromNeighbors();
+		
+		//are there any neighbors who generated already and need structures?
+		dropOffStructuresForNeighbors(); //test want
+		
 //		#if TERRAIN_TEST
 //		textureSlice = GetTexture ();
 //		#endif
 
 		generatedBlockAlready = true;
+	}
+	
+	private void takeStructuresAfterIGeneratedBlocksAlready (List<StructureBase> strs)
+	{
+		if (this.generatedBlockAlready) 
+		{
+			addStructuresToHeightMap(strs);
+			// get chunk man to rebuild any chunks that we're changed
+			List<Coord> patchRelCoords = new List<Coord>();
+			
+			foreach( StructureBase str in strs)
+				patchRelCoords = patchRelativeChunkCoordsThatTouchQuad(str.plot, ref patchRelCoords);
+			
+			this.patchRelativeChCosToRebuild = patchRelCoords;
+//			this.m_chunkManager.rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(this.coord, patchRelCoords); //test want but maybe not here (go to main thread)
+		} 
+		// otherwise this one will take what it needs later.
+	}
+	
+	private List<Coord> patchRelativeChunkCoordsThatTouchQuad(Quad quad, ref List<Coord> alreadyAddedCoords)
+	{
+		int xStart = quad.origin.s / (int) ChunkManager.CHUNKLENGTH;
+		int zStart = quad.origin.t / (int) ChunkManager.CHUNKLENGTH;
+		
+		int xEnd = quad.extent().s / (int) ChunkManager.CHUNKLENGTH;
+		int zEnd = quad.extent().t / (int) ChunkManager.CHUNKLENGTH;
+		
+		List<Coord> result = new List<Coord>();
+		
+		for (int xx = xStart; xx <= xEnd; ++xx)
+		{
+			for (int zz = zStart; zz <= zEnd; ++zz)
+			{
+				bool already = false;
+				Coord newCo = new Coord(xx, 0, zz);
+				foreach(Coord alreadyCo in alreadyAddedCoords)
+				{
+					if (alreadyCo.equalTo(newCo) )
+					{
+						already = true;
+						break;
+					}
+				}
+				if (!already)
+					result.Add(newCo);
+			}
+		}
+		return result;
+	}
+	
+	private void dropOffStructuresForNeighbors() // if the neighbor was build before we were
+	{
+		// confusingness...as written this func should cause an exception: "Internal_Create can only be called from the main thread"
+		// it seems to happen sometimes but rarely? 
+		// the map generally ( :•) ) builds right now.
+		// todo: figure out the best way to do stuff when a NoisePatch is done with sep thread jobs.	
+	
+		
+		NoisePatch neighborPatch = null;
+//		List<StructureBase> strs = null;
+		
+		// X POS NEIGHBOR
+		NoiseCoord nco = new NoiseCoord(this.coord.x + 1, this.coord.z);
+		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
+		{
+			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
+//			if (neighborPatch.IsDone == true) 
+				if (neighborPatch.generatedBlockAlready)
+					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.XPOS));
+			
+		}
+		
+		// Z NEG NEIGHBOR	
+		nco = new NoiseCoord(this.coord.x, this.coord.z + 1);
+		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
+		{
+			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
+//			if (neighborPatch.IsDone == true) 
+				if (neighborPatch.generatedBlockAlready)
+					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.ZPOS));
+		}
+		
+		// XZ NEG NEIGHBOR
+		nco = new NoiseCoord(this.coord.x + 1, this.coord.z + 1);
+		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
+		{
+			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
+//			if (neighborPatch.IsDone == true) 
+				if (neighborPatch.generatedBlockAlready)
+					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.XZPOS));
+		}
+	}
+	
+	private void getStructuresFromNeighbors()
+	{
+		NoisePatch neighborPatch = null;
+		List<StructureBase> strs = null;
+		
+		// X NEG NEIGHBOR
+		NoiseCoord nco = new NoiseCoord(this.coord.x - 1, this.coord.z);
+		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) {
+			neighborPatch =  this.m_chunkManager.blocks.noisePatches[nco];
+			strs = neighborPatch.giveStructuresFor(NeighborDirection.XPOS);
+			addStructuresToHeightMap(strs);
+		}
+		
+		// Z NEG NEIGHBOR	
+		nco = new NoiseCoord(this.coord.x, this.coord.z - 1);
+		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) {
+			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
+			strs = neighborPatch.giveStructuresFor(NeighborDirection.ZPOS);
+			addStructuresToHeightMap(strs);
+		}
+		
+		// XZ NEG NEIGHBOR
+		nco = new NoiseCoord(this.coord.x - 1, this.coord.z - 1);
+		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) {
+			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
+			strs = neighborPatch.giveStructuresFor(NeighborDirection.XZPOS);
+			addStructuresToHeightMap(strs);
+		}
+	}
+	
+	private List<StructureBase> giveStructuresFor(NeighborDirection nDir)
+	{
+		List<StructureBase> structuresFor;
+		
+		switch (nDir) {
+		case NeighborDirection.XPOS:
+			structuresFor = structuresForNeighbors.forXPos;
+			break;
+		case NeighborDirection.ZPOS:
+			structuresFor = structuresForNeighbors.forZPos;
+			break;
+		default:
+			structuresFor = structuresForNeighbors.forXZPos;
+			break;
+		}
+		
+		List<StructureBase> result = new List<StructureBase>();
+		result.AddRange(structuresFor);
+		structuresFor.Clear(); //don't need anymore...
+		
+		return result;
+	}
+	
+	private void addPlinthForNeighborPatches(Plinth pl, int xx, int zz, float noise_val) 
+	{
+		//populate structure for neighbors... 
+		//i.e. if the structure's area extends beyond this patch
+		// add a structure for the next patch (only deal with z and x pos dirs).
+		bool zTruncated = pl.tDimensionWasTruncated();
+		bool xTruncated = pl.sDimensionWasTruncated();
+		
+		if (zTruncated)
+		{
+			int zPosNeighborRelativeZCoord = zz - patchDimensions.z;
+			PTwo zPosRelCo = new PTwo(xx, zPosNeighborRelativeZCoord);
+			Plinth plzpos = new Plinth(zPosRelCo, pl.y_origin, noise_val + 5f);
+			structuresForNeighbors.forZPos.Add(plzpos);
+		}
+		if (xTruncated)
+		{
+			int xPosNeighborRelativeZCoord = xx - patchDimensions.x;
+			PTwo xPosRelCo = new PTwo(xPosNeighborRelativeZCoord, zz);
+			Plinth plxpos = new Plinth(xPosRelCo, pl.y_origin, noise_val + 5f);
+			structuresForNeighbors.forXPos.Add(plxpos);
+		}
+		if (xTruncated && zTruncated)
+		{
+			int xPosNeighborRelativeZCoord = xx - patchDimensions.x;
+			int zPosNeighborRelativeZCoord = zz - patchDimensions.z;
+			PTwo xzPosRelCo = new PTwo(xPosNeighborRelativeZCoord, zPosNeighborRelativeZCoord);
+			Plinth plxzpos = new Plinth(xzPosRelCo, pl.y_origin, noise_val + 5f);
+			structuresForNeighbors.forXZPos.Add(plxzpos);
+		}
+	}
+	
+	private void addStructuresToHeightMap(List<StructureBase> structurz) 
+	{
+		if (structurz == null || structurz.Count == 0)
+			return;
+		
+		Range1D highest_at;
+		StructureBase structure;
+		
+		PTwo origin;
+		PTwo dims;
+		
+		List<Range1D> range_l;
+		
+		int i = 0;
+		int j = 0;
+		int k = 0;
+		
+		PTwo offset;
+		PTwo lookup;
+		
+		Range1D str_range;
+		
+		for(; i < structurz.Count; ++i)
+		{
+			structure = structurz[i];
+			origin	= structure.getOrigin();
+			dims = structure.getDimensions();
+			
+
+			for(; j < dims.s; ++j)
+			{
+				k = 0;
+				for (;k < dims.t; ++k)
+				{
+					offset =  new PTwo(j, k);
+					lookup = origin + offset;
+					
+					List<Range1D> str_ranges = structure[offset];
+					// get height here
+					range_l = heightMap[ lookup.s * patchDimensions.x + lookup.t];
+					highest_at = range_l[range_l.Count - 1];
+
+					Range1D above_struck;
+					
+					for (int u = 0; u < str_ranges.Count; ++u) {
+						str_range = str_ranges[u];
+						str_range.start +=  structure.y_origin ; // surface_height_at_origin;	
+						str_ranges[u] = str_range;
+						
+						above_struck = highest_at.subRangeAbove(str_range.extentMinusOne());
+						
+						//adjust height map (squished by structures)
+						highest_at = highest_at.subRangeBelow(str_range.start);
+						
+						range_l.Add(str_range);
+						
+						if (u == str_ranges.Count - 1) // last one
+						{
+							if (!above_struck.isErsatzNull())
+								range_l.Add(above_struck);	
+						}
+					}
+					
+					heightMap[ lookup.s * patchDimensions.x + lookup.t] = range_l;
+				}
+			}
+		}
 	}
 
 	private static bool caveIsHere(float cave_noise_val,int yy, int surfaceNudge) {
@@ -1035,3 +1376,27 @@ public class NoisePatch : ThreadedJob
 
 }
 
+public struct StructuresForNeighbors
+{
+//	List<StructureBase> forXNeg;
+//	List<StructureBase> forZNeg;
+	public List<StructureBase> forXPos;
+	public List<StructureBase> forZPos;
+	public List<StructureBase> forXZPos;
+	
+	public static StructuresForNeighbors MakeNew() 
+	{
+		StructuresForNeighbors sfn = new StructuresForNeighbors();
+//		sfn.forXNeg = new List<StructureBase>();
+//		sfn.forZNeg = new List<StructureBase>();
+		sfn.forXPos = new List<StructureBase>();
+		sfn.forZPos = new List<StructureBase>();
+		sfn.forXZPos = new List<StructureBase>();
+		
+		return sfn;
+	}
+}
+
+public enum NeighborDirection {
+	XPOS, ZPOS, XZPOS
+};

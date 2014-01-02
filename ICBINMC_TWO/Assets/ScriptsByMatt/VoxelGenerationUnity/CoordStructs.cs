@@ -65,7 +65,7 @@ public struct Range1D
 	
 	public Range1D(int _start, int _range) 
 	{
-		this = new Range1D(_start, _range, BlockType.Grass);
+		this = new Range1D(_start, _range, BlockType.Stone);
 	}
 	
 	public int extent() {
@@ -77,7 +77,7 @@ public struct Range1D
 	}
 	
 	public static Range1D theErsatzNullRange() {
-		return new Range1D(-999123, -9999999);
+		return new Range1D(-999123, -1);
 	}
 	
 	public static bool Equal(Range1D aa, Range1D bb) {
@@ -114,7 +114,7 @@ public struct Range1D
 	}
 	
 	public static Range1D Copy(Range1D copyMe) {
-		return new Range1D(copyMe.start, copyMe.range);	
+		return new Range1D(copyMe.start, copyMe.range, copyMe.blockType);	
 	}
 	// set funcs.
 	
@@ -133,7 +133,7 @@ public struct Range1D
 		if (newRange <= 0)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(level + 1, newRange);
+		return new Range1D(level + 1, newRange, this.blockType);
 	}
 	
 	public Range1D setRangeStartTo(int level) {
@@ -142,7 +142,7 @@ public struct Range1D
 		if (newRange <= 0)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(level + 1, newRange);
+		return new Range1D(level + 1, newRange, this.blockType);
 	}
 	
 	public Range1D subRangeBelow(int level) {
@@ -151,11 +151,11 @@ public struct Range1D
 		
 		int min = Mathf.Min(this.extent(), level);
 		
-		return new Range1D(this.start, min - this.start);
+		return new Range1D(this.start, min - this.start, this.blockType);
 	}
 	
 	public Range1D extendRangeByOne() {
-		return new Range1D(this.start, this.range + 1);
+		return new Range1D(this.start, this.range + 1, this.blockType);
 	}	
 	
 	public Range1D subtractOneFromStart() {
@@ -163,11 +163,11 @@ public struct Range1D
 	}
 	
 	public Range1D adjustStartBy(int adjustBy) {
-		return new Range1D(this.start + adjustBy, this.range - adjustBy);	
+		return new Range1D(this.start + adjustBy, this.range - adjustBy, this.blockType);	
 	}
 	
 	public Range1D extendRangeToInclude(Range1D extender) {
-		return new Range1D(this.start, extender.extentMinusOne() - this.start);	
+		return new Range1D(this.start, extender.extentMinusOne() - this.start, this.blockType);	
 	}
 	
 	public static bool RangesIntersect(Range1D raa, Range1D rbb)
@@ -183,7 +183,7 @@ public struct Range1D
 		if (interStart >= interExtent)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(interStart, interExtent - interStart);
+		return new Range1D(interStart, interExtent - interStart, raa.blockType);
 //		int extentDif = raa.e
 	}
 	

@@ -40,6 +40,20 @@ public struct MeshSet
 		return new MeshSet(new GeometrySet(tris, vs), uvs);
 	}
 }
+//
+//public struct CoRange2D
+//{
+//	public PTwo origin;
+//	public PTwo range;
+//	
+//	public CoRange2D(PTwo _origin, PTwo _range) {
+//		origin = _origin; range = _range;	
+//	}
+//	
+//	public PTwo extent() {
+//			
+//	}
+//}
 
 public struct PTwo
 {
@@ -237,6 +251,23 @@ public struct Quad
 	
 	public static Quad QuadFromStrip(Strip strip, int hLocation) {
 		return new Quad( new PTwo(hLocation, strip.range.start) , new PTwo(strip.width, strip.range.range) );	
+	}
+	
+	//TODO: test this func.
+	public static Quad Intersection(Quad ii, Quad kk) {
+		Range1D ii_s = new Range1D(ii.origin.s, ii.dimensions.s);
+		Range1D ii_t = new Range1D(ii.origin.t, ii.dimensions.t);
+		Range1D kk_s = new Range1D(kk.origin.s, kk.dimensions.s);
+		Range1D kk_t = new Range1D(kk.origin.t, kk.dimensions.t);
+		
+		ii_s = Range1D.IntersectingRange(ii_s, kk_s);
+		
+		kk_t = Range1D.IntersectingRange(ii_t, kk_t);
+		
+		if (ii_s.isErsatzNull() || kk_t.isErsatzNull() )
+			return Quad.theErsatzNullQuad();
+		
+		return new Quad(new PTwo(ii_s.start, kk_t.start), new PTwo(ii_s.range, kk_t.range) );
 	}
 	
 //	public static Quad Union(Quad one, Quad two)

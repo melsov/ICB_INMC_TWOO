@@ -81,6 +81,7 @@ public class ChunkManager : MonoBehaviour
 	private CoRange m_dontDestroyRealm;
 
 	private	List<NoisePatch> setupThesePatches;
+	private List<NoisePatch> checkDoneForThesePatches = new List<NoisePatch>();
 
 	private Coord lastPlayerBlockCoord;
 	private Coord lastPlayerChunkCoord;
@@ -376,6 +377,26 @@ public class ChunkManager : MonoBehaviour
 	void bug(string str) {
 		UnityEngine.Debug.Log (str);
 	}
+	
+	#region rebuild chunks for NoisePatch structures
+	
+	public void rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(NoiseCoord nco, List<Coord> patchRelChunkCoords)
+	{
+		Coord patchWoco = worldCoordForNoiseCoord(nco);
+		foreach(Coord pRelChCo in patchRelChunkCoords)
+		{
+			Coord pRelCoord = pRelChCo * (int)CHUNKLENGTH;	
+			Coord chwoco = pRelCoord + patchWoco;
+			Chunk ch = chunkContainingCoord(chwoco);
+			
+			if (ch != null)
+			{
+				updateChunk(ch);
+			}
+		}
+	}
+	
+	#endregion
 
 	#region finding coords and chunks
 
@@ -524,8 +545,6 @@ public class ChunkManager : MonoBehaviour
 //		Coord altBlockCoord = startOfChunkCoord + new Coord (avg);
 
 		Vector3 blockWorldPos = worldPositionOfBlock (hit);
-
-		bug ("world pos of block that we want to break: " + blockWorldPos.ToString ());
 
 		Coord altBlockCoord =  hitOrPlaceBlockCoordFromWorldPos (blockWorldPos);// new Coord (blockWorldPos);
 
@@ -1337,7 +1356,7 @@ public class ChunkManager : MonoBehaviour
 							else {
 								chunkMap.destroyChunkAt (chunk.chunkCoord);
 							}
-
+							
 							checkTheseAsyncChunksDoneCalculating.RemoveAt (0);
 						} 
 					}
@@ -1594,8 +1613,33 @@ public class ChunkManager : MonoBehaviour
 				}
 				
 				setupThesePatches.RemoveAt (0);
+				checkDoneForThesePatches.Add(np);
 			}
 			yield return new WaitForSeconds (.12f);
+		}
+	}
+	
+	IEnumerator checkAsyncPatchesDone()
+	{
+
+		while (true)
+		{
+			
+			if (checkDoneForThesePatches.Count > 0) 
+			{
+				NoisePatch npatch = checkDoneForThesePatches[0];
+
+				if (npatch != null)
+				{
+					if (npatch.Update()) {
+						if (checkDoneForThesePatches.Count > 0)
+							checkDoneForThesePatches.RemoveAt (0); //bizarrely arg is out of range?
+					} 
+				}
+
+			}
+			
+			yield return new WaitForSeconds(.1f);
 		}
 	}
 
@@ -2056,6 +2100,7 @@ public class ChunkManager : MonoBehaviour
 				
 				StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
 				StartCoroutine (updateSetupPatchesListI ());
+//				StartCoroutine (checkAsyncPatchesDone ());
 				
 				StartCoroutine (checkAsyncChunksList ());
 			}

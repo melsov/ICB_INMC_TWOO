@@ -154,22 +154,36 @@ public class FaceAggregator
 		return ret;
 	}
 	
+	private bool indexRepresentsAnOccupiedCoord(int index) {
+		return index > -1 && index < faceSets.Count;
+	}
+	
 	private void newFaceSetAtCoord(AlignedCoord coord, BlockType type, Direction dir)
 	{
-		if (indexOfFaceSetAtCoord(coord, dir) >= -1) //
-//			bug ("trying to add a new face set where there already was one? " + coord.toString());
-			throw new Exception("trying to add a new face set where there already was one? coord is: " + coord.toString() );
+		
+		//TODO: figure out what we should really to in this case.
+		// maybe some kind of look up table re: which block type wins?
+		
+		int currentLookupIndex = indexOfFaceSetAtCoord(coord, dir);
+		
+		if (indexRepresentsAnOccupiedCoord(currentLookupIndex)) //
+		{
+			// remove
+			FaceSet currentOccupantFaceSet = faceSets[currentLookupIndex];
+			currentOccupantFaceSet.removeFaceAtCoord(coord); // hang on to your hats! (no bugs please!)
+		}
+
 		
 		int faceSetsCount = faceSets.Count;
 		FaceSet fs = new FaceSet(type, dir, coord);
 		faceSets.Add (fs);
 		
-		
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
 		faceSetTable[coord.across * 2 + nudge_lookup, coord.up] = faceSetsCount + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
-	private void copyFaceSetIndexFromToCoord(AlignedCoord fromC, AlignedCoord toC, Direction dirForBothCoords) {
+	private void copyFaceSetIndexFromToCoord(AlignedCoord fromC, AlignedCoord toC, Direction dirForBothCoords) 
+	{
 		int indexFrom = indexOfFaceSetAtCoord(fromC, dirForBothCoords);
 		
 		//WE THINK WE SHOULD ADD THIS HERE....
