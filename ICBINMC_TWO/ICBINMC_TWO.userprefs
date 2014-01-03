@@ -1,17 +1,16 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/ObjectMaps/LightLevelTable.cs">
     <Files>
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="1" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structs.cs" Line="1" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/LibNoiseNetHandler.cs" Line="1" Column="1" />
       <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceAggregator.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceSet.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/Tester/TestRunner.cs" Line="1" Column="1" />
       <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/MeshBuilder.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Chunk.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/CoordStructs.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ObjectMaps/LookupTable2D.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="731" Column="8" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs" Line="8" Column="1" />
+      <File FileName="Assets/Materials/ShadersMP/BlockTilingAtlas.shader" Line="44" Column="1" />
+      <File FileName="Assets/Materials/ShadersMP/GameClock.cs" Line="1" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="2009" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ObjectMaps/LightLevelTable.cs" Line="27" Column="79" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

@@ -640,40 +640,9 @@ public class NoisePatch : ThreadedJob
 		this.Start ();
 	}
 
-//	public void genNoiseOnMainThread() {
-////		doGenerateNoisePatch();
-//	}
-
-//	public void populateBlocksOnMainThread() { //TODO: very confusing. clarify the use of this...
-////		doGenerateNoisePatch();
-//	}
-
-//	public void genNoiseAndPopulateBlocksOnMainThread() {
-////		doGenerateNoisePatch ();
-//		doPopulateBlocksFromNoise ();
-//	}
-
-//	public void doGenerateNoisePatch()
-//	{
-////		if (generatedNoiseAlready)
-////			return;
-////
-////		m_chunkManager.noiseHandler.GenerateAtNoiseCoord (coord);
-////
-////		m_chunkManager.noiseHandler.GenerateAltAtNoiseCoord (coord);
-//		
-//		//don't need. dif noise lib where we just access the values directly (i.e. no more separate noise map)
-//
-////		generatedNoiseAlready = true;
-//	}
-
 	public void populateBlocksFromNoise()
 	{
 		doPopulateBlocksFromNoise();
-//		Coord start = new Coord (0);
-//		Coord range = patchDimensions;
-//		populateBlocksFromNoise (start, range);
-//		this.Start ();
 	}
 
 	private void doPopulateBlocksFromNoise()
@@ -687,7 +656,58 @@ public class NoisePatch : ThreadedJob
 	}
 	
 	#region populate blocks
+	private float valueByShiftingValueLeft(float value, int left_shift)
+	{
+		int sign = value < 0 ? -1 : 1;
+		value = (float) (value * Mathf.Pow(10f, left_shift) );
+		return (float)((value - (int) value) * sign); 
+	}
 	
+	private int noiseAsWorldHeight (float noise_val, float elevation_multiplier, float hilliness) 
+	{
+		int baseElevation =(int)(elevation_multiplier * patchDimensions.y);
+		int elevationRange = (int)((patchDimensions.y - baseElevation ) * .5f * hilliness);
+		return (int)(noise_val * elevationRange + elevationRange + baseElevation);
+	}
+	
+	//NOTE: variable names may not really reflect the functionality embodied herein :)
+	private List<Range1D> heightsAndOverhangRangesWith(float noise_val, float overhangness, float caveness, BiomeInputs biomeInputs)
+	{
+		List<Range1D> result = new List<Range1D>();
+		
+		int baseElevation =(int)(biomeInputs.baseElevation * patchDimensions.y);
+		int elevationRange = (int)((patchDimensions.y - baseElevation ) * .5f * biomeInputs.hilliness);
+		noise_val = (noise_val < -1f) ? -1f : noise_val;
+		float height_noise = noise_val * .75f + overhangness * .25f; // (noise_val * noise_val * noise_val * .75f + overhangness * overhangness * overhangness * .25f);
+		
+		int noiseAsWorldHeight = (int)(height_noise * elevationRange + elevationRange + baseElevation);
+
+		Range1D zeroToSurface = new Range1D(0, noiseAsWorldHeight);
+		
+		// concavity insertion point (which may simply eat away at the height or may create a concavity)
+		//  overhangeness smallness and noise_val largness
+		float concavity = overhangness * overhangness - .2f + noise_val; //   (1f - (.5f +  overhangness * .5f)) * 1f;
+		
+		if (concavity > 0)
+		{
+			int elevation = noiseAsWorldHeight - baseElevation;
+			int concave_range = (int) (elevation * (concavity));
+
+			int concave_start = (int) (baseElevation + (elevation - concave_range) * .5f);
+			 zeroToSurface = new Range1D(0, concave_start);
+			result.Add(zeroToSurface);
+			
+			if (concave_start + concave_range < noiseAsWorldHeight)
+			{
+				int overhang = noiseAsWorldHeight - (concave_start + concave_range);
+				result.Add( new Range1D(concave_start + concave_range, overhang));
+			}
+			return result;
+		}
+	
+		result.Add(zeroToSurface);
+		return result;
+	}
 	
 	private void populateBlocksFromNoise(Coord start, Coord range)
 	{
@@ -740,6 +760,11 @@ public class NoisePatch : ThreadedJob
 #endif
 		
 		List<StructureBase> structurz = new List<StructureBase>();
+		List<Range1D> heightRanges;
+		float noise_val = 0f;
+		float noise_shifted2 = 0f; float noise_shifted3 = 0f;
+		Vector2 local_slope = new Vector2(0f, 0f);
+		
 		
 		int xx = x_start;
 		for (; xx < x_end ; xx++ ) 
@@ -754,25 +779,33 @@ public class NoisePatch : ThreadedJob
 				biomeInputs = BiomeInputs.Pasture();
 				
 #else
-				float noise_val = get2DNoise(xx, zz);
+				noise_shifted2 = getAlt2DNoise(xx + 123, zz + 123); //  valueByShiftingValueLeft(noise_val, 1);
+				noise_val = get2DNoise(xx - (int)(0 * noise_shifted2) , zz -(int)(0 * noise_shifted2));
+				
+				noise_shifted3 = valueByShiftingValueLeft(noise_shifted2, 1);
+				
 				biomeInputs =  BiomeInputs.Pasture(); // FOR TESTING // biomeInputsAtCoord(xx,zz, biomeInputs);
-				int baseElevation =(int)(biomeInputs.baseElevation * patchDimensions.y);
-				int elevationRange = (int)((patchDimensions.y - baseElevation ) * .5f * biomeInputs.hilliness);
-				noiseAsWorldHeight =  (int)(noise_val * elevationRange + elevationRange + baseElevation);
+//				int baseElevation =(int)(biomeInputs.baseElevation * patchDimensions.y);
+//				int elevationRange = (int)((patchDimensions.y - baseElevation ) * .5f * biomeInputs.hilliness);
+//				noiseAsWorldHeight =  noiseAsWorldHeight(noise_val, biomeInputs.baseElevation, biomeInputs.hilliness); // (int)(noise_val * elevationRange + elevationRange + baseElevation);
 //				y_end = noiseAsWorldHeight + 1;
+				
 #endif
 				
-				List<Range1D> heightRanges = new List<Range1D>();
+//				heightRanges // TODO: add save blocks to heightMap as ranges. then set the corresponding range to heightranges.
+				// NOTE: must deal with overlapping ranges.
 				
-				//NO Y WAY!!
+				heightRanges = heightsAndOverhangRangesWith(noise_val, noise_shifted2, noise_shifted3,biomeInputs);  // new List<Range1D>();
+				int highestLevel = heightRanges[heightRanges.Count - 1].extent();
+				//NO-Y METHOD!!
 				
 				// TODO: (pos.) make height map a class with an accessor that imitates the array that it currently is
 				// this class also know its height range and has some way of knowing it coverage in the noisePatch
 				// like whether the it spans the noise patch (no drop offs/overhangs) or (if only partial coverage) somehow describes
 				// the extent of partial coverage...
 				
-				Range1D zero_ToSurface_range = new Range1D(0, noiseAsWorldHeight);
-				heightRanges.Add(zero_ToSurface_range);
+//				Range1D zero_ToSurface_range = new Range1D(0, noiseAsWorldHeight);
+//				heightRanges.Add(zero_ToSurface_range);
 				
 				
 				
@@ -781,7 +814,7 @@ public class NoisePatch : ThreadedJob
 				if (xx == 62 && zz == 12)
 				{
 					PTwo patchRelCo = new PTwo(xx, zz);
-					Plinth pl = new Plinth(patchRelCo, noiseAsWorldHeight, noise_val + 5f); // silliness
+					Plinth pl = new Plinth(patchRelCo, highestLevel, noise_val + 5f); // silliness
 					structurz.Add(pl);
 					
 //					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
@@ -1243,6 +1276,11 @@ public class NoisePatch : ThreadedJob
 	
 	private float get2DNoise(int xx, int zz) {
 		return m_chunkManager.m_libnoiseNetHandler.Get2DValue((float)((patchDimensions.x * coord.x + xx) * NOISESCALE2D / (float)patchDimensions.x), 	
+			(float)((patchDimensions.z * coord.z + zz) * NOISESCALE2D/(float)patchDimensions.z)); 
+	}
+	
+	private float getAlt2DNoise(int xx, int zz) {
+		return m_chunkManager.m_libnoiseNetHandler.GetAlt2DValue((float)((patchDimensions.x * coord.x + xx) * NOISESCALE2D / (float)patchDimensions.x), 	
 			(float)((patchDimensions.z * coord.z + zz) * NOISESCALE2D/(float)patchDimensions.z)); 
 	}
 

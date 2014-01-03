@@ -20,13 +20,17 @@ using Graphics.Tools.Noise.Tranformer;
 // we need a 2d noise for the height map (probably two types of noise with a selector)
 // want to test for caves only underground
 
-public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test output only
+public class LibNoiseNetHandler // : MonoBehaviour //using monobehaviour for test output only
 {
 	private IModule3D noiseModule;
 	private FilterModule filterModule;
 	private PrimitiveModule primitiveModule;
 	
-	private IModule2D noise2DModule;
+//	private IModule2D noise2DModule;
+	private IModule3D noise2DModule;
+	
+	private IModule3D altNoise2DModule;
+	private FilterModule altFilterModule;
 	
 	public float Threshold = 0f;
 	
@@ -106,10 +110,10 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 	
 	private void refreshTexture() 
 	{
-		setDefaults();
-		
-		testTex = GetTestImage();
-		renderer.material.mainTexture = testTex;
+//		setDefaults();
+//		
+//		testTex = GetTestImage();
+//		renderer.material.mainTexture = testTex;
 	}
 	
 	public LibNoiseNetHandler()
@@ -117,6 +121,7 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 		
 		SetUpRidgedMultiFractal3DModule ();
 		SetUpNoise2D();
+		SetUpAltNoise2D();
 		
 		setDefaults();
 	}
@@ -133,7 +138,8 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 
 		ScaleBias scale = null;
 
-		filterModule =  new RidgedMultiFractal(); //new Pipe(); //
+		filterModule = new Billow(); //  new RidgedMultiFractal(); //new Pipe(); //
+		filterModule.Primitive3D = (IModule3D)pModule;
 		
 		// Used to show the difference with our gradient color (-1 + 1)
 		scale = new ScaleBias (filterModule, 1f, 0f); // 0.9f, -1.25f);
@@ -141,7 +147,7 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 		float rmfScale = .75f;
 		ScalePoint scalePoint = new ScalePoint(filterModule, rmfScale, rmfScale * 1f, rmfScale);
 		
-		filterModule.Primitive3D = (IModule3D)pModule;
+		
 
 		noiseModule = scalePoint; // scale;
 	}
@@ -149,10 +155,33 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 	private void SetUpNoise2D()
 	{
 		//noise character should vary
-		PrimitiveModule pModule2D = new SimplexPerlin();
+		PrimitiveModule pModule2D =  new SimplexPerlin(); // new ImprovedPerlin(); //
 		pModule2D.Seed = primitiveModule.Seed + 1234;
 		
-		noise2DModule = (IModule2D) pModule2D;
+//		noise2DModule = (IModule3D) pModule2D;
+		
+		FilterModule fModule = new SumFractal(); // new Billow(); //
+		fModule.Primitive3D = (IModule3D) pModule2D;
+		
+		float rmfScale = .8f;
+		ScalePoint scalePoint = new ScalePoint(fModule, rmfScale, rmfScale, rmfScale); 
+		
+		noise2DModule = (IModule3D) scalePoint;
+	}
+	
+	private void SetUpAltNoise2D()
+	{
+		PrimitiveModule pModule2D = new SimplexPerlin();
+		pModule2D.Seed = primitiveModule.Seed + 6789;
+		
+		altFilterModule = new Pipe(); // RidgedMultiFractal();
+		
+		altFilterModule.Primitive3D = (IModule3D)pModule2D;
+		
+		float alt_module_scale = 2.4f;
+		ScalePoint scalePoint_alt = new ScalePoint(altFilterModule, alt_module_scale, alt_module_scale, alt_module_scale);
+		
+		altNoise2DModule = (IModule3D) scalePoint_alt;
 	}
 
 	public float GetRidgedMultiFractalValue(float x, float y, float z) {
@@ -160,7 +189,11 @@ public class LibNoiseNetHandler : MonoBehaviour //using monobehaviour for test o
 	}
 	
 	public float Get2DValue(float x, float z) {
-		return noise2DModule.GetValue(x,z);
+		return noise2DModule.GetValue(x, 0f, z);
+	}
+	
+	public float GetAlt2DValue(float x, float z) {
+		return altNoise2DModule.GetValue(x, 0f, z);
 	}
 	
 //	public Texture2D GetTestImage() 

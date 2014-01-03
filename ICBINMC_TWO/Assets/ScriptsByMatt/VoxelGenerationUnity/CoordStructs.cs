@@ -54,18 +54,25 @@ public struct Range1D
 	public int start, range;
 	
 	public BlockType blockType;
+	public int top_light_level; // todo: get rid of these horrible add-ons
+	public int bottom_light_level;
 
 	//TODO: move the above accounting variables to another struct
 	//that owns a range1d——and replace a bunch of code so that it deals with this new struct
 	
+	public Range1D(int _start, int _range, BlockType btype, int light_level_, int bottom_light_level_) 
+	{
+		start = _start; range = _range;	blockType = btype; top_light_level = light_level_; bottom_light_level = bottom_light_level_;
+	}
+	
 	public Range1D(int _start, int _range, BlockType btype) 
 	{
-		start = _start; range = _range;	blockType = btype;
+		this = new Range1D(_start, _range, btype, 10, 10); 
 	}
 	
 	public Range1D(int _start, int _range) 
 	{
-		this = new Range1D(_start, _range, BlockType.Stone);
+		this = new Range1D(_start, _range, BlockType.Grass);
 	}
 	
 	public int extent() {

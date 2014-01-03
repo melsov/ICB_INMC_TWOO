@@ -127,7 +127,6 @@ public class MeshBuilder
 		
 		foreach(FaceAggregator[] faceAggs in getFaceAggCollection())
 		{
-			
 			collectMeshDataWithFaceAggregators(faceAggs, ref starting_tri_index);	
 		}
 

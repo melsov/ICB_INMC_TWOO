@@ -61,6 +61,7 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\LibNoiseNetHandler.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoiseHandler.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoisePatch.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\LightLevelTable.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\LookupTable2D.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\RangeTable.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\Generator\Billow.cs" />
@@ -195,6 +196,7 @@
      <Compile Include="Assets\ThreadedJob\ThreadedJob.cs" />
      <None Include="Assets\Materials\ShadersMP\SkyBox.shader" />
      <None Include="Assets\Materials\ShadersMP\BlockTilingArrayTex.shader" />
+     <None Include="Assets\Materials\ShadersMP\FORK_flashlight_BlockTilingAtlas.shader" />
      <None Include="Assets\Standard Assets\Skyboxes\_skybox info.txt" />
      <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />

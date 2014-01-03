@@ -1,4 +1,4 @@
-﻿Shader "Custom/BlockTilingAtlas" {
+﻿Shader "Custom/FLASHLIGHT_FORK_BlockTilingAtlas" {
 	Properties {
 		_BlockTex ("Base RGB!", 2D) = "white" {}
 		_GameClock ("Clock", Range(0, 1.0)) = 1.0
@@ -59,14 +59,14 @@
 			float vx = v.vertex.x + .5;
 			float vy = v.vertex.z + .5;
 			//wait just use floor?
-//			float4 worldpos = floor( mul(_Object2World, v.vertex));
+			float4 worldpos = floor( mul(_Object2World, v.vertex));
 //			sneak the world pos into the "uv" pos
 //			 NOTE: theoretically using half type for uv limits world lighting system to (generally 16 bits) 60,000 +/- position in any direction! (if worlds get bigger than that switch v2f.uv to float)
-//			half worldx = worldpos.x;
-//			half worldy = worldpos.z;
+			half worldx = worldpos.x;
+			half worldy = worldpos.z;
 			
-//			half pposx = _PlayerLoc.x;
-//			half pposy = _PlayerLoc.z; 
+			half pposx = _PlayerLoc.x;
+			half pposy = _PlayerLoc.z; 
 			
 			half light_level = .5;
 			fixed day_level = (_GameClock - NIGHT_LENGTH) / DAY_LENGTH;
@@ -88,24 +88,24 @@
 				vy = v.vertex.y + .5;
 				
 				light_level += pos_shadow_nudge;				
-//				worldy = worldpos.y;
-//				pposy = _PlayerLoc.y;
+				worldy = worldpos.y;
+				pposy = _PlayerLoc.y;
 			}
 			else if ( v.normal.z < -NORMAL_THRESHOLD)
 			{
 				vy = -(v.vertex.y + .5);
 				vx *= -1;
 				light_level += neg_shadow_nudge;
-//				worldy = worldpos.y;
-//				pposy = _PlayerLoc.y;
+				worldy = worldpos.y;
+				pposy = _PlayerLoc.y;
 			}
 			else if (v.normal.x > NORMAL_THRESHOLD) 
 			{
 				vx = -(v.vertex.y + .5);
 				vy *= -1;
 				light_level += pos_shadow_nudge;
-//				worldx = worldpos.y;
-//				pposx = _PlayerLoc.y;
+				worldx = worldpos.y;
+				pposx = _PlayerLoc.y;
 				
 			}
 			else if ( v.normal.x < -NORMAL_THRESHOLD)
@@ -113,8 +113,8 @@
 				vx = (v.vertex.y + .5);
 				vy *= -1;
 				light_level += neg_shadow_nudge;
-//				worldx = worldpos.y;
-//				pposx = _PlayerLoc.y;
+				worldx = worldpos.y;
+				pposx = _PlayerLoc.y;
 			}
 			else if (v.normal.y < -NORMAL_THRESHOLD)
 			{
@@ -148,13 +148,12 @@
 			o.color.xy = tile_o;
 			// END OF GET TILE OFFSET
 			
-//			o.color.zw = float2(pposx, pposy); //_PlayerLoc.xz;  // light_level;
-			o.color.z = light_level;
+			o.color.zw = float2(pposx, pposy); //_PlayerLoc.xz;  // light_level;
 			
 			o.uv.xy =  half2(vx, vy);
 			
 			
-//			o.uv.zw = half2(worldx, worldy);
+			o.uv.zw = half2(worldx, worldy);
 			
 			return o;
             
@@ -172,9 +171,9 @@
 			//light level staircase
 			float dist = ceil( distance(i.color.zw, ceil( i.uv.zw)));
 			
-			half light_level = i.color.z; // 1.0 * 1.0/dist;  // floor( i.color.z * 10.0) / 10.0; // don't do this here? (it gets weird)
+			half light_level = 1.0 * 1.0/dist;  // floor( i.color.z * 10.0) / 10.0; // don't do this here? (it gets weird)
 			
-//			light_level = min(light_level, 1.0);
+			light_level = min(light_level, 1.0);
 //			// player flashlight
 //			float4 worldpos = mul(_Object2World, i.pos );
 //			float dist = distance(_PlayerLoc.xz, worldpos.xz);

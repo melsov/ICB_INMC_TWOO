@@ -1967,7 +1967,7 @@ public class ChunkManager : MonoBehaviour
 	// Use this for initialization
 	void Start () 
 	{
-
+		
 		if (TestRunner.DontRunGame() )
 			return;
 
@@ -2103,12 +2103,25 @@ public class ChunkManager : MonoBehaviour
 //				StartCoroutine (checkAsyncPatchesDone ());
 				
 				StartCoroutine (checkAsyncChunksList ());
+				
+//				StartCoroutine(updatePlayerPositionInShader());
 			}
 
 		}
 
 		placePlayerAtSpawnPoint ();
 	}
+	
+	#region shader update
+	private IEnumerator updatePlayerPositionInShader() 
+	{
+		while(true)
+		{
+			prefabMeshHolder.renderer.sharedMaterial.SetVector("_PlayerLoc", playerCameraTransform.position);	
+			yield return new WaitForSeconds(.1f);
+		}
+	}
+	#endregion
 
 	private void placePlayerAtSpawnPoint() {
 		movePlayerToXZofCoordAtSurface (spawnPlayerAtCoord);

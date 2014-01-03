@@ -129,13 +129,30 @@ public class FaceAggregator
 			// if it matches the type we want, add
 			if (type == fset.blockType && fset.blockFaceDirection == dir)
 			{
-
+				//beyond limit for this face set?
+				if (coordIsBeyondFaceSetMaxAllowArea(fset, addMeCoord))
+					return false;
+				
 				fset.addCoord(addMeCoord); //, adjacentCoord);
 				copyFaceSetIndexFromToCoord(adjacentCoord, addMeCoord, dir);
 				return true;
 			}
 
 		}
+		return false;
+	}
+	
+	private static bool coordIsBeyondFaceSetMaxAllowArea(FaceSet fset, AlignedCoord alco) 
+	{
+		Quad currentLimits = fset.getFaceSetLimits();
+		if (alco.across - currentLimits.origin.s > FaceSet.MAX_DIMENSIONS.s)
+			return true;
+		if (alco.up - currentLimits.origin.t > FaceSet.MAX_DIMENSIONS.t)
+			return true;
+		if (currentLimits.extent().s - alco.across > FaceSet.MAX_DIMENSIONS.s)
+			return true;
+		if (currentLimits.extent().t - alco.up > FaceSet.MAX_DIMENSIONS.t)
+			return true;
 		return false;
 	}
 

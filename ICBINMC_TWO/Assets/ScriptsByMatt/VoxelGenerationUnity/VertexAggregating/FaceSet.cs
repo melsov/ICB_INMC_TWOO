@@ -48,7 +48,7 @@ public class FaceSet
 	
 	private const int SPECIAL_QUAD_LOOKUP_NUMBER = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH * 805);
 	
-	
+	public static PTwo MAX_DIMENSIONS = new PTwo(4,4);
 	
 //	private static int MAX_FACES;
 	
@@ -192,6 +192,10 @@ public class FaceSet
 	{
 		List<Strip> strips = stripsArray[alco.across];
 		stripsArray[alco.across] = rangesWithRemovedFaceAt(alco.up, strips);
+	}
+	
+	public Quad getFaceSetLimits() {
+		return faceSetLimits;	
 	}
 	
 	public void addCoord(AlignedCoord co)

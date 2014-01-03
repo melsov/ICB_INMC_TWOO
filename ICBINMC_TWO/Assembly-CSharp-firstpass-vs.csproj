@@ -50,6 +50,7 @@
      <Compile Include="Assets\Standard Assets\Scripts\Utility Scripts\MeshCombineUtility.cs" />
      <None Include="Assets\Materials\ShadersMP\SkyBox.shader" />
      <None Include="Assets\Materials\ShadersMP\BlockTilingArrayTex.shader" />
+     <None Include="Assets\Materials\ShadersMP\FORK_flashlight_BlockTilingAtlas.shader" />
      <None Include="Assets\Standard Assets\Skyboxes\_skybox info.txt" />
      <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />

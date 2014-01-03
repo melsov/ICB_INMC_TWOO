@@ -360,7 +360,7 @@ public struct BiomeInputs
 	{
 		BiomeInputs inputs = new BiomeInputs();
 		//pasture
-		inputs.hilliness = .12f;
+		inputs.hilliness = .32f;
 		inputs.cragginess = 2.2f;
 		inputs.overhangness = .1f;	
 		inputs.caveVerticalFrequency = 3.5f;
