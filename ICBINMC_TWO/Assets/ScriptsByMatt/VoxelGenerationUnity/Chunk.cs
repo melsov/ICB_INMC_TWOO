@@ -472,9 +472,9 @@ public class Chunk : ThreadedJob
 	
 	private void addRangeToFaceAggregatorAtXZ(List<Range1D> ranges, BlockType type, Direction dir, int x, int z)
 	{
-		// todo: make 'addRange func.s in FaceSet and FAgg
+		// TODO: make 'addRange func.s in FaceSet and FAgg
 		//TODO: make sure that all ranges are of one block type.
-//		bug ("add range was called Direction was: " + dir);
+
 		foreach(Range1D range in ranges)
 		{
 			int j = range.start;
@@ -517,25 +517,20 @@ public class Chunk : ThreadedJob
 		resetFaceAggregatorsArray(); // TODO: face aggregators still report trying to add new facesets where there already was one...
 
 		int xx = 0;
-		for (; xx < CHLEN; ++xx) {
+		for (; xx < CHLEN; ++xx) 
+		{
 			int zz = 0;
-			for (; zz < CHLEN; ++zz) {
-//				int height_index = 0;
+			for (; zz < CHLEN; ++zz) 
+			{
 				heights = ySurfaceMap [xx * CHLEN + zz];
 				
 				if (heights == null)
 				{
-//					continue; // possible with structure maps
 					throw new Exception("in add y faces heights was Null");	
 				}
 				
-//				else if (heights.Length == 0)
-//					throw new Exception("in add y faces heights was zero");
-				
-				if (heights != null) {
-//					foreach (Range1D h_range in heights) 
-//					{
-					
+				if (heights != null) 
+				{
 					
 #if ONLY_HIGHEST_Y_FACES
 					int j = heights.Count - 1;	
@@ -582,18 +577,14 @@ public class Chunk : ThreadedJob
 						bool no_lower_faces = h_range.start != 0;
 #endif
 						
-						
 						if (no_lower_faces) //don't draw below bedrock
 						{
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
 							targetBlockIndex = new ChunkIndex(blockCoord);	
 							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
-							
 #if FACE_AG
 							addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos); 
 #else
-							
-						
 							addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
 							starting_tri_index += 4;
 #endif
@@ -605,7 +596,6 @@ public class Chunk : ThreadedJob
 #if FACE_AG
 						addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);
 #else
-						
 						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
 						starting_tri_index += 4;
 #endif
@@ -630,8 +620,6 @@ public class Chunk : ThreadedJob
 						// chunks ask noisepatchs for ranges at the chunk limits
 						// noise patches just deal with it at the noise patch limit...
 						
-
-
 						//XPOS
 						List<Range1D> adjRanges;
 						if (xx == CHLEN - 1) {
@@ -704,8 +692,7 @@ public class Chunk : ThreadedJob
 						// also, in the shader itself, just draw the texture based on the uv
 						// coord of a pixel at 0?? (somehow give the shader a hint about the offset)
 						// then hardcode the tile size...and hard code the width of a block
-						
-						
+
 						// END DRAWING X AND Z TOO
 					}
 				}

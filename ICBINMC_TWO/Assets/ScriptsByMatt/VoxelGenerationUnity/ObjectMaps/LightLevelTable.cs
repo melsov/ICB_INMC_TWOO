@@ -28,4 +28,23 @@ public class LightLevelTable
 //	face aggregator (i.e. each plane) ... and that number gets packed along with each vertex on that plane.
 //	 then the vertex does a look up and kaboom? (actually in this case) the lookup will have to happen in the
 //	fragment shader--right? (which will know its position and have the special number etc.)
+	
+//	let's say 4 light levels (but max light can spread ortho 3 and diag 2 plus a little for the other o'clocks like this:
+	/*
+	 ...*...
+	 ..***..
+	 .*****.
+	 *******
+	 .*****.
+	 ..***..
+	 ...*...
+	 
+	 */
+	
+//	in frag shader: i have my number which I unpack based on my xz coords.
+//	that tells me an additive to my light level.
+//	for ( 16 x 16 )^ (4 possible light levels) = uint.Max (4.2 billion and change)
+	
+//	basically dividing a theoretical set of all of the pos. values of uint into 
+	 
 }

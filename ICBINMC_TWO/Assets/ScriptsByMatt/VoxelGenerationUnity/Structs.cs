@@ -218,6 +218,11 @@ public struct Quad
 		return origin + dimensions;	
 	}
 	
+	public PTwo extentMinusOne() {
+		return origin + dimensions - new PTwo(1,1);	
+	}
+	
+	
 	public static Quad theErsatzNullQuad() {
 		return new Quad(new PTwo (-1, -777), new PTwo (-12399, -88) );	
 	}

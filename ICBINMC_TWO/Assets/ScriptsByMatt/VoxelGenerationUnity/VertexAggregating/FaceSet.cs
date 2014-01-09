@@ -50,6 +50,8 @@ public class FaceSet
 	
 	public static PTwo MAX_DIMENSIONS = new PTwo(4,4);
 	
+	public int myFGIndex_Test;
+	
 //	private static int MAX_FACES;
 	
 //	private int internalTriIndex = 0;
@@ -205,9 +207,11 @@ public class FaceSet
 		// for later...
 //		filledFaces[co.across, co.up] = true; 
 		if (faceSetLimits.isErsatzNull() ) {
-			faceSetLimits = Quad.UnitQuadWithAlignedCoord(co);  //( PTwo.PTwoXZFromCoord(co), new PTwo(1,1) );	
+			faceSetLimits = Quad.UnitQuadWithAlignedCoord(co);  //( PTwo.PTwoXZFromCoord(co), new PTwo(1,1) );
+//			bug ("face set limits init: " + faceSetLimits.toString());
 		} else {
-			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.across, co.up) );
+			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.across, co.up));
+//			bug ("face set limits is now: " + faceSetLimits.toString());
 		}
 		
 		///
@@ -491,7 +495,9 @@ public class FaceSet
 		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
 		
 		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
-
+		
+		
+//		float test_color = 3f/(8.0f); // red divided by 'possible colors'
 		Vector2 monoUVValue = new Vector2(uvIndex, 0f); // origin ;
 		
 		List<Vector2> returnUVS = new List<Vector2>();
@@ -511,6 +517,25 @@ public class FaceSet
 			int curLLindex = curULindex + 1;
 			int curURindex = curULindex + 2;
 			int curLRindex = curULindex + 3;
+			
+			//TEST
+//			float test_color = (float)((int) (quad.origin.t ) % 8)/8f;
+//			int dims = (quad.origin.t) + quad.dimensions.t + quad.origin.s + quad.dimensions.s ; // * (quad.origin.s) % 2; // faceSetLimits.dimensions.s;
+			int dims = this.myFGIndex_Test; // faceSetLimits.dimensions.s + faceSetLimits.dimensions.t; // + quad.origin.s + quad.origin.t; // 
+			dims %= 16;
+			float test_color = 15f;
+			
+			test_color = (float) dims;
+			
+//			test_color = (float)((int) (quad.dimensions.s ) % 16);
+			
+			test_color /= 16f;
+			
+//			test_color = faceSetLimits.dimensions.s == 5 ?  : test_color;
+//			test_color = faceSetLimits.dimensions.s == 4 ? 4f/8f : test_color;
+//			test_color = faceSetLimits.dimensions.s == 3 ? 3f/8f : test_color;
+			monoUVValue = new Vector2(uvIndex, test_color); // origin ;
+			//END TEST
 			
 			//TODO: switch vecs for XY and ZY cases
 				

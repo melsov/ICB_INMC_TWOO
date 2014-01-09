@@ -1,6 +1,6 @@
 ﻿#define NO_CAVES
-//#define TERRAIN_TEST
 //#define FLAT_TOO
+//#define TERRAIN_TEST
 //#define FLAT
 
 using UnityEngine;
@@ -775,7 +775,7 @@ public class NoisePatch : ThreadedJob
 //				float noise_val = 0.5f; // FLAT TEST get2DNoise(xx, zz);
 			
 #if FLAT_TOO
-				float noise_val = .4f; // get2DNoise(xx, zz);
+				noise_val = .4f; // get2DNoise(xx, zz);
 				biomeInputs = BiomeInputs.Pasture();
 				
 #else
@@ -809,6 +809,8 @@ public class NoisePatch : ThreadedJob
 				
 				
 				
+#if FLAT_TOO
+#else
 				// add a structure on the surface maybe
 				// fake test...
 				if (xx == 62 && zz == 12)
@@ -819,6 +821,7 @@ public class NoisePatch : ThreadedJob
 					
 //					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
 				}
+#endif
 				
 				heightMap[xx * patchDimensions.x + zz] = heightRanges;
 				

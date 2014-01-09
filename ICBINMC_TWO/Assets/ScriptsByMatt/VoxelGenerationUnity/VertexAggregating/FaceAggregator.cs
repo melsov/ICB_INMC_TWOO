@@ -123,7 +123,8 @@ public class FaceAggregator
 		int faceSetIndex = indexOfFaceSetAtCoord(adjacentCoord, dir);
 		
 		
-		if (faceSetIndex > -1)
+//		if (faceSetIndex > -1)
+		if (indexRepresentsAnOccupiedCoord(faceSetIndex))
 		{
 			FaceSet fset = faceSets[faceSetIndex];
 			// if it matches the type we want, add
@@ -131,7 +132,10 @@ public class FaceAggregator
 			{
 				//beyond limit for this face set?
 				if (coordIsBeyondFaceSetMaxAllowArea(fset, addMeCoord))
+				{
+//					b.bug("need a new faceset at coord: " + addMeCoord.toString() + "face set limits: " + fset.getFaceSetLimits().toString() + " direction: " + dir);
 					return false;
+				}
 				
 				fset.addCoord(addMeCoord); //, adjacentCoord);
 				copyFaceSetIndexFromToCoord(adjacentCoord, addMeCoord, dir);
@@ -145,13 +149,13 @@ public class FaceAggregator
 	private static bool coordIsBeyondFaceSetMaxAllowArea(FaceSet fset, AlignedCoord alco) 
 	{
 		Quad currentLimits = fset.getFaceSetLimits();
-		if (alco.across - currentLimits.origin.s > FaceSet.MAX_DIMENSIONS.s)
+		if (alco.across - currentLimits.origin.s >= FaceSet.MAX_DIMENSIONS.s)
 			return true;
-		if (alco.up - currentLimits.origin.t > FaceSet.MAX_DIMENSIONS.t)
+		if (alco.up - currentLimits.origin.t >= FaceSet.MAX_DIMENSIONS.t)
 			return true;
-		if (currentLimits.extent().s - alco.across > FaceSet.MAX_DIMENSIONS.s)
+		if (currentLimits.extentMinusOne().s - alco.across >= FaceSet.MAX_DIMENSIONS.s)
 			return true;
-		if (currentLimits.extent().t - alco.up > FaceSet.MAX_DIMENSIONS.t)
+		if (currentLimits.extentMinusOne().t - alco.up >= FaceSet.MAX_DIMENSIONS.t)
 			return true;
 		return false;
 	}
@@ -186,13 +190,17 @@ public class FaceAggregator
 		if (indexRepresentsAnOccupiedCoord(currentLookupIndex)) //
 		{
 			// remove
+//			b.bug("represents an occupied coord: cur lookup index: " + currentLookupIndex + " direction: " + dir);
+			
 			FaceSet currentOccupantFaceSet = faceSets[currentLookupIndex];
 			currentOccupantFaceSet.removeFaceAtCoord(coord); // hang on to your hats! (no bugs please!)
 		}
-
 		
+//		b.bug("adding a new face set at coord: " + coord.toString() );
+
 		int faceSetsCount = faceSets.Count;
 		FaceSet fs = new FaceSet(type, dir, coord);
+		fs.myFGIndex_Test = faceSetsCount;
 		faceSets.Add (fs);
 		
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
@@ -214,7 +222,7 @@ public class FaceAggregator
 	
 	private FaceSet faceSetAt(AlignedCoord alco, Direction dir) {
 		int index = indexOfFaceSetAtCoord(alco, dir);
-		bug ("got the index: " + index);
+//		bug ("got the index: " + index);
 		
 		if (index < 0)
 			return null;
@@ -515,7 +523,7 @@ public class FaceAggregatorTest
 	
 	private static Coord[] removeCoords = new Coord[]{
 		
-		new Coord(0, 0, 5),
+//		new Coord(0, 0, 5),
 //		new Coord(0, 0, 7),
 //		new Coord(1, 0, 7),
 //		new Coord(5, 0, 9),

@@ -10,8 +10,8 @@ public class TestRunner : MonoBehaviour {
 	private static bool dontRunGame = false;
 //	public const bool DontRunDoTerrainTestInstead = true;
 	public const bool DontRunDoTerrainTestInstead = false;
-//	public const bool RunGameOnlyOneNoisePatch = true;
-	public const bool RunGameOnlyOneNoisePatch = false;	
+	public const bool RunGameOnlyOneNoisePatch = true;
+//	public const bool RunGameOnlyOneNoisePatch = false;	
 	
 	private bool doRunTest = true;
 	

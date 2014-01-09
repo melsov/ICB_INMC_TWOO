@@ -51,16 +51,16 @@ public struct AlignedCoord
 [Serializable]
 public struct Range1D
 {
-	public int start, range;
+	public int start, range; // TODO: convert to short?
 	
 	public BlockType blockType;
-	public int top_light_level; // todo: get rid of these horrible add-ons
-	public int bottom_light_level;
+	public byte top_light_level; // todo: get rid of these horrible add-ons
+	public byte bottom_light_level;
 
 	//TODO: move the above accounting variables to another struct
 	//that owns a range1d——and replace a bunch of code so that it deals with this new struct
 	
-	public Range1D(int _start, int _range, BlockType btype, int light_level_, int bottom_light_level_) 
+	public Range1D(int _start, int _range, BlockType btype, byte light_level_, byte bottom_light_level_) 
 	{
 		start = _start; range = _range;	blockType = btype; top_light_level = light_level_; bottom_light_level = bottom_light_level_;
 	}
