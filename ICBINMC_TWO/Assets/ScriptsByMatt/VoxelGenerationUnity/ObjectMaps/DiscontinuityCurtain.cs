@@ -1,8 +1,143 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using Wintellect.PowerCollections;
+
+public struct Box3
+{
+	public Coord origin;
+	public Coord range;
+	
+	public Box3( Coord _or, Coord _ra) {
+		origin = _or; range = _ra;	
+	}
+	
+	public Coord extent() {
+		return origin + range;
+	}
+	
+	public Coord extentMinusOne() {
+		return origin + range - 1;
+	}
+}
+
+public struct ZCurtainUnit
+{
+//	SimpleRange startHeightRange;
+//	SimpleRange endHeightRange;
+	public SimpleRange zRange;
+	
+	public bool startIsOpen, endIsOpen;
+	
+//	public ZCurtain(SimpleRange start_height_range, SimpleRange end_height_range, SimpleRange z_range, bool startOpen, bool endOpen) {
+//		startHeightRange = start_height_range; end_height_range = end_height_range; zRange = z_range;
+//		startIsOpen = startOpen; endIsOpen = endOpen;
+//	}
+	
+	public ZCurtainUnit(SimpleRange z_range, bool startOpen, bool endOpen) {
+		zRange = z_range;
+		startIsOpen = startOpen; endIsOpen = endOpen;
+	}
+	
+	public ZCurtainUnit(int z_start, bool startOpen) {
+		this = new ZCurtainUnit(new SimpleRange(z_start, 1), startOpen, false);
+	}
+}
+
+public class ZCurtain
+{
+	private List<ZCurtainUnit> sections = new List<ZCurtainUnit>();
+	
+	public ZCurtain(int woco_z_start, bool startOpen)
+	{
+		ZCurtainUnit first = new ZCurtainUnit(woco_z_start, startOpen);
+		sections.Add(first);
+	}
+	
+	public int worldStartZ {
+		get {
+			return sections[0].zRange.start;	
+		}
+	}
+	
+	public int worldEndZ {
+		get {
+			return sections[section.Count - 1].zRange.extent();	
+		}
+	}
+	
+	public bool startIsOpen {
+		get {
+			if (sections.Count > 0) {
+				ZCurtainUnit first = sections[0];
+				return first.startIsOpen;
+			}
+			return false;	
+		}
+	}
+	
+	public bool endIsOpen {
+		get {
+			if (sections.Count > 0) {
+				ZCurtainUnit last = sections[sections.Count - 1];
+				return last.endIsOpen;
+			}
+			return false;	
+		}
+	}
+	
+	public void extendCurtainAt(int woco_z) 
+	{
+		// greater than end
+		int cur_extent = this.worldEndZ;
+		if (woco_z >= cur_extent)
+		{
+			SimpleRange last = sections[sections.Count - 1];
+			last.extendRangeToInclude(woco_z);
+			sections[sections.Count - 1] = last;
+			return;
+		}
+		
+		int cur_start = this.worldStartZ;
+		if (woco_z <= cur_start)
+		{
+			SimpleRange first = sections[0];
+			first.extendRangeToInclude(woco_z);
+			sections[0] = first;
+			return;	
+		}
+		
+		// TODO: middle
+		
+		SimpleRange zRange;
+		int index = 0;
+		bool combineWithNext = false;
+		foreach(SimpleRange range in sections)
+		{
+//			if (range.start >
+//			if (range.start - 1 == woco_z)
+//			zRange = range;
+			
+			
+		}
+	}
+	
+	private bool theresIsAnotherElementAfter(int index) {
+		return index < sections.Count - 1;	
+	}
+	
+}
 
 public class DiscontinuityCurtain 
 {
+	Box3 bounds;
+//	Deque<ZCurtain> 
+	
+	public DiscontinuityCurtain() 
+	{
+		
+	}
+	
 	// from a bird's eye view
 	// a discontinuity curtain is a squiggle on the map
 	// CORRECTION: a discontinuity curtain is a squiggle WITH RANGES STICKING OUT OF IT -- GOING IN THE Z DIRECTION on the map

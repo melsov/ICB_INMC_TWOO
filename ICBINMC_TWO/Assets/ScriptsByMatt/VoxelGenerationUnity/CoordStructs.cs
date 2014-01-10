@@ -48,6 +48,182 @@ public struct AlignedCoord
 	}
 }
 
+//[Serializable]
+//public struct BlockRange
+//{
+//	public Range1D range_;
+//	public BlockType blockType;
+//	public byte top_light_level; // todo: get rid of these horrible add-ons
+//	public byte bottom_light_level;
+//	
+//	public BlockRange(int _start, int _range, BlockType btype, byte light_level_, byte bottom_light_level_) 
+//	{
+//		start = _start; range = _range;	blockType = btype; top_light_level = light_level_; bottom_light_level = bottom_light_level_;
+//	}
+//	
+//	public BlockRange(Range1D rr, BlockType btype, byte light_level_, byte bottom_light_level_) 
+//	{
+//		this = new BlockRange (rr.start, rr.range, btype, light_level_, bottom_light_level_);
+//	}
+//	
+//	public BlockRange(int _start, int _range, BlockType btype) 
+//	{
+//		this = new Range1D(_start, _range, btype, 10, 10); 
+//	}
+//	
+//}
+
+[Serializable]
+public struct SimpleRange
+{
+	public int start, range; // TODO: convert to short?
+	
+	public SimpleRange (int _start, int _range) 
+	{
+		start = _start; range = _range;
+	}
+	
+	public Range1D convertToRange1D() {
+		return new Range1D(this.start, this.range);	
+	}
+	
+	public static SimpleRange SimpleRangeWithStartAndExtent(int start_, int extent_) {
+		return new SimpleRange(start_, extent_ - start);	
+	}
+	
+	public int extent() {
+		return this.start + this.range;
+	}
+	
+	public int extentMinusOne() {
+		return this.extent() - 1;
+	}
+	
+	public static SimpleRange theErsatzNullRange() {
+		return new SimpleRange(-999123, -1);
+	}
+	
+	public static bool Equal(SimpleRange aa, SimpleRange bb) {
+		return (aa.start == bb.start && aa.range == bb.range);	
+	}
+	
+	public bool isErsatzNull() {
+		return SimpleRange.Equal(this, SimpleRange.theErsatzNullRange() );	
+	}
+	
+	public bool contains(int index) {
+		return index >= this.start && index < this.extent();	
+	}
+	
+	public RelationToRange relationToRange(int index) {
+		if (this.contains(index))
+			return RelationToRange.WithinRange;
+		if (index < this.start)
+			return RelationToRange.BelowRange;
+		
+		return RelationToRange.AboveRange;
+	}
+		
+	public bool isOneBelowStart(int index) {
+		return index == this.start - 1;
+	}
+	
+	public bool isOneAboveRange(int index) {
+		return this.extent() == index;	
+	}
+	
+	public string toString() {
+		return "SimpleRange->start: " + this.start + " range: " + this.range;	
+	}
+	
+	public static SimpleRange Copy(SimpleRange copyMe) {
+		return new SimpleRange(copyMe.start, copyMe.range);	
+	}
+	// set funcs.
+	
+	public SimpleRange subRangeAboveRange(SimpleRange excluder) {
+		
+		return subRangeAbove(excluder.extentMinusOne());
+	}
+	
+	//TODO: fix sub range so it only can return a real sub range:
+	// this func. really gives the area above the level.
+	public SimpleRange subRangeAbove(int level) {
+		if (level < this.start)
+			return this;
+		
+		int newRange = this.extentMinusOne() - level;
+		if (newRange <= 0)
+			return SimpleRange.theErsatzNullRange();
+		
+		return new SimpleRange(level + 1, newRange);
+	}
+	
+	public SimpleRange setRangeStartTo(int level) {
+		
+		int newRange = this.extent() - level - 1;
+		if (newRange <= 0)
+			return SimpleRange.theErsatzNullRange();
+		
+		return new SimpleRange(level + 1, newRange);
+	}
+	
+	public SimpleRange subRangeBelow(int level) {
+		if (level <= this.start)
+			return SimpleRange.theErsatzNullRange();
+		
+		int min = Mathf.Min(this.extent(), level);
+		
+		return new SimpleRange(this.start, min - this.start);
+	}
+	
+	public SimpleRange extendRangeByOne() {
+		return new SimpleRange(this.start, this.range + 1);
+	}	
+	
+	public SimpleRange subtractOneFromStart() {
+		return this.adjustStartBy(-1);
+	}
+	
+	public SimpleRange adjustStartBy(int adjustBy) {
+		return new SimpleRange(this.start + adjustBy, this.range - adjustBy);	
+	}
+	
+	public SimpleRange extendRangeToInclude(SimpleRange extender) {
+		return new SimpleRange(this.start, extender.extentMinusOne() - this.start);	
+	}
+	
+	//new for SR
+	public SimpleRange extendRangeToInclude(int extendAbsPosition) {
+		int new_start = Mathf.Min(start, extendAbsPosition);
+		int new_extent = Mathf.Max(this.extent(), extendAbsPosition);
+		return SimpleRange.SimpleRangeWithStartAndExtent(new_start, new_extent);
+	}
+	
+	public static bool RangesIntersect(SimpleRange raa, SimpleRange rbb)
+	{
+		return !(SimpleRange.IntersectingRange(raa, rbb).isErsatzNull() );
+	}
+	
+	public static SimpleRange IntersectingRange(SimpleRange raa, SimpleRange rbb)
+	{
+		int interExtent = raa.extent() < rbb.extent() ? raa.extent() : rbb.extent();
+		int interStart = raa.start > rbb.start ? raa.start : rbb.start;
+		
+		if (interStart >= interExtent)
+			return SimpleRange.theErsatzNullRange();
+		
+		return new SimpleRange(interStart, interExtent - interStart);
+//		int extentDif = raa.e
+	}
+	
+	public bool contains(SimpleRange r) {
+		return this.start <= r.start && this.extent() >=r.extent();	
+	}
+	
+}
+
+
 [Serializable]
 public struct Range1D
 {
