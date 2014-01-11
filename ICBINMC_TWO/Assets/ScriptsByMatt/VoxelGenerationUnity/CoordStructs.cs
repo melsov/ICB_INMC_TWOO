@@ -88,7 +88,7 @@ public struct SimpleRange
 	}
 	
 	public static SimpleRange SimpleRangeWithStartAndExtent(int start_, int extent_) {
-		return new SimpleRange(start_, extent_ - start);	
+		return new SimpleRange(start_, extent_ - start_);	
 	}
 	
 	public int extent() {
@@ -216,6 +216,12 @@ public struct SimpleRange
 		return new SimpleRange(interStart, interExtent - interStart);
 //		int extentDif = raa.e
 	}
+	
+	public static bool SimpleRangeCoversRange(SimpleRange covering, SimpleRange covered)
+	{
+		return covering.start <= covered.start && covering.extent() >= covered.extent();
+	}
+	
 	
 	public bool contains(SimpleRange r) {
 		return this.start <= r.start && this.extent() >=r.extent();	

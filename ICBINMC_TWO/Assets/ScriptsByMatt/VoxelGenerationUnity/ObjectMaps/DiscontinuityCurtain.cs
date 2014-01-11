@@ -3,23 +3,23 @@ using System.Collections;
 using System.Collections.Generic;
 using Wintellect.PowerCollections;
 
-public struct Box3
-{
-	public Coord origin;
-	public Coord range;
-	
-	public Box3( Coord _or, Coord _ra) {
-		origin = _or; range = _ra;	
-	}
-	
-	public Coord extent() {
-		return origin + range;
-	}
-	
-	public Coord extentMinusOne() {
-		return origin + range - 1;
-	}
-}
+//public struct Box3
+//{
+//	public Coord origin;
+//	public Coord range;
+//	
+//	public Box3( Coord _or, Coord _ra) {
+//		origin = _or; range = _ra;	
+//	}
+//	
+//	public Coord extent() {
+//		return origin + range;
+//	}
+//	
+//	public Coord extentMinusOne() {
+//		return origin + range - 1;
+//	}
+//}
 
 public struct ZCurtainUnit
 {
@@ -33,6 +33,16 @@ public struct ZCurtainUnit
 //		startHeightRange = start_height_range; end_height_range = end_height_range; zRange = z_range;
 //		startIsOpen = startOpen; endIsOpen = endOpen;
 //	}
+	
+	public ZCurtainUnit(int z_start) {
+		zRange = new SimpleRange(z_start, 1);
+		startIsOpen = false; endIsOpen = false;
+	}
+	
+	public ZCurtainUnit(SimpleRange z_range) {
+		zRange = z_range;
+		startIsOpen = false; endIsOpen = false;
+	}
 	
 	public ZCurtainUnit(SimpleRange z_range, bool startOpen, bool endOpen) {
 		zRange = z_range;
@@ -48,21 +58,22 @@ public class ZCurtain
 {
 	private List<ZCurtainUnit> sections = new List<ZCurtainUnit>();
 	
-	public ZCurtain(int woco_z_start, bool startOpen)
+	public ZCurtain(int woco_z_start)
 	{
-		ZCurtainUnit first = new ZCurtainUnit(woco_z_start, startOpen);
+		ZCurtainUnit first = new ZCurtainUnit(woco_z_start);
 		sections.Add(first);
 	}
 	
 	public int worldStartZ {
 		get {
-			return sections[0].zRange.start;	
+			ZCurtainUnit start_curtainu = sections[0];
+			return start_curtainu.zRange.start;	
 		}
 	}
 	
 	public int worldEndZ {
 		get {
-			return sections[section.Count - 1].zRange.extent();	
+			return sections[sections.Count - 1].zRange.extent();	
 		}
 	}
 	
@@ -86,40 +97,89 @@ public class ZCurtain
 		}
 	}
 	
-	public void extendCurtainAt(int woco_z) 
+	public void extendCurtainToIncludeWocoZ(int woco_z) 
 	{
 		// greater than end
 		int cur_extent = this.worldEndZ;
 		if (woco_z >= cur_extent)
 		{
-			SimpleRange last = sections[sections.Count - 1];
-			last.extendRangeToInclude(woco_z);
-			sections[sections.Count - 1] = last;
+			ZCurtainUnit lastcu = sections[sections.Count - 1];
+			lastcu.zRange = lastcu.zRange.extendRangeToInclude(woco_z);
+			sections[sections.Count - 1] = lastcu;
 			return;
 		}
 		
 		int cur_start = this.worldStartZ;
 		if (woco_z <= cur_start)
 		{
-			SimpleRange first = sections[0];
-			first.extendRangeToInclude(woco_z);
-			sections[0] = first;
+			ZCurtainUnit firstcu = sections[0];
+			firstcu.zRange = firstcu.zRange.extendRangeToInclude(woco_z);
+			sections[0] = firstcu;
 			return;	
 		}
 		
 		// TODO: middle
-		
+		// we are not sure whether we care about the middle! (there's probably a reason)
 		SimpleRange zRange;
-		int index = 0;
 		bool combineWithNext = false;
-		foreach(SimpleRange range in sections)
+		int i = 0;
+		ZCurtainUnit zcurtain_unit;
+		for( ; i < sections.Count; ++i)
 		{
-//			if (range.start >
-//			if (range.start - 1 == woco_z)
-//			zRange = range;
+			zcurtain_unit = sections[i];
+			zRange = zcurtain_unit.zRange;
+			if (zRange.contains(woco_z))
+				return;
+			if (zRange.start - 1 == woco_z)
+			{
+				zRange.start--;
+				zRange.range++;
+				zcurtain_unit.zRange = zRange;
+				sections[i] = zcurtain_unit;
+				break;
+			}
+			if (zRange.extent() == woco_z)
+			{
+				zRange.range++;
+				zcurtain_unit.zRange = zRange;
+				sections[i] = zcurtain_unit;
+				break;
+			}
 			
-			
+			if (zRange.start > woco_z)
+			{
+				break; // don't know what to do here?	
+			}
 		}
+	}
+	
+	public void setDiscontinuityStartWithSurfaceRange(Range1D surfaceRange, Range1D airRange_) 
+	{
+		setDiscontinuityWithSurfaceRange(surfaceRange, airRange_, true);
+	}
+	
+	public void setDiscontinuityEndWithSurfaceRange(Range1D surfaceRange, Range1D airRange_) 
+	{
+		setDiscontinuityWithSurfaceRange(surfaceRange, airRange_, false);
+	}
+	
+	private void setDiscontinuityWithSurfaceRange(Range1D surfaceRange, Range1D airRange_, bool wantStart) 
+	{
+		if (sections.Count < 1)
+			return;
+		
+		SimpleRange surfRange = new SimpleRange(surfaceRange.start, surfaceRange.range);
+		SimpleRange airRange = new SimpleRange(airRange_.start, airRange_.range);
+		
+		ZCurtainUnit zcu;
+		if (wantStart) zcu = sections[0];
+		else zcu = sections[sections.Count - 1];
+		
+		zcu.startIsOpen = SimpleRange.SimpleRangeCoversRange(surfRange, airRange);
+	}
+	
+	public bool zCoordContainedByCurtain(int z_co) {
+		return z_co >= this.worldStartZ &&	z_co < this.worldEndZ;
 	}
 	
 	private bool theresIsAnotherElementAfter(int index) {
@@ -130,12 +190,33 @@ public class ZCurtain
 
 public class DiscontinuityCurtain 
 {
-	Box3 bounds;
-//	Deque<ZCurtain> 
+	Quad bounds;
+	Deque<ZCurtain> z_curtains = new Deque<ZCurtain>();
 	
-	public DiscontinuityCurtain() 
+	public DiscontinuityCurtain(PTwo xzStartCoord, Range1D continuityRangeAtZMinusOne, Range1D airRange) 
 	{
+		bounds = Quad.UnitQuadWithPoint(xzStartCoord);
 		
+		ZCurtain inital_zc = new ZCurtain(xzStartCoord.t);
+		inital_zc.setDiscontinuityStartWithSurfaceRange(continuityRangeAtZMinusOne, airRange);
+		
+		z_curtains.Add(inital_zc);
+	}
+	
+	public bool addContiguousXZCoord(PTwo xzco)
+	{
+		Range1D z_domain = bounds.tRange();
+		if (z_domain.contains(xzco.t)) {
+			PTwo relCo = bounds.origin - xzco;	
+			ZCurtain zcur = z_curtains[relCo.s];
+			zcur.extendCurtainToIncludeWocoZ(xzco.t);
+			z_curtains[relCo.s] = zcur;
+			return true;
+		}
+		//TODO: next door in s dim?
+//		if (
+		
+		return false;
 	}
 	
 	// from a bird's eye view

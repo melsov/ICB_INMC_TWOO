@@ -275,6 +275,14 @@ public struct Quad
 		return new Quad(new PTwo(ii_s.start, kk_t.start), new PTwo(ii_s.range, kk_t.range) );
 	}
 	
+	public Range1D sRange() {
+		return new Range1D(this.origin.s, this.dimensions.s);	
+	}
+	
+	public Range1D tRange() {
+		return new Range1D(this.origin.t, this.dimensions.t);	
+	}
+	
 //	public static Quad Union(Quad one, Quad two)
 //	{
 ////		PTwo newO = 	
