@@ -597,7 +597,7 @@ public class Chunk : ThreadedJob
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
 							targetBlockIndex = new ChunkIndex(blockCoord);	
 							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
-							if (b != null)
+							if (b != null) 
 							{
 #if FACE_AG
 								addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos); 
