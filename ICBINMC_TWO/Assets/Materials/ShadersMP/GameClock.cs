@@ -4,7 +4,8 @@ using System.Threading;
 
 public class GameClock : MonoBehaviour 
 {
-
+	public bool ClockIsOn = false;
+	
 	public Transform _UrChunkTransform;
 	private Renderer _chunkRenderer;
 	public Camera _playerCamera;
@@ -19,6 +20,12 @@ public class GameClock : MonoBehaviour
 	// Update is called once per frame
 	void Update () 
 	{
+		if (!ClockIsOn) {
+			_chunkRenderer.sharedMaterial.SetFloat("_GameClock", 1f);
+			_playerCamera.backgroundColor = Color.Lerp(nightColor, dayColor, 1f);
+			return;
+		}
+		
 		float shininess = .5f + .5f * Mathf.Sin (Time.time * .3F);
 		_chunkRenderer.sharedMaterial.SetFloat("_GameClock", shininess);
 

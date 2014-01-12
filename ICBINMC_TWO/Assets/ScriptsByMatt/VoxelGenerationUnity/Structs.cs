@@ -79,6 +79,11 @@ public struct PTwo
 		return new PTwo(1,1);	
 	}
 	
+	public static PTwo PTwoZero() {
+		return new PTwo(1,1);	
+	}
+	
+	
 	public PTwo plusOne() {
 		return new PTwo(this.s + 1, this.t + 1);	
 	}
@@ -91,6 +96,10 @@ public struct PTwo
 	
 	public static PTwo PTwoXZFromCoord(Coord co) {
 		return new PTwo(co.x, co.z);	
+	}
+	
+	public static Coord CoordFromPTwoWithY(PTwo point, int height) {
+		return new Coord(point.s, height, point.t);	
 	}
 	
 	public static PTwo PTwoFromAlignedCoord(AlignedCoord alco) {
@@ -158,6 +167,30 @@ public struct PTwo
 		return aaa.s >= bbb.s && aaa.t >= bbb.t;	
 	}
 	
+	public static PTwo Abs(PTwo aa) {
+		return new PTwo(Mathf.Abs(aa.s), Mathf.Abs(aa.t) );
+	}
+	
+	public static int GreaterDimension(PTwo _a) {
+		if (_a.s > _a.t) 
+			return _a.s;
+		return _a.t;
+	}
+	
+	public static int LesserDimension(PTwo _a) {
+		if (_a.s < _a.t) 
+			return _a.s;
+		return _a.t;
+	}
+	
+	public bool isIndexSafe(PTwo indexPoint) {
+		return indexPoint.s < this.s && indexPoint.t < this.t;	
+	}
+	
+	public bool hasANegativeElement() {
+		return this.s < 0 || this.t < 0;	
+	}
+	
 }
 
 public struct VertexTwo
@@ -198,6 +231,10 @@ public struct Quad
 		origin = origin_; dimensions = dims;
 	}
 	
+	public static Quad QuadZero() {
+		return new Quad(PTwo.PTwoZero(), PTwo.PTwoZero());
+	}
+	
 	public static Quad UnitQuadWithPoint(PTwo point) {
 		return new Quad(point, new PTwo(1,1) );	
 	}
@@ -222,6 +259,9 @@ public struct Quad
 		return origin + dimensions - new PTwo(1,1);	
 	}
 	
+	public static bool Equal(Quad _a, Quad _b) {
+		return PTwo.Equal(_a.origin, _b.origin) && PTwo.Equal(_a.dimensions, _b.dimensions);	
+	}
 	
 	public static Quad theErsatzNullQuad() {
 		return new Quad(new PTwo (-1, -777), new PTwo (-12399, -88) );	
@@ -231,8 +271,16 @@ public struct Quad
 		return this.dimensions.s == -12399;	
 	}
 	
+	public bool contains(PTwo point) {
+		return this.sRange().contains(point.s) && this.tRange().contains(point.t);	
+	}
+	
 	public Quad expandedToContainPoint(PTwo point) {
 		return Quad.QuadWithOriginAndExtent(PTwo.Min(this.origin, point) , PTwo.Max(this.extent(), point.plusOne()) );
+	}
+	
+	public Quad limitExtent(PTwo extentLimit) {
+		return Quad.QuadWithOriginAndExtent(this.origin, PTwo.Min(this.extent(), extentLimit));	
 	}
 	
 	public Quad upperLeftQuarter() {

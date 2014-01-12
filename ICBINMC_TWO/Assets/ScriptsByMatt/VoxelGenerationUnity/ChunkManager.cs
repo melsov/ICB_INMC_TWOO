@@ -150,7 +150,45 @@ public class ChunkManager : MonoBehaviour
 		
 
 		return blocks [index]; 
+	}
+	
+	public BlockType blockTypeAtChunkCoordOffset(Coord cc, Coord offset)
+	{
+		Coord index = new Coord ((int)(cc.x * CHUNKLENGTH + offset.x),
+									(int) (cc.y * CHUNKHEIGHT + offset.y),
+									(int) (cc.z * CHUNKLENGTH + offset.z));
 
+		if (index.y < 0 || index.y >= WORLD_HEIGHT_BLOCKS) {  
+			bug ("index. y out of range: (negative or greater than world height) " + index.toString ());
+			return BlockType.TheNullType;
+		}
+		
+//		if (!blocks.noisePatches.ContainsKey (new NoiseCoord (cc / NoisePatch.CHUNKDIMENSION) ))
+		if (!blocks.noisePatchExistsAtWorldCoord(index) )
+		{
+			bug ("trying to get a block from ch coord: " + cc.toString() + " offset: " + offset.toString() +" for which we don't have a noise patch coord at woco: " + index.toString() );
+			return BlockType.TheNullType;
+		}
+		
+		NoisePatch np = blocks.noisePatchAtWorldCoord(index);
+		return np.blockTypeAtChunkCoordOffset(cc,offset);
+	}
+	
+	public List<Range1D> rangesAtWorldCoord(Coord woco)
+	{
+		if (woco.y < 0 || woco.y >= WORLD_HEIGHT_BLOCKS) {  
+			bug ("index. y out of range: (negative or greater than world height) " + woco.toString ());
+			return null;
+		}	
+		
+		if (!blocks.noisePatchExistsAtWorldCoord(woco) )
+		{
+			bug ("trying to get a block from woco coord: " + woco.toString() + " for which we don't have a noise patch coord at woco: ");
+			return null;
+		}
+		
+		NoisePatch np = blocks.noisePatchAtWorldCoord(woco);
+		return np.rangesAtWorldCoord(woco);
 	}
 	
 	public List<Range1D> heightsListAtChunkCoordOffset(Coord cc, Coord offset)
@@ -2213,7 +2251,7 @@ public class SavableBlock : Block
 
 public enum BlockType
 {
-	Grass, Path, TreeTrunk, TreeLeaves, BedRock, Air, Stone, Stucco, Sand, Dirt, ParapetStucco, LightBulb
+	TheNullType = -1, Grass, Path, TreeTrunk, TreeLeaves, BedRock, Air, Stone, Stucco, Sand, Dirt, ParapetStucco, LightBulb
 }
 
 public static class B 

@@ -86,8 +86,6 @@ public class NoisePatch : ThreadedJob
 	private List<Range1D>[] heightMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 //	private List<Range1D>[] structureMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	
-	private BiomeTypeCorners biomeCorners;
-	
 	private const int BIOMELOOKUPOFFSET = 100;
 	
 	private const float BIOMEFREQUENCY = 120f;
@@ -100,9 +98,12 @@ public class NoisePatch : ThreadedJob
 	
 	const float RMF_TURBULENCE_SCALE = 2.0f;
 	
-//	#if TERRAIN_TEST
+	private static SimpleRange TREE_MAX_LIKELIHOOD_VRANGE = SimpleRange.SimpleRangeWithStartAndExtent((int)(patchDimensions.y * .45), (int) (patchDimensions.y * .75));
+	private const float TREE_MAX_LIKELIHOOD_FACTOR = .125f;
+	
+//#if TERRAIN_TEST
 	public Color[,] terrainSlice = new Color[patchDimensions.y, patchDimensions.z];
-//	#endif
+//#endif
 	
 	private List<StructureBase> structures = new List<StructureBase>();
 	private StructuresForNeighbors structuresForNeighbors = StructuresForNeighbors.MakeNew();
@@ -135,9 +136,9 @@ public class NoisePatch : ThreadedJob
 	}
 
 	public bool coordIsInBlocksArray(Coord indexCo) {
-		if (!indexCo.isIndexSafe(patchDimensions)) //debug purposes
+		if (!indexCo.isIndexSafe(patchDimensions)) // throw an exception—only for debugging.
 		{
-			bug ("coord out of array bounds for this noise patch: coord: " + indexCo.toString() + " array bounds: " + patchDimensions.toString ());
+			throw new Exception ("coord out of array bounds for this noise patch: coord: " + indexCo.toString() + " array bounds: " + patchDimensions.toString ());
 			return false;
 		}
 
@@ -168,7 +169,6 @@ public class NoisePatch : ThreadedJob
 		savedBlocks = (List<SavableBlock>) info.GetValue("SavedBlocks", typeof(List<SavableBlock>));
 		updateSavableAndNormalBlocksArray ();
 		generatedBlockAlready = false;
-//		generatedNoiseAlready = false;
 		startedBlockSetup = false;
 	}
 
@@ -314,6 +314,21 @@ public class NoisePatch : ThreadedJob
 		return blockAtRelativeCoord(index); //  blocks [index.x, index.y, index.z];
 	}
 	
+	public BlockType blockTypeAtChunkCoordOffset(Coord chunkCo, Coord offset) 
+	{
+		Coord index = NoisePatch.patchRelativeBlockCoordForChunkCoord (chunkCo) + offset; 
+
+		if (!index.isIndexSafe(patchDimensions)) 
+		{
+			return m_chunkManager.blockTypeAtChunkCoordOffset (chunkCo, offset); // look elsewhere
+		}
+
+		if (!generatedBlockAlready)
+			return BlockType.TheNullType;
+
+		return blockTypeFromCoord(index);
+	}
+	
 	public List<Range1D> heightsListAtChunkCoordOffset(Coord chunkCo, Coord offset)
 	{
 		Coord index = NoisePatch.patchRelativeBlockCoordForChunkCoord(chunkCo) + offset;
@@ -357,7 +372,38 @@ public class NoisePatch : ThreadedJob
 
 		return noiseCoords;
 	}
+	
+	private Coord patchWorldCoord() {
+		return new Coord(this.coord.x, 0, this.coord.z) * patchDimensions;
+	}
 
+	private Coord unsafePatchRelativeCoordFrom(Coord woco) 
+	{
+		return woco - patchWorldCoord();
+	}
+	
+	public int highestPointAtWorldCoord(Coord woco)
+	{
+		List<Range1D> heights = rangesAtWorldCoord(woco);
+		
+		if (heights == null)
+			return -1234574;
+		
+		Range1D last = heights[heights.Count - 1];
+		return last.extent();
+	}
+	
+	public List<Range1D> rangesAtWorldCoord(Coord woco)
+	{
+		Coord unsafeRelCo = unsafePatchRelativeCoordFrom(woco);
+		if (!unsafeRelCo.isIndexSafe(patchDimensions))
+		{
+			return this.m_chunkManager.rangesAtWorldCoord(woco);
+		}	
+		
+		return heightMap[unsafeRelCo.x * patchDimensions.x + unsafeRelCo.z];
+	}
+	
 	// TODO: bug. if block not on the ground--i.e. floating--we think that it is air...
 	
 	public Block blockAtWorldBlockCoord(Coord woco)
@@ -412,7 +458,7 @@ public class NoisePatch : ThreadedJob
 //			}
 			++count;
 		}
-		b.bug("block was air because we went through all of the ranges");
+//		b.bug("block was air because we went through all of the ranges");
 		return BlockType.Air;
 	}
 
@@ -481,7 +527,7 @@ public class NoisePatch : ThreadedJob
 						heights[heightsIndex] = rOD;
 					}
 					
-					break;
+					break; 
 				}
 			}
 			
@@ -670,6 +716,32 @@ public class NoisePatch : ThreadedJob
 		return (int)(noise_val * elevationRange + elevationRange + baseElevation);
 	}
 	
+	private static bool aTreeIsHere(int xx, int zz, int surfaceHeight, float noise_val) {
+		
+		if (surfaceHeight > patchDimensions.y - 24)
+			return false;
+		
+		if (Utils.IntegerAtDecimalPlace(noise_val, 4) > 5)
+			return false;
+		
+		
+		int tree_interval = 12; // BUG: faceSet gets an index out of range when this number is small (smaller than 8?) //when trees overlap?
+		
+//		tree_interval += NoisePatch.TREE_MAX_LIKELIHOOD_VRANGE.contains(surfaceHeight) ? 0 : (int)(tree_interval * .5f); //crude
+//		
+		noise_val = noise_val < 0 ? -noise_val : noise_val;
+		tree_interval += (int)(6 * Utils.DecimatLeftShift(noise_val, 3));
+		
+//		tree_interval = Mathf.Max(tree_interval, 8);
+		
+		int intervalx = (xx % tree_interval);
+		int intervalz = (zz % tree_interval);
+
+		if(intervalx == 0 && intervalz == 0)
+			return true;
+		return false;
+	}
+	
 	//NOTE: variable names may not really reflect the functionality embodied herein :)
 	private List<Range1D> heightsAndOverhangRangesWith(float noise_val, float overhangness, float caveness, BiomeInputs biomeInputs)
 	{
@@ -809,19 +881,23 @@ public class NoisePatch : ThreadedJob
 				
 				
 				
-#if FLAT_TOO
-#else
+//#if FLAT_TOO
+//#else
+				PTwo patchRelCo = new PTwo(xx, zz);
+				if (aTreeIsHere(xx,zz, highestLevel, noise_val))
+				{
+					Tree tree = new Tree(patchRelCo, highestLevel, noise_val * 4.23f);
+					structurz.Add(tree);	
+				}
 				// add a structure on the surface maybe
 				// fake test...
-				if (xx == 62 && zz == 12)
+				if (xx == 12 && zz == 12)
 				{
-					PTwo patchRelCo = new PTwo(xx, zz);
 					Plinth pl = new Plinth(patchRelCo, highestLevel, noise_val + 5f); // silliness
 					structurz.Add(pl);
-					
 //					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
 				}
-#endif
+//#endif
 				
 				heightMap[xx * patchDimensions.x + zz] = heightRanges;
 				
@@ -1173,6 +1249,8 @@ public class NoisePatch : ThreadedJob
 		int j = 0;
 		int k = 0;
 		
+		int u = 0;
+		
 		PTwo offset;
 		PTwo lookup;
 		
@@ -1184,39 +1262,92 @@ public class NoisePatch : ThreadedJob
 			origin	= structure.getOrigin();
 			dims = structure.getDimensions();
 			
-
-			for(; j < dims.s; ++j)
+			/*
+			 * THIS IS A BUG FACTORY (AND ITS FUNCTIONALITY WAS OBVIATED BY CENTERING TREES/STRUCTURES ETC.)
+			 * BECAUSE WE ARE OFTEN ASKING FOR RANGES (HIGHESTPOINTATWORLD COORD(GR_POINT) ) THAT 
+			 * HAVEN'T YET BEEN GENERATED (and then not handling this case very gracefully). FIND ANOTHER WAY TO GROUND THE TREES ?
+			 * OR, DECLINE TO ADD STRUCTURES THAT CAN'T ESTABLISH THEIR GROUNDS. OR DEFER ADDING THEM?
+			//unfortunately, here we must adjust the y origin of the structure to the actual lowest ground level at the ground plot
+			if (!Quad.Equal(structure.plot, structure.groundLevelPlot))
 			{
-				k = 0;
-				for (;k < dims.t; ++k)
+				int lowest = structure.y_origin;
+				for(int v = 0; v < structure.groundLevelPlot.dimensions.s; ++v)
+				{
+					for (int c = 0; c < structure.groundLevelPlot.dimensions.t; ++c)
+					{
+						PTwo ground_point = origin + structure.groundLevelPlot.origin +  new PTwo(v,c);
+						Coord ground_point_woco = this.patchWorldCoord() + PTwo.CoordFromPTwoWithY(ground_point, 0);
+						
+						int highest = this.highestPointAtWorldCoord(ground_point_woco); //  highpoint.extent();
+						lowest = lowest > highest ? highest : lowest;
+					}
+				}
+				structure.y_origin = lowest;
+			}
+			//end adjust y origin
+			*/
+			
+			for(j = 0; j < dims.s; ++j)
+			{
+				
+				for (k = 0; k < dims.t; ++k)
 				{
 					offset =  new PTwo(j, k);
 					lookup = origin + offset;
 					
 					List<Range1D> str_ranges = structure[offset];
-					// get height here
 					range_l = heightMap[ lookup.s * patchDimensions.x + lookup.t];
-					highest_at = range_l[range_l.Count - 1];
 
 					Range1D above_struck;
 					
-					for (int u = 0; u < str_ranges.Count; ++u) {
+					for (u = 0; u < str_ranges.Count; ++u) 
+					{
+						highest_at = range_l[range_l.Count - 1];
+						
 						str_range = str_ranges[u];
-						str_range.start +=  structure.y_origin ; // surface_height_at_origin;	
+						str_range.start +=  structure.y_origin ; 
 						str_ranges[u] = str_range;
 						
+						// if structure range happens to contain the highest_at range:
+						if (str_range.contains(highest_at))
+						{
+							// and then what about ranges below that? TODO:
+//							range_l.RemoveAt(range_l.Count - 1);
+//							range_l.Add(str_range); //NO. the terrain -- or previous structures win this one. (commenting out)
+							continue;
+						}
+						
 						above_struck = highest_at.subRangeAbove(str_range.extentMinusOne());
+
+						//adjust height map (truncated by structures)
+						Range1D below_structure = highest_at.subRangeBelow(str_range.start);
 						
-						//adjust height map (squished by structures)
-						highest_at = highest_at.subRangeBelow(str_range.start);
+						if (!below_structure.isErsatzNull() )
+						{
+							//add it as the new 'highest at' (now a misnomer potentially)
+							if (below_structure.range > 0) {
+								range_l[range_l.Count - 1] = below_structure;
+							} else
+								throw new Exception("below struct range was not ersatz null but was range < 1 ?? the range: " + below_structure.toString());
+						} else {
+							range_l.RemoveAt(range_l.Count - 1); //happens when the have the same start...	
+						}
 						
-						range_l.Add(str_range);
+						if (!str_range.isErsatzNull() && str_range.range > 0)
+							range_l.Add(str_range); 
+						else
+							throw new Exception("a structure range was ersatz null or range < 1 ?? the range: " + str_range.toString());
+
+						highest_at = above_struck;
 						
 						if (u == str_ranges.Count - 1) // last one
 						{
-							if (!above_struck.isErsatzNull())
+							if (!above_struck.isErsatzNull() && above_struck.range > 0) {
 								range_l.Add(above_struck);	
+							} else if (above_struck.range == 0)
+								throw new Exception("above struck range range less than 1: " + above_struck.toString());
 						}
+						
 					}
 					
 					heightMap[ lookup.s * patchDimensions.x + lookup.t] = range_l;

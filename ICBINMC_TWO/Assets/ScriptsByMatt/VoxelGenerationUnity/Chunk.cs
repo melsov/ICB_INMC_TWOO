@@ -258,16 +258,32 @@ public class Chunk : ThreadedJob
 			cX = tile_length;
 			break;
 		case BlockType.Sand:
-			cX = tile_length * 2;
-			cY = tile_length; //<-- silly // * 2;
+			cX = tile_length;
+//			cY = tile_length; //<-- silly // * 2;
 			break;
 		case BlockType.Dirt:
-			cX = tile_length * 3;
-			cY = tile_length * 3;
+//			cX = tile_length * 3;
+			cY = tile_length;
 			break;
 		case BlockType.BedRock:
 			cX = tile_length * 3;
-			cY = tile_length * 2; //silly value at the moment
+//			cY = tile_length * 2; //silly value at the moment
+			break;
+		case BlockType.Stucco:
+			cX = tile_length * 1;
+			cY = tile_length * 3;
+			break;
+		case BlockType.TreeTrunk:
+			if(dir == Direction.yneg || dir == Direction.ypos)
+			{
+				cX = tile_length * 2;		
+			}
+			cY = tile_length * 2;
+			
+			break;
+		case BlockType.TreeLeaves:
+			cX = tile_length;
+			cY = tile_length * 2;
 			break;
 		default: //GRASS
 			//testing...make geom more visible
@@ -576,25 +592,28 @@ public class Chunk : ThreadedJob
 #else
 						bool no_lower_faces = h_range.start != 0;
 #endif
-						
 						if (no_lower_faces) //don't draw below bedrock
 						{
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
 							targetBlockIndex = new ChunkIndex(blockCoord);	
 							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
+							if (b != null)
+							{
 #if FACE_AG
-							addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos); 
+								addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos); 
 #else
-							addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
-							starting_tri_index += 4;
+								addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
+								starting_tri_index += 4;
 #endif
+							}
 						}
 						
 						Coord extentBlockCoord = new Coord(xx, h_range.extentMinusOne() , zz);
 						targetBlockIndex = new ChunkIndex (extentBlockCoord) ; //(xx, h_range.extentMinusOne() , zz);	
 						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, extentBlockCoord);
 #if FACE_AG
-						addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);
+						if (b != null)
+							addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);
 #else
 						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
 						starting_tri_index += 4;
@@ -631,7 +650,10 @@ public class Chunk : ThreadedJob
 						List<Range1D> exposedRanges = exposedRangesWithinRange(h_range, adjRanges, heights.Count > 1);
 						
 #if FACE_AG_XZ
-						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
+						if (b != null)
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
+						else 
+							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else
 						addMeshDataForExposedRanges(exposedRanges, Direction.xneg, ref starting_tri_index, xx, zz);
 #endif
@@ -646,7 +668,10 @@ public class Chunk : ThreadedJob
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 #if FACE_AG_XZ
-						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
+						if (b != null)
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
+						else 
+							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else
 						addMeshDataForExposedRanges(exposedRanges, Direction.zneg, ref starting_tri_index, xx, zz);
 #endif
@@ -664,7 +689,10 @@ public class Chunk : ThreadedJob
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 #if FACE_AG_XZ
-						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
+						if (b != null)	
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
+						else 
+							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else
 						addMeshDataForExposedRanges(exposedRanges, Direction.xpos, ref starting_tri_index, xx, zz);
 #endif
@@ -678,7 +706,10 @@ public class Chunk : ThreadedJob
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 #if FACE_AG_XZ
-						addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
+						if (b != null)
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
+						else 
+							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else
 						addMeshDataForExposedRanges(exposedRanges, Direction.zpos, ref starting_tri_index, xx, zz);
 #endif
@@ -807,7 +838,7 @@ public class Chunk : ThreadedJob
 				if (belowAdj.start == Range1D.theErsatzNullRange().start ) //paranoid? (not quite?)
 					throw new Exception ("range is funky but we are adding it now" + belowAdj.toString() + " adj range was: " + adjacentRange.toString() + " the orig range was " + _range.toString());
 				
-				if (shouldDebug) bug ("yes were adding a range: from below: " + belowAdj.toString());
+//				if (shouldDebug) bug ("yes were adding a range: from below: " + belowAdj.toString());
 				
 				if (_range.contains(belowAdj))
 				{
@@ -912,7 +943,6 @@ public class Chunk : ThreadedJob
 
 		int shift = (int) dir % 2 == 1 ? -1 : 1;
 		Direction oppositeDir = (Direction) ((int) dir + shift);
-
 		uvs = uvCoordsForBlockType (bType, oppositeDir);
 
 		int[] posTriangles = new int[] { 0, 2, 3, 0, 1, 2 };  // clockwise when looking from pos towards neg

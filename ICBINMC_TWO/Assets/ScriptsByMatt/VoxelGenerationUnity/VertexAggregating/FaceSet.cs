@@ -1,4 +1,6 @@
-﻿//#define NO_OPTIMIZATION
+﻿#define GLOSS_QUAD_ARRAY_INDEX_BUG
+#define IRREGULARITY_LOG
+//#define NO_OPTIMIZATION
 
 using UnityEngine;
 using System.Collections;
@@ -38,6 +40,7 @@ public class FaceSet
 	private Quad faceSetLimits = Quad.theErsatzNullQuad();
 	private List<Quad> quads = new List<Quad>();
 	
+	private PTwo quadTableDimensions;
 	private int[,] quadTable; // = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
 	
 	private bool[,] filledFaces = new bool[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
@@ -60,17 +63,18 @@ public class FaceSet
 	{
 		blockType = _type;	
 		blockFaceDirection = _dir;
-		
-		addCoord(initialCoord);
-		
+
 //		MAX_FACES = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH); // for now
 		
 		if (_dir == Direction.yneg || _dir == Direction.ypos)
 		{
-			quadTable  = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];	
+			quadTableDimensions = new PTwo((int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH);
 		} else {
-			quadTable  = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKHEIGHT];	
+			quadTableDimensions = new PTwo((int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKHEIGHT);
 		}
+		quadTable  = new int [quadTableDimensions.s, quadTableDimensions.t]; 
+		
+		addCoord(initialCoord);
 	}
 	
 	private int quadIndexAtCoord(PTwo coord) {
@@ -78,9 +82,19 @@ public class FaceSet
 	}
 	
 	private int addNewQuadAtCoord(Quad qq, PTwo coord) {
+//		if (!coord.isIndexSafe(new PTwo(quadTable.GetLength(0), quadTable.GetLength(1)) ))
+//		{
+//			bug ("we should throw an exception here instead. this quad isn't within bounds!");
+//			return -1;
+//		}
+		
 		int curQuadCount = quads.Count + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
 		
-		quadTable[coord.s, coord.t] = curQuadCount ;
+		try {
+			quadTable[coord.s, coord.t] = curQuadCount ;
+		} catch(IndexOutOfRangeException e) {
+			throw new Exception("an index was out of range when trying to add a coord to table. the coord: " +coord.toString() + " table dims: " + 	quadTable.GetLength(0) +  " 2nd length: " + quadTable.GetLength(1) + "\n the quad: " + qq.toString());
+		}
 		quads.Add(qq);
 		
 		return curQuadCount - FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
@@ -202,6 +216,18 @@ public class FaceSet
 	
 	public void addCoord(AlignedCoord co)
 	{
+#if IRREGULARITY_LOG
+		string IRREGULARITY_LOG = "";
+		Strip check_irregular_strip = new Strip(new Range1D(1,1), new IndexSet(0,0,0,0), 456);
+#endif
+		
+		//sanity check
+		if (!co.isIndexSafe(new AlignedCoord(quadTable.GetLength(0), quadTable.GetLength(1) ) ))
+		{
+			throw new Exception ( "why are we trying to add a coord that's beyond bounds? coord: " + co.toString() );
+			return;
+		}
+		
 		// ADD/ADJUST STRIPS
 		
 		// for later...
@@ -211,6 +237,7 @@ public class FaceSet
 //			bug ("face set limits init: " + faceSetLimits.toString());
 		} else {
 			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.across, co.up));
+
 //			bug ("face set limits is now: " + faceSetLimits.toString());
 		}
 		
@@ -219,14 +246,29 @@ public class FaceSet
 		int stripsIndex = co.across;
 		int addAtHeight = co.up;
 		
+//#if GLOSS_QUAD_ARRAY_INDEX_BUG 
+//		//really just a sane thing to do.
+//		if (addAtHeight >= quadTableDimensions.t) 
+//			return;
+//#endif
+		
 		List<Strip> strips = stripsAtIndex(stripsIndex);
 		
 		// no strips yet?
 		if (strips.Count == 0)
 		{
+			
 			Strip newStrip = new Strip(new Range1D(addAtHeight, 1));
 			strips.Add(newStrip);
 			stripsArray[stripsIndex] = strips;
+			
+#if IRREGULARITY_LOG
+			IRREGULARITY_LOG +="strips count was zero";
+#endif
+#if IRREGULARITY_LOG
+			if (addAtHeight >= quadTableDimensions.t)
+				b.bug(IRREGULARITY_LOG);
+#endif
 			return;
 		}
 		
@@ -248,10 +290,11 @@ public class FaceSet
 			
 			if 	(str.range.isOneAboveRange(addAtHeight) )
 			{
-				str.range.range++; // = str.range.extendRangeByOne();
+				str.range.range++; 
 				
 				// can we combine with a next range?
-				if (i < strips.Count - 1) {
+				if (i < strips.Count - 1) 
+				{
 					Strip nextStrip = strips[i + 1];
 					if (nextStrip.range.isOneBelowStart(addAtHeight))
 					{
@@ -260,6 +303,10 @@ public class FaceSet
 					}
 				}
 				
+#if IRREGULARITY_LOG
+				IRREGULARITY_LOG += "add at height: " + addAtHeight + "was one above strip range: " + str.toString() ;
+				check_irregular_strip = str;
+#endif
 				strips[i] = str; //put it back 
 				break;
 			}
@@ -270,6 +317,10 @@ public class FaceSet
 				str.range.start--;
 				str.range.range++;
 				
+#if IRREGULARITY_LOG
+				IRREGULARITY_LOG += "was one below start. add at height: " + addAtHeight;
+				check_irregular_strip = str;
+#endif
 				strips[i] = str;
 				break;
 			}
@@ -278,11 +329,24 @@ public class FaceSet
 			{
 				Strip newStrip = new Strip(new Range1D(addAtHeight, 1));
 				strips.Add(newStrip);
+#if IRREGULARITY_LOG
+				IRREGULARITY_LOG += "got to the end of the strips array and made a new strip.";
+				check_irregular_strip = newStrip;
+#endif				
 				break;
 			}
 		}
 		
 		stripsArray[stripsIndex] = strips; // put it back!
+		
+#if IRREGULARITY_LOG
+		if (check_irregular_strip.range.range < 1 || check_irregular_strip.range.start >= quadTableDimensions.t ) {
+			b.bug("the irregular strip: " + check_irregular_strip.toString() );
+			b.bug(IRREGULARITY_LOG);
+			throw new Exception("getting out of here!");
+		}
+		
+#endif		
 	}
 	
 	private void optimizeStripsSafeVersion()
@@ -338,6 +402,18 @@ public class FaceSet
 		if (faceSetLimits.dimensions.s == 1) {
 			List<Strip> the_strips = stripsArray[faceSetLimits.origin.s  ];
 			foreach(Strip stripp in the_strips) {
+#if GLOSS_QUAD_ARRAY_INDEX_BUG
+				if (stripp.range.start >= quadTableDimensions.t)
+				{
+					b.bug("range start greater or eq quad table . t. face set limits: " + faceSetLimits.toString() + "range: " + stripp.range.toString() );
+					continue;
+				}
+				if (stripp.range.range < 1)
+				{
+					b.bug("range range less than 1. face set limits: " + faceSetLimits.toString() + "range: " + stripp.range.toString() );
+					continue;
+				}
+#endif
 				Quad quadd = Quad.QuadFromStrip(stripp, faceSetLimits.origin.s);
 				addNewQuadAtCoord(quadd, new PTwo(faceSetLimits.origin.s, stripp.range.start) );
 			}

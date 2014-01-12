@@ -46,6 +46,10 @@ public struct AlignedCoord
 	public string toString() {
 		return "Aligned coord: across: " + this.across + " up: " + this.up;
 	}
+	
+	public bool isIndexSafe(AlignedCoord arrayDims) {
+		return (this.across >= 0 && this.up >= 0 &&	this.across < arrayDims.across && this.up < arrayDims.up);
+	}
 }
 
 //[Serializable]

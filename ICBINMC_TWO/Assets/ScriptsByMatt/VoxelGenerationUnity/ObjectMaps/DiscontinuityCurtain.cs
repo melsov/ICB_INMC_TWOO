@@ -100,8 +100,7 @@ public class ZCurtain
 	public void extendCurtainToIncludeWocoZ(int woco_z) 
 	{
 		// greater than end
-		int cur_extent = this.worldEndZ;
-		if (woco_z >= cur_extent)
+		if (woco_z >= this.worldEndZ)
 		{
 			ZCurtainUnit lastcu = sections[sections.Count - 1];
 			lastcu.zRange = lastcu.zRange.extendRangeToInclude(woco_z);
@@ -109,8 +108,7 @@ public class ZCurtain
 			return;
 		}
 		
-		int cur_start = this.worldStartZ;
-		if (woco_z <= cur_start)
+		if (woco_z <= this.worldStartZ)
 		{
 			ZCurtainUnit firstcu = sections[0];
 			firstcu.zRange = firstcu.zRange.extendRangeToInclude(woco_z);

@@ -131,6 +131,7 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\SimplexNoise\Noise.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structs.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structures\StructureBase.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\Utils.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceAggregator.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceSet.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\MeshBuilder.cs" />
