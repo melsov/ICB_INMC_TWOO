@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class LightLevelTable 
+public class LightLevelTableOLD 
 {
 
 // a double ? (?) could potentially store light levels for a chunk: (of 16 x 16 x 256 dims ) x say 8 light levels x 6 faces.

@@ -50,6 +50,10 @@ public struct AlignedCoord
 	public bool isIndexSafe(AlignedCoord arrayDims) {
 		return (this.across >= 0 && this.up >= 0 &&	this.across < arrayDims.across && this.up < arrayDims.up);
 	}
+	
+	public static AlignedCoord LesserValues(AlignedCoord _aa, AlignedCoord _bb) {
+		return new AlignedCoord( _aa.across < _bb.across ? _aa.across : _bb.across, _aa.up < _bb.up ? _aa.up : _bb.up);	
+	}
 }
 
 //[Serializable]
@@ -253,7 +257,7 @@ public struct Range1D
 	
 	public Range1D(int _start, int _range, BlockType btype) 
 	{
-		this = new Range1D(_start, _range, btype, 10, 10); 
+		this = new Range1D(_start, _range, btype, Block.MAX_LIGHT_LEVEL, Block.MAX_LIGHT_LEVEL); 
 	}
 	
 	public Range1D(int _start, int _range) 
@@ -307,7 +311,7 @@ public struct Range1D
 	}
 	
 	public static Range1D Copy(Range1D copyMe) {
-		return new Range1D(copyMe.start, copyMe.range, copyMe.blockType);	
+		return new Range1D(copyMe.start, copyMe.range, copyMe.blockType, copyMe.top_light_level, copyMe.bottom_light_level );	
 	}
 	// set funcs.
 	
@@ -326,7 +330,7 @@ public struct Range1D
 		if (newRange <= 0)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(level + 1, newRange, this.blockType);
+		return new Range1D(level + 1, newRange, this.blockType, this.top_light_level, this.bottom_light_level);
 	}
 	
 	public Range1D setRangeStartTo(int level) {
@@ -335,7 +339,7 @@ public struct Range1D
 		if (newRange <= 0)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(level + 1, newRange, this.blockType);
+		return new Range1D(level + 1, newRange, this.blockType, this.top_light_level, this.bottom_light_level);
 	}
 	
 	public Range1D subRangeBelow(int level) {
@@ -344,11 +348,11 @@ public struct Range1D
 		
 		int min = Mathf.Min(this.extent(), level);
 		
-		return new Range1D(this.start, min - this.start, this.blockType);
+		return new Range1D(this.start, min - this.start, this.blockType, this.top_light_level, this.bottom_light_level);
 	}
 	
 	public Range1D extendRangeByOne() {
-		return new Range1D(this.start, this.range + 1, this.blockType);
+		return new Range1D(this.start, this.range + 1, this.blockType, this.top_light_level, this.bottom_light_level);
 	}	
 	
 	public Range1D subtractOneFromStart() {
@@ -356,11 +360,11 @@ public struct Range1D
 	}
 	
 	public Range1D adjustStartBy(int adjustBy) {
-		return new Range1D(this.start + adjustBy, this.range - adjustBy, this.blockType);	
+		return new Range1D(this.start + adjustBy, this.range - adjustBy, this.blockType, this.top_light_level, this.bottom_light_level);	
 	}
 	
 	public Range1D extendRangeToInclude(Range1D extender) {
-		return new Range1D(this.start, extender.extentMinusOne() - this.start, this.blockType);	
+		return new Range1D(this.start, extender.extentMinusOne() - this.start, this.blockType, this.top_light_level, this.bottom_light_level);	
 	}
 	
 	public static bool RangesIntersect(Range1D raa, Range1D rbb)

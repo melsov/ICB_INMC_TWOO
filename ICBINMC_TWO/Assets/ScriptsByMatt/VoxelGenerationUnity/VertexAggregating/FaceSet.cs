@@ -1,5 +1,6 @@
 ﻿#define GLOSS_QUAD_ARRAY_INDEX_BUG
-#define IRREGULARITY_LOG
+#define LIGHT_BY_RANGE
+//#define IRREGULARITY_LOG
 //#define NO_OPTIMIZATION
 
 using UnityEngine;
@@ -38,7 +39,11 @@ public class FaceSet
 	private List<Strip>[] stripsArray = new List<Strip>[(int)ChunkManager.CHUNKLENGTH];
 	
 	private Quad faceSetLimits = Quad.theErsatzNullQuad();
-	private List<Quad> quads = new List<Quad>();
+#if LIGHT_BY_RANGE
+	private List<LitQuad> quads = new List<LitQuad>();
+#else
+	private List<Lit> quads = new List<Quad>();
+#endif
 	
 	private PTwo quadTableDimensions;
 	private int[,] quadTable; // = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
@@ -55,11 +60,14 @@ public class FaceSet
 	
 	public int myFGIndex_Test;
 	
+//	private byte[,] lightLevelTable;
+//	private LightLevelTable lightLevelTable = new LightLevelTable();
+	
 //	private static int MAX_FACES;
 	
 //	private int internalTriIndex = 0;
 	
-	public FaceSet(BlockType _type, Direction _dir, AlignedCoord initialCoord)
+	public FaceSet(BlockType _type, Direction _dir, AlignedCoord initialCoord, byte lightLevel)
 	{
 		blockType = _type;	
 		blockFaceDirection = _dir;
@@ -74,33 +82,28 @@ public class FaceSet
 		}
 		quadTable  = new int [quadTableDimensions.s, quadTableDimensions.t]; 
 		
-		addCoord(initialCoord);
+		addCoord(initialCoord, lightLevel);
 	}
 	
 	private int quadIndexAtCoord(PTwo coord) {
 		return quadTable[coord.s, coord.t] - FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
 	}
 	
-	private int addNewQuadAtCoord(Quad qq, PTwo coord) {
-//		if (!coord.isIndexSafe(new PTwo(quadTable.GetLength(0), quadTable.GetLength(1)) ))
-//		{
-//			bug ("we should throw an exception here instead. this quad isn't within bounds!");
-//			return -1;
-//		}
-		
+	private int addNewQuadAtCoord(LitQuad qq, PTwo coord) 
+	{
 		int curQuadCount = quads.Count + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
 		
 		try {
 			quadTable[coord.s, coord.t] = curQuadCount ;
 		} catch(IndexOutOfRangeException e) {
-			throw new Exception("an index was out of range when trying to add a coord to table. the coord: " +coord.toString() + " table dims: " + 	quadTable.GetLength(0) +  " 2nd length: " + quadTable.GetLength(1) + "\n the quad: " + qq.toString());
+			throw new Exception("an index was out of range when trying to add a coord to table. the coord: " +coord.toString() + " table dims: " + 	quadTable.GetLength(0) +  " 2nd length: " + quadTable.GetLength(1) + "\n the quad: " + qq.quad.toString());
 		}
-		quads.Add(qq);
 		
+		quads.Add(qq);
 		return curQuadCount - FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
 	}
 	
-	private Quad quadAtCoord(PTwo co) {
+	private LitQuad quadAtCoord(PTwo co) {
 		return quads[quadIndexAtCoord(co)];	
 	}
 	
@@ -214,7 +217,7 @@ public class FaceSet
 		return faceSetLimits;	
 	}
 	
-	public void addCoord(AlignedCoord co)
+	public void addCoord(AlignedCoord co, byte lightLevel)
 	{
 #if IRREGULARITY_LOG
 		string IRREGULARITY_LOG = "";
@@ -241,6 +244,7 @@ public class FaceSet
 //			bug ("face set limits is now: " + faceSetLimits.toString());
 		}
 		
+//		lightLevelTable[co.across, co.up] = lightLevel; // NO LONGER
 		///
 		//...	assume we're dealing with xz faces and z neg is 'up' x pos is 'right'
 		int stripsIndex = co.across;
@@ -258,7 +262,11 @@ public class FaceSet
 		if (strips.Count == 0)
 		{
 			
-			Strip newStrip = new Strip(new Range1D(addAtHeight, 1));
+#if LIGHT_BY_RANGE
+			Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType, lightLevel, lightLevel));
+#else
+			Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType));
+#endif
 			strips.Add(newStrip);
 			stripsArray[stripsIndex] = strips;
 			
@@ -292,6 +300,7 @@ public class FaceSet
 			{
 				str.range.range++; 
 				
+				byte bottom_light_level = lightLevel;
 				// can we combine with a next range?
 				if (i < strips.Count - 1) 
 				{
@@ -299,9 +308,16 @@ public class FaceSet
 					if (nextStrip.range.isOneBelowStart(addAtHeight))
 					{
 						str.range = str.range.extendRangeToInclude(nextStrip.range);
+#if LIGHT_BY_RANGE
+						bottom_light_level = nextStrip.range.bottom_light_level;
+#endif
 						strips.RemoveAt(i+1);
 					}
 				}
+				
+#if LIGHT_BY_RANGE
+				str.range.bottom_light_level = bottom_light_level;
+#endif
 				
 #if IRREGULARITY_LOG
 				IRREGULARITY_LOG += "add at height: " + addAtHeight + "was one above strip range: " + str.toString() ;
@@ -314,6 +330,9 @@ public class FaceSet
 			if (str.range.isOneBelowStart(addAtHeight) ) 
 			{	
 //				str.range = str.range.subtractOneFromStart();
+#if LIGHT_BY_RANGE
+				str.range.top_light_level = lightLevel;
+#endif
 				str.range.start--;
 				str.range.range++;
 				
@@ -327,7 +346,11 @@ public class FaceSet
 			
 			if (i == strips.Count - 1) //still didn't find anything? make new
 			{
+#if LIGHT_BY_RANGE
+				Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType, lightLevel, lightLevel));
+#else	
 				Strip newStrip = new Strip(new Range1D(addAtHeight, 1));
+#endif
 				strips.Add(newStrip);
 #if IRREGULARITY_LOG
 				IRREGULARITY_LOG += "got to the end of the strips array and made a new strip.";
@@ -370,8 +393,9 @@ public class FaceSet
 			}
 			
 			foreach(Strip sturip in currentStrips){
-				Quad qq = Quad.QuadFromStrip(sturip, horizontalDim);
-				addNewQuadAtCoord(qq, new PTwo(horizontalDim, sturip.range.start));
+//				Quad qq = Quad.QuadFromStrip(sturip, horizontalDim);
+				LitQuad litQuad = LitQuad.LitQuadFromStrip(sturip, horizontalDim);
+				addNewQuadAtCoord(litQuad, new PTwo(horizontalDim, sturip.range.start));
 			}
 		}
 	}
@@ -414,8 +438,11 @@ public class FaceSet
 					continue;
 				}
 #endif
-				Quad quadd = Quad.QuadFromStrip(stripp, faceSetLimits.origin.s);
-				addNewQuadAtCoord(quadd, new PTwo(faceSetLimits.origin.s, stripp.range.start) );
+//				Quad quadd = Quad.QuadFromStrip(stripp, faceSetLimits.origin.s);
+//				LightCorners lightcorners = LightCorners.LightCornersFromRangeTopBottom(stripp.range);
+				LitQuad litquadd = LitQuad.LitQuadFromStrip(stripp, faceSetLimits.origin.s); // new LitQuad(quadd, lightcorners);
+				
+				addNewQuadAtCoord(litquadd, new PTwo(faceSetLimits.origin.s, stripp.range.start) );
 			}
 			return;
 		}
@@ -449,7 +476,9 @@ public class FaceSet
 					foreach(Strip lastRowStrip in currentStrips)
 					{
 						Quad lq = Quad.QuadFromStrip(lastRowStrip, horizontalDim);
-						addNewQuadAtCoord(lq, new PTwo(horizontalDim, lastRowStrip.range.start) );
+						LightCorners lightcorners = LightCorners.LightCornersFromRangeTopBottom(lastRowStrip.range);
+						LitQuad litlq = new LitQuad(lq, lightcorners);
+						addNewQuadAtCoord(litlq, new PTwo(horizontalDim, lastRowStrip.range.start) );
 					}
 				
 				// THROWING UP HANDS WAY!
@@ -468,8 +497,10 @@ public class FaceSet
 				
 				if (horizontalDim == 1)
 				{
-					Quad qq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
-					lstp.quadIndex = addNewQuadAtCoord(qq, new PTwo(horizontalDim - 1, lstp.range.start) );
+//					Quad qq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
+					
+					LitQuad litqq = LitQuad.LitQuadFromStrip(lstp, horizontalDim - 1);
+					lstp.quadIndex = addNewQuadAtCoord(litqq, new PTwo(horizontalDim - 1, lstp.range.start) );
 					
 					if (lstp.quadIndex < 0)
 						bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString());
@@ -482,21 +513,21 @@ public class FaceSet
 				{
 					Strip stp = currentStrips[i];
 					
-					
 					if (Range1D.Equal(stp.range, lstp.range) ) 
 					{
 						// has a quad index?
 						if (lstp.quadIndex != -1)
 						{
 							//TEST
-							Quad qua;
+							LitQuad qua;
 							try {
 								qua = quads[lstp.quadIndex];
 							} catch(ArgumentOutOfRangeException e) {
 								throw new Exception("argument out of range. index was: " + lstp.quadIndex );		
 							}
 							
-							qua.dimensions.s++;
+							qua.quad.dimensions.s++;
+							qua.lightCorners.setRightCornersWithRange(stp.range);
 							
 							if (lstp.quadIndex < 0)
 								bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString() + "else from lstp qI == -1" + "\n BTW: the shift number is: " + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER);
@@ -513,7 +544,10 @@ public class FaceSet
 							
 							Quad doubleWidthqq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
 							doubleWidthqq.dimensions.s = 2;
-							lstp.quadIndex = addNewQuadAtCoord(doubleWidthqq, new PTwo(horizontalDim - 1, lstp.range.start) );
+							LightCorners lightCorners = new LightCorners(lstp.range.top_light_level, stp.range.top_light_level, lstp.range.bottom_light_level, stp.range.bottom_light_level);
+							LitQuad litdoubleWidthQuad = new LitQuad(doubleWidthqq, lightCorners);
+							
+							lstp.quadIndex = addNewQuadAtCoord(litdoubleWidthQuad, new PTwo(horizontalDim - 1, lstp.range.start) );
 							
 							if (lstp.quadIndex < 0)
 								bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString() + "else from lstp qI == -1" + "\n BTW: the shift number is: " + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER);
@@ -530,7 +564,11 @@ public class FaceSet
 						if (horizontalDim == horizDimEnd - 1)
 						{
 							Quad sq = Quad.QuadFromStrip(stp, horizontalDim);
-							stp.quadIndex = addNewQuadAtCoord(sq, new PTwo(horizontalDim, stp.range.start) );
+							
+							LightCorners lightCorners = LightCorners.LightCornersFromRangeTopBottom(stp.range);
+							LitQuad litSQuad = new LitQuad(sq, lightCorners);
+							
+							stp.quadIndex = addNewQuadAtCoord(litSQuad, new PTwo(horizontalDim, stp.range.start) );
 							
 							if (stp.quadIndex < 0)
 								bug ("the quad index less than zero: " + stp.quadIndex + " strip is: " + stp.toString());
@@ -544,7 +582,11 @@ public class FaceSet
 				if (lstp.quadIndex == -1) // still no match
 				{
 					Quad sq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
-					lstp.quadIndex = addNewQuadAtCoord(sq, new PTwo(horizontalDim - 1, lstp.range.start) );
+					
+					LightCorners lightCorners = LightCorners.LightCornersFromRangeTopBottom(lstp.range);
+					LitQuad litSQuad = new LitQuad(sq, lightCorners);
+					
+					lstp.quadIndex = addNewQuadAtCoord(litSQuad, new PTwo(horizontalDim - 1, lstp.range.start) );
 				}
 				
 				lastStrips[j] = lstp;
@@ -556,11 +598,26 @@ public class FaceSet
 		
 	}
 	
-
-	
 	public MeshSet CalculateGeometry(float verticalHeight) //need param y height...
 	{
 		optimizeStrips();
+		
+		//there needs to be a start offset
+		//based on the faceSetLimits.origin.t
+		// because by the time these verts go to the shader, they will have 'forgotten' their 
+		// pos. relative to this face set.
+		// so it origin.t is (say) 5,
+		// the value for the first tile will be held in the 4^1 of the color32 number 
+		// the value for the fourth tiles (at 8) will be held in 4^0 (i.e. (place (i.e. 3) + start_offset( i.e. 5 % 4) % 4)
+		
+//		int upperHalfLightLevel = lightLevelTable.getUpperHalfBits();
+//		int lowerHalfLightLevel = lightLevelTable.getLowerHalfBits();
+		//65536 ushort.max
+//		float max = 65535.00f;
+//		Vector2 colorReallyOverhangLightLevel = new Vector2(1.5999f, 1.599f); // new Vector2((float) upperHalfLightLevel/max , (float) lowerHalfLightLevel/max);
+		
+		int t_offset = faceSetLimits.origin.t;
+//		Color32 fake_color32 = new Color32(255, 255, 255, 255); //lightLevelTable.color32ForLightLevels(t_offset); //0 fake // 
 		
 		int curTriIndex = 0;
 		
@@ -572,7 +629,6 @@ public class FaceSet
 		
 		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
 		
-		
 //		float test_color = 3f/(8.0f); // red divided by 'possible colors'
 		Vector2 monoUVValue = new Vector2(uvIndex, 0f); // origin ;
 		
@@ -580,12 +636,32 @@ public class FaceSet
 		List<int> returnTriIndices = new List<int>();
 		List<Vector3> returnVecs = new List<Vector3>();
 		
+		List<Vector2> returnColors = new List<Vector2>();
+		List<Color32> returnCol32s = new List<Color32>();
+		
 		float half_unit = 0.5f;
+		
+#if LIGHT_BY_RANGE
+		Color32[] cornerColors = new Color32[4] {new Color32(0,0,0,0),new Color32(0,0,0,0),new Color32(0,0,0,0),new Color32(0,0,0,0)}; 	
+#endif
 
 		int i = 0;
 		for(; i < quads.Count ; ++i)
 		{
+#if LIGHT_BY_RANGE
+			LitQuad litQuad = quads[i];
+			Quad quad = litQuad.quad;
+			
+			//CONSIDER: do we want to rotate (and/or flip?) the corners based on blockFaceDirection?
+			LightCorners lightCorners = litQuad.lightCorners;
+			cornerColors[0].r = lightCorners.oo;
+			cornerColors[1].r = lightCorners.mo;
+			cornerColors[2].r = lightCorners.om;
+			cornerColors[3].r = lightCorners.mm;
+#else
 			Quad quad = quads[i];
+#endif
+			
 			
 			int vertsAddedByStrip = 0;
 			
@@ -624,6 +700,8 @@ public class FaceSet
 			returnVecs.Add(ulVec);
 			vertsAddedByStrip++;
 			returnUVS.Add(monoUVValue);
+//			returnColors.Add(colorReallyOverhangLightLevel);
+			returnCol32s.Add(cornerColors[0] );
 		
 //			Vector3 llVec = new Vector3((float) quad.origin.s - half_unit, 
 //				verticalHeight, 
@@ -632,6 +710,8 @@ public class FaceSet
 				verticalHeight, 
 				(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(llVec);
+//			returnColors.Add(colorReallyOverhangLightLevel);
+			returnCol32s.Add(cornerColors[1]);
 			
 			vertsAddedByStrip++;
 		
@@ -646,6 +726,8 @@ public class FaceSet
 			returnVecs.Add(urVec);
 			vertsAddedByStrip++;
 			returnUVS.Add( monoUVValue); // + Vector2.Scale(uvURTexDim, uvScalingVec) );
+//			returnColors.Add(colorReallyOverhangLightLevel);
+			returnCol32s.Add(cornerColors[2]);
 			
 //			Vector3 lrVec = new Vector3((float)quad.extent().s - half_unit, 
 //				verticalHeight, 
@@ -656,6 +738,8 @@ public class FaceSet
 			returnVecs.Add(lrVec);
 			vertsAddedByStrip++;
 			returnUVS.Add(monoUVValue); // + Vector2.Scale(uvLRTexDim, uvScalingVec) );
+//			returnColors.Add(colorReallyOverhangLightLevel);
+			returnCol32s.Add(cornerColors[3]);
 			
 			int[] tris;
 			
@@ -674,7 +758,9 @@ public class FaceSet
 		//now maybe just calculate the actual v3 array and the indices....
 		GeometrySet geomset = new GeometrySet(returnTriIndices, returnVecs );
 		
-		return new MeshSet(geomset, returnUVS);
+//		return new MeshSet(geomset, returnUVS);
+//		return new MeshSet(geomset, returnUVS, returnColors);
+		return new MeshSet(geomset, returnUVS, returnCol32s);
 		
 	}
 	
@@ -763,8 +849,8 @@ public class FaceSet
 	public string getQuadsString() {
 		string result = "";
 		
-		foreach(Quad qq in quads) {
-			result += " | " + qq.toString();	
+		foreach(LitQuad qq in quads) {
+			result += " | " + qq.quad.toString();	
 		}
 		return result;
 	}
@@ -787,7 +873,7 @@ public class FaceSetTest
 	public FaceSetTest()
 	{
 		bug ("BEGIN FACE SET TEST");
-		FaceSet fs = new FaceSet(BlockType.Grass, Direction.ypos, new AlignedCoord(0,0));
+		FaceSet fs = new FaceSet(BlockType.Grass, Direction.ypos, new AlignedCoord(0,0), 3);
 		
 		Coord[] coords = new Coord[256];
 		for(int i = 0; i < 256 ; ++i)
@@ -800,7 +886,7 @@ public class FaceSetTest
 		
 		
 		foreach (Coord co in coords) {
-			fs.addCoord(new AlignedCoord(co.x, co.z));	
+			fs.addCoord(new AlignedCoord(co.x, co.z), 3);	
 		}
 		
 		MeshSet mset = fs.CalculateGeometry(2);

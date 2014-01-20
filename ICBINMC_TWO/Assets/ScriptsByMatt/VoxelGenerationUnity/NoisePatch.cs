@@ -1,4 +1,5 @@
 ﻿#define NO_CAVES
+#define LIGHT_HACK
 //#define FLAT_TOO
 //#define TERRAIN_TEST
 //#define FLAT
@@ -106,9 +107,15 @@ public class NoisePatch : ThreadedJob
 //#endif
 	
 	private List<StructureBase> structures = new List<StructureBase>();
-	private StructuresForNeighbors structuresForNeighbors = StructuresForNeighbors.MakeNew();
+	private DataForNeighbors dataForNeighbors = DataForNeighbors.MakeNew();
 	
 	private List<Coord> patchRelativeChCosToRebuild = new List<Coord>();
+	
+#if LIGHT_HACK
+	private bool thereWasAnOverhang = false;
+	private float currentLightLevel = 3.5f;
+	private float lastXRowStartLightLevel = 3.5f;
+#endif
 	
 	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
 	{
@@ -742,6 +749,28 @@ public class NoisePatch : ThreadedJob
 		return false;
 	}
 	
+#if LIGHT_HACK
+	private byte nextLightLevel(bool thereWasAnOverhangAtThisXZ)
+	{
+		currentLightLevel += thereWasAnOverhangAtThisXZ ? -.1f : .1f;
+		currentLightLevel = Mathf.Max(currentLightLevel, 0f);
+		currentLightLevel = Mathf.Min((float) Block.MAX_LIGHT_LEVEL, currentLightLevel);
+		return (byte) currentLightLevel;
+	}
+	
+	private void resetLightLevelCounter() { 
+		this.currentLightLevel = this.lastXRowStartLightLevel;
+	}
+	
+	private void setXRowStartLightLevelAtZeroZeroHack() {
+		this.lastXRowStartLightLevel = (float) Block.MAX_LIGHT_LEVEL / 1.5f ; //fake hack	
+	}
+	
+	private void influenceXRowLightLevelWithNearbyZLevel() {
+		this.lastXRowStartLightLevel = (this.lastXRowStartLightLevel + this.currentLightLevel) /2.0f;	
+	}
+#endif
+	
 	//NOTE: variable names may not really reflect the functionality embodied herein :)
 	private List<Range1D> heightsAndOverhangRangesWith(float noise_val, float overhangness, float caveness, BiomeInputs biomeInputs)
 	{
@@ -755,10 +784,11 @@ public class NoisePatch : ThreadedJob
 		int noiseAsWorldHeight = (int)(height_noise * elevationRange + elevationRange + baseElevation);
 
 		Range1D zeroToSurface = new Range1D(0, noiseAsWorldHeight);
-		
+
 		// concavity insertion point (which may simply eat away at the height or may create a concavity)
 		//  overhangeness smallness and noise_val largness
 		float concavity = overhangness * overhangness - .2f + noise_val; //   (1f - (.5f +  overhangness * .5f)) * 1f;
+
 		
 		if (concavity > 0)
 		{
@@ -766,14 +796,28 @@ public class NoisePatch : ThreadedJob
 			int concave_range = (int) (elevation * (concavity));
 
 			int concave_start = (int) (baseElevation + (elevation - concave_range) * .5f);
-			 zeroToSurface = new Range1D(0, concave_start);
-			result.Add(zeroToSurface);
+			zeroToSurface = new Range1D(0, concave_start); 
 			
 			if (concave_start + concave_range < noiseAsWorldHeight)
 			{
 				int overhang = noiseAsWorldHeight - (concave_start + concave_range);
-				result.Add( new Range1D(concave_start + concave_range, overhang));
+				Range1D topRange = new Range1D(concave_start + concave_range, overhang);
+				
+				result.Add(topRange );
+				
+#if LIGHT_HACK
+				thereWasAnOverhang = true;
+			} else {
+				thereWasAnOverhang = false;	
+#endif
 			}
+			
+//			zeroToSurface.top_light_level = nextLightLevel(thereWasAnOverhang); 
+			
+			
+			
+			result.Insert(0, zeroToSurface); //add the lower range after
+			
 			return result;
 		}
 	
@@ -837,10 +881,18 @@ public class NoisePatch : ThreadedJob
 		float noise_shifted2 = 0f; float noise_shifted3 = 0f;
 		Vector2 local_slope = new Vector2(0f, 0f);
 		
+#if LIGHT_HACK
+		if (x_start == 0)
+			setXRowStartLightLevelAtZeroZeroHack();
+#endif
 		
 		int xx = x_start;
 		for (; xx < x_end ; xx++ ) 
 		{
+#if LIGHT_HACK
+			resetLightLevelCounter();		
+#endif
+			
 			int zz = z_start;
 			for (; zz < z_end; zz++ ) 
 			{
@@ -867,8 +919,47 @@ public class NoisePatch : ThreadedJob
 //				heightRanges // TODO: add save blocks to heightMap as ranges. then set the corresponding range to heightranges.
 				// NOTE: must deal with overlapping ranges.
 				
+				
 				heightRanges = heightsAndOverhangRangesWith(noise_val, noise_shifted2, noise_shifted3,biomeInputs);  // new List<Range1D>();
 				int highestLevel = heightRanges[heightRanges.Count - 1].extent();
+				
+
+#if LIGHT_HACK
+				if (heightRanges.Count > 1) // there was probably an overhang
+				{
+					Range1D secondHighestRange = heightRanges[heightRanges.Count - 2];
+					secondHighestRange.top_light_level = nextLightLevel(true);
+					heightRanges[heightRanges.Count - 2] = secondHighestRange;
+					
+					Range1D highestRange = heightRanges[heightRanges.Count - 1];
+					highestRange.bottom_light_level = secondHighestRange.top_light_level;
+					heightRanges[heightRanges.Count - 1] = highestRange;
+					
+				} else {
+					byte nextLevel = nextLightLevel(false);	
+					
+//					if highrange not contained by last highest z
+					if (zz > 1)
+					{
+						List<Range1D> prevZs = heightMap[xx * patchDimensions.x + zz - 1];
+						if (prevZs.Count > 0)
+						{
+							Range1D prevZRange = prevZs[prevZs.Count - 1];
+							Range1D highestR = heightRanges[0];
+							if (!prevZRange.contains(highestR.extentMinusOne()))
+							{
+								highestR.top_light_level = nextLevel;
+								heightRanges[0] = highestR;
+							}
+						}
+					}
+				}
+				
+				if (zz < 5) //backwardly influence x light level
+				{
+					influenceXRowLightLevelWithNearbyZLevel();	
+				}
+#endif				
 				//NO-Y METHOD!!
 				
 				// TODO: (pos.) make height map a class with an accessor that imitates the array that it currently is
@@ -1070,7 +1161,7 @@ public class NoisePatch : ThreadedJob
 			this.patchRelativeChCosToRebuild = patchRelCoords;
 //			this.m_chunkManager.rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(this.coord, patchRelCoords); //test want but maybe not here (go to main thread)
 		} 
-		// otherwise this one will take what it needs later.
+		// else this noisepatch will take what it needs later so don't bother.
 	}
 	
 	private List<Coord> patchRelativeChunkCoordsThatTouchQuad(Quad quad, ref List<Coord> alreadyAddedCoords)
@@ -1183,13 +1274,13 @@ public class NoisePatch : ThreadedJob
 		
 		switch (nDir) {
 		case NeighborDirection.XPOS:
-			structuresFor = structuresForNeighbors.forXPos;
+			structuresFor = dataForNeighbors.structures.forXPos;
 			break;
 		case NeighborDirection.ZPOS:
-			structuresFor = structuresForNeighbors.forZPos;
+			structuresFor = dataForNeighbors.structures.forZPos;
 			break;
 		default:
-			structuresFor = structuresForNeighbors.forXZPos;
+			structuresFor = dataForNeighbors.structures.forXZPos;
 			break;
 		}
 		
@@ -1213,14 +1304,14 @@ public class NoisePatch : ThreadedJob
 			int zPosNeighborRelativeZCoord = zz - patchDimensions.z;
 			PTwo zPosRelCo = new PTwo(xx, zPosNeighborRelativeZCoord);
 			Plinth plzpos = new Plinth(zPosRelCo, pl.y_origin, noise_val + 5f);
-			structuresForNeighbors.forZPos.Add(plzpos);
+			dataForNeighbors.structures.forZPos.Add(plzpos);
 		}
 		if (xTruncated)
 		{
 			int xPosNeighborRelativeZCoord = xx - patchDimensions.x;
 			PTwo xPosRelCo = new PTwo(xPosNeighborRelativeZCoord, zz);
 			Plinth plxpos = new Plinth(xPosRelCo, pl.y_origin, noise_val + 5f);
-			structuresForNeighbors.forXPos.Add(plxpos);
+			dataForNeighbors.structures.forXPos.Add(plxpos);
 		}
 		if (xTruncated && zTruncated)
 		{
@@ -1228,7 +1319,7 @@ public class NoisePatch : ThreadedJob
 			int zPosNeighborRelativeZCoord = zz - patchDimensions.z;
 			PTwo xzPosRelCo = new PTwo(xPosNeighborRelativeZCoord, zPosNeighborRelativeZCoord);
 			Plinth plxzpos = new Plinth(xzPosRelCo, pl.y_origin, noise_val + 5f);
-			structuresForNeighbors.forXZPos.Add(plxzpos);
+			dataForNeighbors.structures.forXZPos.Add(plxzpos);
 		}
 	}
 	
@@ -1482,70 +1573,20 @@ public class NoisePatch : ThreadedJob
 	
 	#endregion
 
-	#region get texture
 
-	public Color[,] GetTexture()
-	{
-		return this.GetTexture(LibNoise.Unity.Gradient.Grayscale);
+}
+
+public struct DataForNeighbors
+{
+	public StructuresForNeighbors structures;
+	
+	public DataForNeighbors(StructuresForNeighbors _structuresForNeighbors) {
+		this.structures = _structuresForNeighbors;	
 	}
-
-	/// <summary>
-	/// Creates a texture map for the current content of the noise map.
-	/// </summary>
-	/// <param name="device">The graphics device to use.</param>
-	/// <param name="gradient">The gradient to color the texture map with.</param>
-	/// <returns>The created texture map.</returns>
-	public Color[,] GetTexture(LibNoise.Unity.Gradient gradient)
-	{
-		return this.GetTexture(ref gradient, patchDimensions.z, patchDimensions.y);
+	
+	public static DataForNeighbors MakeNew() {
+		return new DataForNeighbors(StructuresForNeighbors.MakeNew());	
 	}
-
-	public Color[,] GetTexture(ref LibNoise.Unity.Gradient gradient, int texWidth, int texHeight)
-	{
-//		Texture2D result = new Texture2D(texWidth, texHeight);
-//		Color[] data = new Color[texWidth * texHeight];
-		Color[,] data = new Color[texHeight ,texWidth];
-		int id = 0;
-
-		int texFour = texHeight / 4;
-
-		for (int y = 0; y < texFour * 4 ; y++)
-		{
-			for (int z = 0; z < texWidth; z++, id++)
-			{
-//		for (int z = 0; z < texWidth; z++)
-//		{
-//			for (int y = 0; y < texFour * 4 ; y++, id++)
-//			{
-				Block b = blocks [0, y, z];
-
-//				float d =  
-//					y % 4 == 0 ? 1f : (float)(x / texWidth);  // (float)(y / texHeight); // .75f; // 0.0f;
-//				if (!float.IsNaN(this.m_borderValue) && (x == 0 || x == this.m_width - 1 || y == 0 || y == this.m_height - 1))
-//				{
-//					d = this.m_borderValue;
-//				}
-//				else
-//				{
-//					d = this.m_data[x, y];
-//				}
-				data [y,z] = b.type == BlockType.Air ? Color.black : Color.white;  // new Color (d, d, d, 1f);// gradient[d];
-			}
-		}
-
-		return data;
-		//result.SetData<Color>(data);
-		//Debug.Log("Setting pixels");
-//		result.SetPixels(data);
-//		return result;
-	}
-
-	#endregion
-
-	private static int shiftCoordBy(int coordMaxValue, float scale) {
-		return (int)(coordMaxValue * scale);
-	}
-
 }
 
 public struct StructuresForNeighbors
@@ -1570,5 +1611,72 @@ public struct StructuresForNeighbors
 }
 
 public enum NeighborDirection {
-	XPOS, ZPOS, XZPOS
+	XPOS, ZPOS, XZPOS,
+	XNEG, ZNEG, XZNEG
 };
+
+
+
+//	#region get texture
+//
+//	public Color[,] GetTexture()
+//	{
+//		return this.GetTexture(LibNoise.Unity.Gradient.Grayscale);
+//	}
+//
+//	/// <summary>
+//	/// Creates a texture map for the current content of the noise map.
+//	/// </summary>
+//	/// <param name="device">The graphics device to use.</param>
+//	/// <param name="gradient">The gradient to color the texture map with.</param>
+//	/// <returns>The created texture map.</returns>
+//	public Color[,] GetTexture(LibNoise.Unity.Gradient gradient)
+//	{
+//		return this.GetTexture(ref gradient, patchDimensions.z, patchDimensions.y);
+//	}
+//
+//	public Color[,] GetTexture(ref LibNoise.Unity.Gradient gradient, int texWidth, int texHeight)
+//	{
+////		Texture2D result = new Texture2D(texWidth, texHeight);
+////		Color[] data = new Color[texWidth * texHeight];
+//		Color[,] data = new Color[texHeight ,texWidth];
+//		int id = 0;
+//
+//		int texFour = texHeight / 4;
+//
+//		for (int y = 0; y < texFour * 4 ; y++)
+//		{
+//			for (int z = 0; z < texWidth; z++, id++)
+//			{
+////		for (int z = 0; z < texWidth; z++)
+////		{
+////			for (int y = 0; y < texFour * 4 ; y++, id++)
+////			{
+//				Block b = blocks [0, y, z];
+//
+////				float d =  
+////					y % 4 == 0 ? 1f : (float)(x / texWidth);  // (float)(y / texHeight); // .75f; // 0.0f;
+////				if (!float.IsNaN(this.m_borderValue) && (x == 0 || x == this.m_width - 1 || y == 0 || y == this.m_height - 1))
+////				{
+////					d = this.m_borderValue;
+////				}
+////				else
+////				{
+////					d = this.m_data[x, y];
+////				}
+//				data [y,z] = b.type == BlockType.Air ? Color.black : Color.white;  // new Color (d, d, d, 1f);// gradient[d];
+//			}
+//		}
+//
+//		return data;
+//		//result.SetData<Color>(data);
+//		//Debug.Log("Setting pixels");
+////		result.SetPixels(data);
+////		return result;
+//	}
+//
+//	#endregion
+//
+//	private static int shiftCoordBy(int coordMaxValue, float scale) {
+//		return (int)(coordMaxValue * scale);
+//	}

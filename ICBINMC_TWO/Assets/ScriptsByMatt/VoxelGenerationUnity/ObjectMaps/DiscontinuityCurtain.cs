@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using Wintellect.PowerCollections;
 
+using System;
+
 //public struct Box3
 //{
 //	public Coord origin;
@@ -97,7 +99,78 @@ public class ZCurtain
 		}
 	}
 	
-	public void extendCurtainToIncludeWocoZ(int woco_z) 
+	public ZDiscontinuityPointCoverageStatus z_contains(int woco_z) {
+		if (woco_z < this.worldStartZ)
+		{
+			return ZDiscontinuityPointCoverageStatus.BeyondBoundsZNeg;
+		}
+		
+		if (woco_z > this.worldEndZ)
+		{
+			return ZDiscontinuityPointCoverageStatus.BeyondBoundsZPos;
+		}
+		
+		foreach (ZCurtainUnit zcu in sections) {
+			if (zcu.zRange.contains(woco_z))
+				return ZDiscontinuityPointCoverageStatus.WithinDiscontinuity;
+			
+			if (zcu.zRange.start > woco_z)
+				return ZDiscontinuityPointCoverageStatus.WithinBoundsOutsideOfDiscontinuity;
+		}
+		
+		return ZDiscontinuityPointCoverageStatus.WithinBoundsOutsideOfDiscontinuity;
+	}
+	
+	public void addNewCurtainUnitWithZNegStartAt(int woco_z) 
+	{
+		ZCurtainUnit zcu = new ZCurtainUnit(woco_z);
+		
+		// greater than end
+		if (woco_z > this.worldEndZ)
+		{
+			sections.Add(zcu);
+			return;
+		}
+		
+		if (woco_z < this.worldStartZ)
+		{
+			sections.Insert(0, zcu);
+			return;
+		}
+		
+		int insert_at = 0;
+		//check contiains
+		for(int i = 0; i < sections.Count; ++i) 
+		{
+			ZCurtainUnit _zcu = sections[i];
+			if (_zcu.zRange.contains(woco_z)) {
+				throw new Exception("trying to add a woco z that we already contain...");	
+			}
+			
+			if (_zcu.zRange.start < woco_z) {
+				
+				if (i == 0)
+					throw new Exception("confusing: why did we get here then (adding new curtain unit..)");
+				
+				insert_at = i - 1;
+				break;
+			}
+		}
+
+		sections.Insert (insert_at, zcu);
+	}
+	
+	public void extendCurtainToIncludeNonTerminationWocoZ(int woco_z) 
+	{
+		extendCurtainToIncludeWocoZ(woco_z, true, Range1D.theErsatzNullRange(), Range1D.theErsatzNullRange(), false);
+	}
+	
+	public void extendCurtainToIncludeWocoZ(int woco_z, Range1D adjacentSurfaceContinuityZPosNeg, Range1D airRange) 
+	{
+		extendCurtainToIncludeWocoZ(woco_z, true, adjacentSurfaceContinuityZPosNeg, airRange, true);
+	}
+	
+	private void extendCurtainToIncludeWocoZ(int woco_z, bool extendInZPosForMiddle, Range1D adjacentSurfaceContinuityZPosNeg, Range1D airRange, bool setTerminalStatus) 
 	{
 		// greater than end
 		if (woco_z >= this.worldEndZ)
@@ -105,6 +178,8 @@ public class ZCurtain
 			ZCurtainUnit lastcu = sections[sections.Count - 1];
 			lastcu.zRange = lastcu.zRange.extendRangeToInclude(woco_z);
 			sections[sections.Count - 1] = lastcu;
+			if (setTerminalStatus)
+				setDiscontinuityEndWithSurfaceRange(adjacentSurfaceContinuityZPosNeg, airRange);
 			return;
 		}
 		
@@ -113,66 +188,90 @@ public class ZCurtain
 			ZCurtainUnit firstcu = sections[0];
 			firstcu.zRange = firstcu.zRange.extendRangeToInclude(woco_z);
 			sections[0] = firstcu;
+			if (setTerminalStatus)
+				setDiscontinuityStartWithSurfaceRange(adjacentSurfaceContinuityZPosNeg, airRange);
 			return;	
 		}
 		
-		// TODO: middle
-		// we are not sure whether we care about the middle! (there's probably a reason)
+		if (sections.Count == 1) {
+			ZCurtainUnit zcu = sections[0];
+			if (zcu.zRange.contains(woco_z))
+				return;
+		}
+		
+		if (sections.Count < 2) {
+			return;
+		} // can't be anthing more to do!
+		
+		// Between ranges
+		// now we need bool extend in z pos
+		
 		SimpleRange zRange;
+		SimpleRange nextZRange;
 		bool combineWithNext = false;
 		int i = 0;
 		ZCurtainUnit zcurtain_unit;
-		for( ; i < sections.Count; ++i)
+		ZCurtainUnit nextZCurtain_unit;
+		for(; i < sections.Count - 1; ++i)
 		{
 			zcurtain_unit = sections[i];
+			nextZCurtain_unit = sections[i + 1];
+			
 			zRange = zcurtain_unit.zRange;
+			nextZRange = nextZCurtain_unit.zRange;
+			
 			if (zRange.contains(woco_z))
 				return;
-			if (zRange.start - 1 == woco_z)
-			{
-				zRange.start--;
-				zRange.range++;
-				zcurtain_unit.zRange = zRange;
-				sections[i] = zcurtain_unit;
-				break;
-			}
-			if (zRange.extent() == woco_z)
-			{
-				zRange.range++;
-				zcurtain_unit.zRange = zRange;
-				sections[i] = zcurtain_unit;
-				break;
-			}
 			
-			if (zRange.start > woco_z)
+			if (zRange.extent() <= woco_z && nextZRange.start > woco_z)
 			{
-				break; // don't know what to do here?	
+				if (extendInZPosForMiddle)
+				{
+					zRange = SimpleRange.SimpleRangeWithStartAndExtent(zRange.start, woco_z + 1);
+				} else {
+					nextZRange = SimpleRange.SimpleRangeWithStartAndExtent(woco_z, nextZRange.extent());	
+				}
+					
+				//connected up now?
+				if (zRange.extent() == nextZRange.start) {
+					zRange.range += nextZRange.range;
+					zcurtain_unit.endIsOpen = nextZCurtain_unit.endIsOpen;
+					sections.RemoveAt(i + 1); // remove next
+				} else {
+					nextZCurtain_unit.zRange = nextZRange;
+					sections[i + 1] = nextZCurtain_unit;	
+				}
+				
+				zcurtain_unit.zRange = zRange;
+				sections[i] = zcurtain_unit;
+				break;
 			}
 		}
 	}
 	
-	public void setDiscontinuityStartWithSurfaceRange(Range1D surfaceRange, Range1D airRange_) 
+	public void setDiscontinuityStartWithSurfaceRange(Range1D lastContinuityBeforeRange, Range1D airRange_) 
 	{
-		setDiscontinuityWithSurfaceRange(surfaceRange, airRange_, true);
+		setDiscontinuityWithSurfaceRange(lastContinuityBeforeRange, airRange_, true);
 	}
 	
-	public void setDiscontinuityEndWithSurfaceRange(Range1D surfaceRange, Range1D airRange_) 
+	public void setDiscontinuityEndWithSurfaceRange(Range1D lastContinuityBeforeRange, Range1D airRange_) 
 	{
-		setDiscontinuityWithSurfaceRange(surfaceRange, airRange_, false);
+		setDiscontinuityWithSurfaceRange(lastContinuityBeforeRange, airRange_, false);
 	}
 	
-	private void setDiscontinuityWithSurfaceRange(Range1D surfaceRange, Range1D airRange_, bool wantStart) 
+	private void setDiscontinuityWithSurfaceRange(Range1D lastContinuityBeforeRange, Range1D airRange_, bool wantStart) 
 	{
 		if (sections.Count < 1)
 			return;
 		
-		SimpleRange surfRange = new SimpleRange(surfaceRange.start, surfaceRange.range);
+		SimpleRange surfRange = new SimpleRange(lastContinuityBeforeRange.start, lastContinuityBeforeRange.range);
 		SimpleRange airRange = new SimpleRange(airRange_.start, airRange_.range);
 		
 		ZCurtainUnit zcu;
 		if (wantStart) zcu = sections[0];
 		else zcu = sections[sections.Count - 1];
 		
+		// whether 
 		zcu.startIsOpen = SimpleRange.SimpleRangeCoversRange(surfRange, airRange);
 	}
 	
@@ -184,6 +283,20 @@ public class ZCurtain
 		return index < sections.Count - 1;	
 	}
 	
+	public IEnumerable zCurtainsRanges() {
+		foreach(ZCurtainUnit zcu in sections) {
+			yield return zcu.zRange;	
+		}
+	}
+	
+}
+
+public enum ZDiscontinuityPointCoverageStatus {
+ 	BeyondXDomain, BeyondBoundsZNeg, BeyondBoundsZPos,  ZAdjacentToStart, ZAdjacentToEnd, WithinBoundsOutsideOfDiscontinuity, WithinDiscontinuity
+}
+
+public enum XDiscontinuityPointCoverageStatus {
+	BeyondBoundsXNeg, BeyondBoundsXPos,  XAdjacentToLowerLimit, XAdjacentToUpperLimit, WithinXDomain
 }
 
 public class DiscontinuityCurtain 
@@ -201,21 +314,166 @@ public class DiscontinuityCurtain
 		z_curtains.Add(inital_zc);
 	}
 	
-	public bool addContiguousXZCoord(PTwo xzco)
+	#region point coverage status
+	
+	public ZDiscontinuityPointCoverageStatus zCoverageStatusForPoint(PTwo woco_pointxz) 
 	{
-		Range1D z_domain = bounds.tRange();
-		if (z_domain.contains(xzco.t)) {
-			PTwo relCo = bounds.origin - xzco;	
+		if (!bounds.sRange().contains(woco_pointxz.s)) {
+			
+			return ZDiscontinuityPointCoverageStatus.BeyondXDomain;
+		}
+		
+		PTwo relCo = woco_pointxz - bounds.origin;
+		return z_curtains[relCo.s].z_contains(woco_pointxz.t);
+	}
+	
+//	public ZDiscontinuityPointCoverageStatus zCoverageStatusForPointIncludeXAdjaceny(PTwo woco_pointxz)
+//	{
+//		XDiscontinuityPointCoverageStatus xcoverage = this.xCoverageStatusForPoint(woco_pointxz);
+//		
+//		if (xcoverage <= XDiscontinuityPointCoverageStatus.BeyondBoundsXPos) //beyond bounds pos or neg
+//			return false;
+//		
+//		if (xcoverage == XDiscontinuityPointCoverageStatus.XAdjacentToLowerLimit) {
+//			woco_pointxz.s++;	
+//		} else if (xcoverage == XDiscontinuityPointCoverageStatus.XAdjacentToUpperLimit) {
+//			woco_pointxz.s--;	
+//		}
+//		
+//		ZDiscontinuityPointCoverageStatus zcoverage = this.zCoverageStatusForPoint(woco_pointxz);
+//		
+//		if (zcoverage <= ZDiscontinuityPointCoverageStatus.BeyondBoundsZPos) {
+//				
+//		}
+//	}
+	
+	public XDiscontinuityPointCoverageStatus xCoverageStatusForPoint(PTwo woco_pointxz) 
+	{
+		Range1D srange = bounds.sRange();
+		if (woco_pointxz.s > srange.extentMinusOne())
+		{
+			if (srange.extent() == woco_pointxz.s)
+				return XDiscontinuityPointCoverageStatus.XAdjacentToUpperLimit;
+			
+			return XDiscontinuityPointCoverageStatus.BeyondBoundsXPos;
+		}
+		if (woco_pointxz.s < srange.start)
+		{
+			if (srange.start - 1 == woco_pointxz.s)
+				return XDiscontinuityPointCoverageStatus.XAdjacentToLowerLimit;
+			return XDiscontinuityPointCoverageStatus.BeyondBoundsXNeg;
+		}
+
+		return XDiscontinuityPointCoverageStatus.WithinXDomain;
+	}
+	
+	#endregion
+	
+	#region extend curtain
+	
+	public void extendWithXZCoordWithoutTerminatingRanges(PTwo xzco) 
+	{
+		extendWithXZCoord(xzco, Range1D.theErsatzNullRange(), Range1D.theErsatzNullRange(), false);	
+	}
+	
+	public void extendWithXZCoordAndTerminatingRanges(PTwo xzco, Range1D continuityRangeAtZPlusOrMinusOne, Range1D airRange)
+	{
+		extendWithXZCoord(xzco, continuityRangeAtZPlusOrMinusOne, airRange, true);
+	}
+	
+	//TODO: need extra parameters for the air and surface at z plus 1!
+	private void extendWithXZCoord(PTwo xzco, Range1D continuityRangeAtZPlusOrMinusOne, Range1D airRange, bool setTerminatingDisConStatus)
+	{
+		Range1D x_domain = bounds.sRange();
+		if (x_domain.contains(xzco.s)) 
+		{
+			PTwo relCo = xzco - bounds.origin;	
 			ZCurtain zcur = z_curtains[relCo.s];
-			zcur.extendCurtainToIncludeWocoZ(xzco.t);
+			if (setTerminatingDisConStatus)
+				zcur.extendCurtainToIncludeWocoZ(xzco.t, continuityRangeAtZPlusOrMinusOne, airRange);
+			else 
+				zcur.extendCurtainToIncludeNonTerminationWocoZ(xzco.t);
+			
 			z_curtains[relCo.s] = zcur;
+			
+			bounds = bounds.expandedToContainPoint(xzco);
+		}
+	}
+	
+	#endregion
+	
+	#region add new curtain
+	
+	public bool addNewZCurtainSectionAt(PTwo xzco, Range1D continuityRangeAtZPlusOrMinusOne, Range1D airRange)
+	{
+		if (doAddNewZCurtainSectionAt(xzco, continuityRangeAtZPlusOrMinusOne, airRange)) {
+			bounds = bounds.expandedToContainPoint(xzco);
 			return true;
 		}
-		//TODO: next door in s dim?
-//		if (
+		return false;
+	}
+	
+	private bool doAddNewZCurtainSectionAt(PTwo xzco, Range1D continuityRangeAtZPlusOrMinusOne, Range1D airRange)
+	{
+		if (!thereIsAdjacencyOnOneSideOrTheOther(xzco))
+			return false; 
+		
+		Range1D x_domain = bounds.sRange();
+		if (x_domain.contains(xzco.s)) 
+		{
+			PTwo relCo = bounds.origin - xzco;	
+			ZCurtain zcur = z_curtains[relCo.s];
+			
+			zcur.addNewCurtainUnitWithZNegStartAt(xzco.t);
+			zcur.setDiscontinuityStartWithSurfaceRange(continuityRangeAtZPlusOrMinusOne, airRange);
+			z_curtains[relCo.s] = zcur;
+
+			return true;
+		}
+		
+		if (x_domain.start - 1 == xzco.s)
+		{
+			ZCurtain zc = new ZCurtain(xzco.t);	
+			zc.setDiscontinuityStartWithSurfaceRange(continuityRangeAtZPlusOrMinusOne, airRange);
+			z_curtains.Insert(0, zc);
+			return true;
+		}
+		else if (x_domain.extent() == xzco.s)
+		{
+			ZCurtain zc = new ZCurtain(xzco.t);	
+			zc.setDiscontinuityStartWithSurfaceRange(continuityRangeAtZPlusOrMinusOne, airRange);			
+			z_curtains.Add(zc);
+			return true;
+		}
 		
 		return false;
 	}
+	
+	#endregion
+	
+	private bool checkAdjacencyAt(int xcoToCheckAgainst, int zco) 
+	{
+		if (!bounds.sRange().contains(xcoToCheckAgainst))
+			return false;
+		
+		ZCurtain zcurtain = z_curtains[bounds.origin.s - xcoToCheckAgainst];
+		foreach(SimpleRange curtainUnitRange in zcurtain.zCurtainsRanges()) 
+		{
+			if (curtainUnitRange.contains(zco)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private bool thereIsAdjacencyOnOneSideOrTheOther(PTwo pointToAdd)
+	{
+		if (checkAdjacencyAt(pointToAdd.s - 1, pointToAdd.t)) {
+			return true;
+		}
+		return this.checkAdjacencyAt(pointToAdd.s + 1, pointToAdd.t);
+	}
+
 	
 	// from a bird's eye view
 	// a discontinuity curtain is a squiggle on the map

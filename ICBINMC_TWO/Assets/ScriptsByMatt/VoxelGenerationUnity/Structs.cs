@@ -25,12 +25,28 @@ public struct MeshSet
 {
 	public GeometrySet geometrySet;
 	public List<Vector2> uvs;
+	public List<Vector2> colors;
+	public List<Color32> color32s;
 	
 	public int deltaVertexCount;
 	
-	public MeshSet(GeometrySet gs, List<Vector2> _uvs) {
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Vector2> _colors, List<Color32> _color32s) {
 		this.geometrySet = gs; this.uvs = _uvs;	
 		deltaVertexCount = 0;
+		color32s = _color32s;
+		colors = _colors;
+	}
+	
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Vector2> _colors) {
+		this = new MeshSet(gs, _uvs, _colors, new List<Color32>() );
+	}
+	
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Color32> _color32s) {
+		this = new MeshSet(gs, _uvs, new List<Vector2>() , _color32s);
+	}
+	
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs) {
+		this = new MeshSet(gs, _uvs, new List<Vector2>() );
 	}
 	
 	public static MeshSet emptyMeshSet() {
@@ -38,6 +54,17 @@ public struct MeshSet
 		List<int> tris = new List<int>();
 		List<Vector2> uvs = new List<Vector2>();
 		return new MeshSet(new GeometrySet(tris, vs), uvs);
+	}
+	
+	public void clearAll() {
+		if (this.geometrySet.vertices == null)
+			return;
+		
+		this.geometrySet.vertices.Clear();
+		this.geometrySet.indices.Clear();
+		this.uvs.Clear();
+		this.colors.Clear();
+		this.color32s.Clear();
 	}
 }
 //
@@ -219,6 +246,72 @@ public struct IndexSet
 	
 	public static IndexSet theErsatzNullIndexSet() {
 		return new IndexSet(-444, -321, -987554, -33);	
+	}
+}
+
+public struct LightCorners
+{
+	public byte oo;
+	public byte mo;
+	public byte om;
+	public byte mm;
+	
+	public LightCorners(byte _oo, byte _mo, byte _om, byte _mm)
+	{
+		oo = _oo; mo = _mo; om = _om; mm = _mm;
+	}
+	
+	public LightCorners(byte _all_values)
+	{
+		this = new LightCorners(_all_values,_all_values,_all_values,_all_values);
+	}
+	
+	public LightCorners(byte _top, byte _bottom)
+	{
+		this = new LightCorners(_top,_top,_bottom,_bottom);
+	}
+	
+	public static LightCorners LightCornersFromRangeTopBottom( Range1D _range) 
+	{
+		return new LightCorners(_range.top_light_level, _range.bottom_light_level);
+	}
+	
+	public static LightCorners CombineHorizontally(LightCorners left, LightCorners right) {
+		return new LightCorners(left.oo, right.mo, left.om, right.mm);	
+	}
+	
+	public void setRightCornersWithRange(Range1D right_side_range)
+	{
+		this.mo = right_side_range.top_light_level;
+		this.mm = right_side_range.bottom_light_level;
+	}
+	
+	public void setLeftCornersWithRange(Range1D right_side_range)
+	{
+		this.oo = right_side_range.top_light_level;
+		this.om = right_side_range.bottom_light_level;
+	}
+	
+	public static LightCorners MaxLightLightCorners() {
+		return new LightCorners(Block.MAX_LIGHT_LEVEL);	
+	}
+}
+
+public struct LitQuad
+{
+	public Quad quad;
+	public LightCorners lightCorners;
+	
+	public LitQuad(Quad _quad, LightCorners _lightCorners) {
+		quad = _quad; lightCorners = _lightCorners;
+	}
+	
+	public LitQuad(Quad _quad) {
+		this = new LitQuad(_quad, LightCorners.MaxLightLightCorners() );
+	}	
+	
+	public static LitQuad LitQuadFromStrip(Strip strip, int horizontalLocation) {
+		return new LitQuad(Quad.QuadFromStrip(strip, horizontalLocation), LightCorners.LightCornersFromRangeTopBottom(strip.range));
 	}
 }
 

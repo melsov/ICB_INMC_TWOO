@@ -1,5 +1,7 @@
 #define FACE_AG
 #define FACE_AG_XZ
+#define LIGHT_BY_RANGE
+//#define MESH_BUILDER_BUILDS_MESH
 //#define NO_MESHBUILDER
 //#define ONLY_HIGHEST_Y_FACES
 //#define NO_XZ
@@ -50,6 +52,19 @@ using System;
 // TODO: make a class that acts like a coord dictionary
 // but really uses a list and a 2D array--like we use in FaceAgg.
 
+public struct FaceInfo
+{
+	
+	public byte lightLevel;
+	public Coord coord;
+	public Direction direction;
+	public BlockType blockType;
+	
+	public FaceInfo(Coord _coord, byte _lightlev, Direction _dir, BlockType block_type) {
+		coord = _coord; lightLevel = _lightlev;	direction = _dir; blockType = block_type;
+	}
+}
+
 public class Chunk : ThreadedJob
 {
 	public static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH; //duplicate of chunkManager's chunklength...
@@ -66,6 +81,8 @@ public class Chunk : ThreadedJob
 	List<Vector3> vertices_list; // = new List<Vector3> ();
 	List<int> triangles_list; // = new List<int> ();
 	List <Vector2> uvcoords_list; // = new List<Vector2> ();
+//	List<Vector2> colors_list = new List<Vector2>();
+	List<Color32> col32s_list = new List<Color32>();
 
 	public bool noNeedToRenderFlag;
 	public bool isActive;
@@ -85,6 +102,8 @@ public class Chunk : ThreadedJob
 	public const float VERTEXSCALE = 1f;
 	
 	public const int TEXTURE_ATLAS_TILES_PER_DIM = 4;
+	
+	private Mesh builtMesh;
 	
 	public Chunk()
 	{
@@ -488,8 +507,9 @@ public class Chunk : ThreadedJob
 	
 	private void addRangeToFaceAggregatorAtXZ(List<Range1D> ranges, BlockType type, Direction dir, int x, int z)
 	{
-		// TODO: make 'addRange func.s in FaceSet and FAgg
+		//TODO: make 'addRange func.s in FaceSet and FAgg
 		//TODO: make sure that all ranges are of one block type.
+		FaceInfo finfo = new FaceInfo(Coord.coordZero() , 3, dir, type);
 
 		foreach(Range1D range in ranges)
 		{
@@ -497,20 +517,26 @@ public class Chunk : ThreadedJob
 			int end = range.extent();
 			while(j < end)
 			{
-				addCoordToFaceAggregorAtIndex(new Coord	(x, j, z), type, dir);
+				finfo.coord = new Coord(x, j, z); 
+				finfo.lightLevel = (byte) Mathf.Lerp(range.bottom_light_level, range.top_light_level, (j - range.start) / range.range);
+
+//				addCoordToFaceAggregorAtIndex(new Coord	(x, j, z), type, dir);
+				addCoordToFaceAggregorAtIndex(finfo);
 				++j;
 			}
 		}
 	}
 	
-	private void addCoordToFaceAggregorAtIndex(Coord co, BlockType type, Direction dir) 
+//	private void addCoordToFaceAggregorAtIndex(Coord co, BlockType type, Direction dir) 
+	private void addCoordToFaceAggregorAtIndex(FaceInfo _faceInfo) 
 	{
 #if NO_MESHBUILDER
 		FaceAggregator fa = faceAggregatorAt(co.y);
 		fa.addFaceAtCoordBlockType(co, type, dir );
 		faceAggregators[co.y] = fa; // put back...
 #else
-		meshBuilder.addCoordToFaceAggregatorAtIndex(co, type, dir);
+//		meshBuilder.addCoordToFaceAggregatorAtIndex(co, type, dir);
+		meshBuilder.addCoordToFaceAggregatorAtIndex(_faceInfo);
 #endif
 
 	}
@@ -552,12 +578,13 @@ public class Chunk : ThreadedJob
 					int j = heights.Count - 1;	
 					int jend = heights.Count; // 1;
 #else
-					int j = 0;
-					int jend = heights.Count;
+					int j = heights.Count - 1;
+					int jend = 0;
 #endif
 					
 					Range1D h_range;
-					for (; j < jend ; ++ j)
+
+					for (; j >= jend ; --j)
 					{
 						
 						h_range = heights[j];
@@ -595,12 +622,13 @@ public class Chunk : ThreadedJob
 						if (no_lower_faces) //don't draw below bedrock
 						{
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
-							targetBlockIndex = new ChunkIndex(blockCoord);	
+							targetBlockIndex = new ChunkIndex(blockCoord);
 							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
 							if (b != null) 
 							{
 #if FACE_AG
-								addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos); 
+//								addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos);								
+								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.ypos, b.type));								
 #else
 								addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
 								starting_tri_index += 4;
@@ -613,7 +641,8 @@ public class Chunk : ThreadedJob
 						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, extentBlockCoord);
 #if FACE_AG
 						if (b != null)
-							addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);
+							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.yneg, b.type));
+//							addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);
 #else
 						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
 						starting_tri_index += 4;
@@ -739,6 +768,11 @@ public class Chunk : ThreadedJob
 	
 	private void addAggregatedFaceGeomToMesh(int starting_tri_index) 
 	{
+#if MESH_BUILDER_BUILDS_MESH
+		meshBuilder.compileGeometryAndKeepMeshSet(ref starting_tri_index);
+		return;	
+#endif
+		
 #if NO_MESHBUILDER
 		FaceAggregator fa;
 		for (int i = 0; i < faceAggregators.Length ; ++i)
@@ -768,6 +802,7 @@ public class Chunk : ThreadedJob
 		triangles_list.AddRange(mesh_set.geometrySet.indices);
 		uvcoords_list.AddRange(mesh_set.uvs);
 		vertices_list.AddRange(mesh_set.geometrySet.vertices);
+		col32s_list.AddRange(mesh_set.color32s);
 #endif
 		
 	}
@@ -824,9 +859,15 @@ public class Chunk : ThreadedJob
 		Range1D remainderRange = _range;
 		
 		bool shouldDebug = debug; 
+		Range1D adjacentRange = Range1D.theErsatzNullRange();
+//		bool adjacentRangeReallyAssigned = false;
+		int i = 0;
 		
-		foreach(Range1D adjacentRange in adjacentRanges)
+		for (; i < adjacentRanges.Count ; ++i)
 		{
+			adjacentRange = adjacentRanges[i];
+//			adjacentRangeReallyAssigned = true;
+			
 			// get the section that's entirely below adj range
 			Range1D belowAdj = remainderRange.subRangeBelow(adjacentRange.start);
 			
@@ -842,6 +883,10 @@ public class Chunk : ThreadedJob
 				
 				if (_range.contains(belowAdj))
 				{
+#if LIGHT_BY_RANGE
+					belowAdj.bottom_light_level =  adjacentRange.bottom_light_level; //side ranges borrow adj light lvel
+					belowAdj.top_light_level = adjacentRange.bottom_light_level;
+#endif
 					nonOverlappingRanges.Add(belowAdj);
 				}
 				else if (debug) {
@@ -855,6 +900,7 @@ public class Chunk : ThreadedJob
 			}
 			
 			remainderRange = remainderRange.subRangeAboveRange(adjacentRange);
+			remainderRange.bottom_light_level = remainderRange.top_light_level = adjacentRange.top_light_level;
 			
 			// no hope of finding more ranges?
 			if (adjacentRange.extentMinusOne() >= remainderRange.extentMinusOne())
@@ -874,6 +920,12 @@ public class Chunk : ThreadedJob
 			
 			if (_range.contains(remainderRange))
 			{
+#if LIGHT_BY_RANGE
+//				if (adjacentRangeReallyAssigned) {
+					remainderRange.bottom_light_level =  _range.top_light_level; // the last adjacent range.
+					remainderRange.top_light_level = _range.top_light_level;
+//				}
+#endif
 				nonOverlappingRanges.Add(remainderRange);
 			}
 			else if (debug) {
@@ -881,9 +933,139 @@ public class Chunk : ThreadedJob
 			}
 			
 		}
-			
 		return nonOverlappingRanges;
 	}
+
+	
+	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index)
+	{
+		addYFaceAtChunkIndex(ci, bType, dir, tri_index, 1);
+	}
+	
+	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index, int height)
+	{
+		Vector3[] verts = new Vector3[]{};
+		int[] tris = new int[]{};
+
+		Vector2[] uvs;
+
+		int shift = (int) dir % 2 == 1 ? -1 : 1;
+		Direction oppositeDir = (Direction) ((int) dir + shift);
+		uvs = uvCoordsForBlockType (bType, oppositeDir);
+
+		int[] posTriangles = new int[] { 0, 2, 3, 0, 1, 2 };  // clockwise when looking from pos towards neg
+		int[] negTriangles = new int[] { 0, 3, 2, 0, 2, 1 }; // the opposite
+
+		tris =(int)(oppositeDir) % 2 == 0 ? posTriangles : negTriangles; 
+
+		for (int ii = 0; ii < tris.Length; ++ii) {
+			tris [ii] += tri_index;
+		}
+		verts = faceMesh (oppositeDir, ci , (float) (height - 1)); //third param = extra hieght. TODO: change this silly implementation
+		vertices_list.AddRange (verts);
+		// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
+		triangles_list.AddRange (tris);
+		// 4 uv coords
+		uvcoords_list.AddRange (uvs);
+	}
+
+
+	public void applyMesh()
+	{
+		applyMeshToGameObject ();
+	}
+
+	public void clearMesh()
+	{
+		clearMeshOfGameObject (meshHoldingGameObject); 
+		return;
+	}
+	
+	private void applyMeshToGameObject()
+	{
+//#if MESH_BUILDER_BUILDS_MESH
+//		if (builtMesh == null)
+//			throw new Exception("null built mesh");
+//		Mesh mesh = builtMesh;
+//#else
+//#endif
+		GeometrySet geomset = new GeometrySet(triangles_list, vertices_list);
+		MeshSet mset = new MeshSet(geomset, uvcoords_list, col32s_list);
+		this.applyMeshToGameObjectWithMeshSet(mset);
+	}
+	
+	public IEnumerator applyMeshToGameObjectCoro()
+	{
+		GeometrySet geomset = new GeometrySet(triangles_list, vertices_list);
+		MeshSet mset = new MeshSet(geomset, uvcoords_list, col32s_list);
+		this.applyMeshToGameObjectWithMeshSet(mset);
+		yield return null;
+	}
+	
+	private void applyMeshToGameObjectWithMeshSet(MeshSet mset) 
+	{
+		meshBuilder.addDataToMesh(meshHoldingGameObject);
+		return;
+#if MESH_BUILDER_BUILDS_MESH
+#endif
+		GameObject _gameObj = meshHoldingGameObject;
+		Mesh mesh = new Mesh();
+		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
+
+		mesh.Clear ();
+	
+		mesh.vertices = mset.geometrySet.vertices.ToArray ();
+		mesh.uv = mset.uvs.ToArray ();
+		mesh.triangles = mset.geometrySet.indices.ToArray ();
+		
+		mesh.colors32 = mset.color32s.ToArray();
+
+		
+		mesh.RecalculateNormals();
+		mesh.RecalculateBounds();
+		
+		mesh.Optimize();
+
+		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
+
+	}
+
+	public void clearMeshLists() 
+	{
+		vertices_list.Clear ();
+		uvcoords_list.Clear ();
+		triangles_list.Clear ();
+		col32s_list.Clear();
+	}
+
+
+	public void clearMeshOfGameObject(GameObject _gameObj)
+	{
+		Mesh mesh = new Mesh();
+		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
+
+		mesh.Clear ();
+
+		mesh.RecalculateNormals();
+		mesh.RecalculateBounds();
+		mesh.Optimize();
+
+		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
+	}
+
+	public void destroyAndSetGameObjectToNull() {
+
+		meshHoldingGameObject = null;
+	}
+	
+	void bug(string str) {
+		Debug.Log (str);
+	}
+	
+	
+
+}
+
 	
 
 //	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
@@ -928,212 +1110,3 @@ public class Chunk : ThreadedJob
 //			}
 //		}
 //	}
-	
-	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index)
-	{
-		addYFaceAtChunkIndex(ci, bType, dir, tri_index, 1);
-	}
-	
-	void addYFaceAtChunkIndex(ChunkIndex ci, BlockType bType, Direction dir, int tri_index, int height)
-	{
-		Vector3[] verts = new Vector3[]{};
-		int[] tris = new int[]{};
-
-		Vector2[] uvs;
-
-		int shift = (int) dir % 2 == 1 ? -1 : 1;
-		Direction oppositeDir = (Direction) ((int) dir + shift);
-		uvs = uvCoordsForBlockType (bType, oppositeDir);
-
-		int[] posTriangles = new int[] { 0, 2, 3, 0, 1, 2 };  // clockwise when looking from pos towards neg
-		int[] negTriangles = new int[] { 0, 3, 2, 0, 2, 1 }; // the opposite
-
-		tris =(int)(oppositeDir) % 2 == 0 ? posTriangles : negTriangles; 
-
-		for (int ii = 0; ii < tris.Length; ++ii) {
-			tris [ii] += tri_index;
-		}
-		verts = faceMesh (oppositeDir, ci , (float) (height - 1)); //third param = extra hieght. TODO: change this silly implementation
-		vertices_list.AddRange (verts);
-		// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
-		triangles_list.AddRange (tris);
-		// 4 uv coords
-		uvcoords_list.AddRange (uvs);
-	}
-
-
-	public void applyMesh()
-	{
-		applyMeshToGameObject (meshHoldingGameObject);
-		return; 
-		// *****
-
-//		Mesh mesh = new Mesh();
-//		GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
-//
-//		mesh.Clear ();
-//		mesh.vertices = vertices_list.ToArray ();
-//		mesh.uv = uvcoords_list.ToArray ();
-//		mesh.triangles = triangles_list.ToArray ();
-//
-//		//clear lists 
-//
-//		//		GetComponent<MeshFilter>().meshCollider = meshc;
-//		//		meshc.sharedMesh = mesh ;
-//
-//		mesh.RecalculateNormals();
-//		mesh.RecalculateBounds();
-//		mesh.Optimize();
-//
-//		//		GetComponent<MeshCollider>().sharedMesh = null; // don't seem to need
-//		GetComponent<MeshCollider>().sharedMesh = mesh;
-	}
-
-	public void clearMesh()
-	{
-		clearMeshOfGameObject (meshHoldingGameObject); 
-		return;
-		// ************v
-
-//		Mesh mesh = new Mesh();
-//		GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
-//
-//		mesh.Clear ();
-//		
-//		mesh.RecalculateNormals();
-//		mesh.RecalculateBounds();
-//		mesh.Optimize();
-//
-//		GetComponent<MeshCollider>().sharedMesh = mesh;
-	}
-
-	//public void applyMeshToGameObject(GameObject _gameObj)
-	//{
-	//	applyMeshToGameObject(_gameObj, false);
-	//}
-
-	public void applyMeshToGameObject(GameObject _gameObj)
-	{
-		Mesh mesh = new Mesh();
-		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
-
-		mesh.Clear ();
-		mesh.vertices = vertices_list.ToArray ();
-		mesh.uv = uvcoords_list.ToArray ();
-		mesh.triangles = triangles_list.ToArray ();
-
-
-		mesh.RecalculateNormals();
-		mesh.RecalculateBounds();
-		mesh.Optimize();
-
-		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
-
-		// TODO: clear the lists?
-
-//		vertices_list.Clear ();
-//		uvcoords_list.Clear ();
-//		triangles_list.Clear ();
-	}
-	
-	// TODO: consolidate all of these duplicate funcs.
-	public void applyMeshToGameObjectWithMeshSet(MeshSet mset) 
-	{
-		GameObject _gameObj = meshHoldingGameObject;
-		Mesh mesh = new Mesh();
-		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
-
-		mesh.Clear ();
-		mesh.vertices = mset.geometrySet.vertices.ToArray ();
-		mesh.uv = mset.uvs.ToArray ();
-		mesh.triangles = mset.geometrySet.indices.ToArray ();
-
-
-		mesh.RecalculateNormals();
-		mesh.RecalculateBounds();
-		mesh.Optimize();
-
-		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
-	}
-
-	public IEnumerator applyMeshToGameObjectCoro()
-	{
-		GameObject _gameObj = meshHoldingGameObject;
-		Mesh mesh = new Mesh();
-		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
-
-		mesh.Clear ();
-		mesh.vertices = vertices_list.ToArray ();
-		mesh.uv = uvcoords_list.ToArray ();
-		mesh.triangles = triangles_list.ToArray ();
-
-		yield return null; // new WaitForSeconds (.1f);
-
-		mesh.RecalculateNormals();
-
-		mesh.RecalculateBounds();
-
-		yield return null;// new WaitForSeconds (.1f);
-
-		mesh.Optimize();
-
-//		yield return null;// new WaitForSeconds (.1f);
-
-		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
-
-//		yield return null;// new WaitForSeconds (.1f);
-		// TODO: clear the lists?
-
-//		vertices_list.Clear ();
-//		uvcoords_list.Clear ();
-//		triangles_list.Clear ();
-
-		yield return new WaitForSeconds (.1f);
-	}
-
-	public void clearMeshLists() 
-	{
-		vertices_list.Clear ();
-		uvcoords_list.Clear ();
-		triangles_list.Clear ();
-
-	}
-
-
-	public void clearMeshOfGameObject(GameObject _gameObj)
-	{
-		Mesh mesh = new Mesh();
-		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
-
-		mesh.Clear ();
-
-		mesh.RecalculateNormals();
-		mesh.RecalculateBounds();
-		mesh.Optimize();
-
-		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
-	}
-
-	public void destroyAndSetGameObjectToNull() {
-
-		meshHoldingGameObject = null;
-	}
-
-
-//	void Start () {
-//
-//	} // unity start or threaded job start????
-	
-	// Update is called once per frame
-	void Update () {
-
-
-	}
-	
-	void bug(string str) {
-		Debug.Log (str);
-	}
-	
-	
-
-}

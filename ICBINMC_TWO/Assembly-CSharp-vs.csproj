@@ -89,7 +89,8 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoisePatch.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\CurtainTable.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\DiscontinuityCurtain.cs" />
-     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\LightLevelTable.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\DiscontinuityCurtainMap.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\LightLevelTableOLD.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\NOTINUSE\ContiguityTable.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\NOTINUSE\LookupTable2D.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\NOTINUSE\RangeTable.cs" />
@@ -134,6 +135,7 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\Utils.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceAggregator.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceSet.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\LightLevelTable.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\MeshBuilder.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Builder\IBuilderFilter.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Builder\NoiseMap.cs" />
@@ -225,15 +227,15 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Writer\Heightmap32RawWriter.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Writer\Heightmap8RawWriter.cs" />
      <Compile Include="Assets\ThreadedJob\ThreadedJob.cs" />
-     <None Include="Assets\Materials\ShadersMP\SkyBox.shader" />
-     <None Include="Assets\Materials\ShadersMP\BlockTilingArrayTex.shader" />
-     <None Include="Assets\Materials\ShadersMP\FORK_flashlight_BlockTilingAtlas.shader" />
+     <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\SkyBox.shader" />
+     <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockTilingArrayTex.shader" />
+     <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\FORK_flashlight_BlockTilingAtlas.shader" />
      <None Include="Assets\Standard Assets\Skyboxes\_skybox info.txt" />
      <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.LESSER.txt" />
      <None Include="Assets\Materials\ShadersMP\BlockTilingAtlas.shader" />
-     <None Include="Assets\Materials\ShadersMP\BlockShader.shader" />
+     <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockShader.shader" />
  <Reference Include="Library\ScriptAssemblies\Assembly-UnityScript-firstpass">
  <HintPath>Library\ScriptAssemblies\Assembly-UnityScript-firstpass.dll</HintPath>
  </Reference>

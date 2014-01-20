@@ -27,6 +27,8 @@ public enum BiomeType
 public class Block  
 {
 	public BlockType type { get; set;}
+	
+	public const byte MAX_LIGHT_LEVEL = 16;
 
 	//TODO: add BIOME type memvar. should we use store type and biomeType in one int?
 

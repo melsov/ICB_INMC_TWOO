@@ -95,29 +95,37 @@ public class FaceAggregator
 		return new AlignedCoord(co.x, co.y);
 	}
 	
-	public void addFaceAtCoordBlockType(Coord coord, BlockType type, Direction dir)
+	public void addFaceAtCoordBlockType(Coord coord, BlockType type, Direction dir) 
+	{
+		throw new Exception("dead this func.");	
+	}
+	
+	public void addFaceAtCoordBlockType(FaceInfo faceInfo)
 	{
 		// TODO: raise exception if this seems to be the wrong dir...
-		AlignedCoord alco = alignedCoordFromCoord(coord);
+		AlignedCoord alco = alignedCoordFromCoord(faceInfo.coord);
+		BlockType type = faceInfo.blockType;
+		Direction dir = faceInfo.direction;
+		
 //		if (coord.x != 0)
 		if (alco.across != 0)
 		{
 //			if (addCoordToFaceSetAtCoord(coord, coord.xMinusOne(), type, dir) )
-			if (addCoordToFaceSetAtCoord(alco, alco.acrossMinusOne(), type, dir) )
+			if (addCoordToFaceSetAtCoord(alco, alco.acrossMinusOne(), type, dir, faceInfo.lightLevel) )
 				return;
 		}
 //		if (coord.z != 0)
 		if (alco.up != 0)
 		{
-			if (addCoordToFaceSetAtCoord(alco, alco.upMinusOne(), type, dir) )
+			if (addCoordToFaceSetAtCoord(alco, alco.upMinusOne(), type, dir, faceInfo.lightLevel) )
 				return;
 		}
 		
 		// ok make a new face set...
-		newFaceSetAtCoord(alco, type, dir);
+		newFaceSetAtCoord(alco, type, dir, faceInfo.lightLevel);
 	}
 	
-	private bool addCoordToFaceSetAtCoord(AlignedCoord addMeCoord, AlignedCoord adjacentCoord, BlockType type, Direction dir)
+	private bool addCoordToFaceSetAtCoord(AlignedCoord addMeCoord, AlignedCoord adjacentCoord, BlockType type, Direction dir, byte lightLevel)
 	{
 		// if there is a face set here
 		int faceSetIndex = indexOfFaceSetAtCoord(adjacentCoord, dir);
@@ -137,7 +145,7 @@ public class FaceAggregator
 					return false;
 				}
 				
-				fset.addCoord(addMeCoord); //, adjacentCoord);
+				fset.addCoord(addMeCoord, lightLevel); //, adjacentCoord);
 				copyFaceSetIndexFromToCoord(adjacentCoord, addMeCoord, dir);
 				return true;
 			}
@@ -179,8 +187,9 @@ public class FaceAggregator
 		return index > -1 && index < faceSets.Count;
 	}
 	
-	private void newFaceSetAtCoord(AlignedCoord coord, BlockType type, Direction dir)
+	private void newFaceSetAtCoord(AlignedCoord coord, BlockType type, Direction dir, byte lightLevel)
 	{
+		
 		
 		//TODO: figure out what we should really to in this case.
 		// maybe some kind of look up table re: which block type wins?
@@ -199,7 +208,7 @@ public class FaceAggregator
 //		b.bug("adding a new face set at coord: " + coord.toString() );
 
 		int faceSetsCount = faceSets.Count;
-		FaceSet fs = new FaceSet(type, dir, coord);
+		FaceSet fs = new FaceSet(type, dir, coord, lightLevel);
 		fs.myFGIndex_Test = faceSetsCount;
 		faceSets.Add (fs);
 		
@@ -333,6 +342,9 @@ public class FaceAggregator
 		List<Vector3> resVecs = new List<Vector3>();
 		List<int> resTriIndices = new List<int>();
 		List<Vector2> resUVs = new List<Vector2>();
+//		List<Vector2> resColors = new List<Vector2>();
+		List<Color32> resCol32s = new List<Color32>();
+		
 		GeometrySet geomset; // = new GeometrySet();
 		MeshSet mset;
 		
@@ -353,11 +365,12 @@ public class FaceAggregator
 			rel_tri_index += geomset.vertices.Count;
 			
 			resUVs.AddRange(mset.uvs);
-			
+//			resColors.AddRange(mset.colors);
+			resCol32s.AddRange(mset.color32s);
 			
 		}
 
-		MeshSet ret_mset = new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs);
+		MeshSet ret_mset = new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs, resCol32s);
 		this.meshSet = ret_mset;
 		return ret_mset;
 	}

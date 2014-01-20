@@ -63,7 +63,6 @@ public class ChunkManager : MonoBehaviour
 	public const uint CHUNKLENGTH = 16;
 	public const int CHUNKHEIGHT = 128;
 	public const int WORLD_HEIGHT_CHUNKS = 1;
-
 	private const int WORLD_HEIGHT_BLOCKS = (int) (WORLD_HEIGHT_CHUNKS * CHUNKHEIGHT);
 
 	public Transform playerCameraTransform; 
@@ -107,7 +106,9 @@ public class ChunkManager : MonoBehaviour
 //	#if TERRAIN_TEST
 	private Texture2D terrainTex;
 //	#endif
-
+	
+//	TODO: make a break block/ make block test cube. it teleports to any location where breaking blocks is requested
+	
 	public LibNoiseNetHandler m_libnoiseNetHandler;
 	
 	private NoiseCoord currentTargetedForCreationNoiseCo;
@@ -340,7 +341,6 @@ public class ChunkManager : MonoBehaviour
 		c.meshHoldingGameObject = gObj; //the chunk gets a reference to the gameObject that it will work with (convenient)
 	}
 
-
 	public void destroyBlockAt(Coord blockCoord) 
 	{
 		Block destroyMe = blocks [blockCoord]; 
@@ -531,6 +531,8 @@ public class ChunkManager : MonoBehaviour
 		// DRAW A '+' IN THE MIDDLE
 		float boxSize = 20;
 		GUI.Box (new Rect (Screen.width * .5f - boxSize/2.0f, Screen.height * .5f - boxSize/2.0f, boxSize, boxSize), "+");
+		
+		
 		
 		return; // !!!!!
 		
@@ -736,7 +738,6 @@ public class ChunkManager : MonoBehaviour
 		ch.clearMeshLists ();
 		ch.makeMesh ();
 		ch.applyMesh ();
-//		makeChunkOnMainThread (ch);
 	}
 
 

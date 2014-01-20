@@ -189,7 +189,7 @@ public class BlockCollection
 		return noiseCoordForWorldCoord(woco);
 	}
 	
-	private static NoiseCoord noiseCoordForWorldCoord(Coord woco){
+	public static NoiseCoord noiseCoordForWorldCoord(Coord woco){
 		woco =  woco - (woco.booleanNegative () * (BLOCKSPERNOISEPATCH  - 1)) ; // (shift neg coords by -1)
 		return new NoiseCoord (woco / BLOCKSPERNOISEPATCH);
 	}
