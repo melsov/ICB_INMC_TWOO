@@ -1,5 +1,5 @@
 #define TEST_LIBNOISENET
-//#define FAST_BLOCK_REPLACE
+#define FAST_BLOCK_REPLACE
 
 
 
@@ -341,40 +341,6 @@ public class ChunkManager : MonoBehaviour
 		c.meshHoldingGameObject = gObj; //the chunk gets a reference to the gameObject that it will work with (convenient)
 	}
 
-	public void destroyBlockAt(Coord blockCoord) 
-	{
-		Block destroyMe = blocks [blockCoord]; 
-
-		if (destroyMe.type == BlockType.Air) {
-			bug ("block was air already! " + blockCoord.toString());
-			return;
-		}
-
-		destroyMe.type = BlockType.Air;
-
-		Chunk ch = chunkContainingCoord (blockCoord);
-
-		if (ch == null) {
-			bug ("null chunk, nothing to update");
-			return;
-		}
-
-		blocks [blockCoord] = destroyMe; // get NoisePatch to update lists.
-		
-		
-#if FAST_BLOCK_REPLACE
-		Coord chunkRelCo = chunkRelativeCoord(blockCoord);
-		ch.editBlockAtCoord(chunkRelCo, BlockType.Air);
-#else
-		updateChunk (ch);
-#endif
-
-		// also update any chunks touching the destroyed block
-		foreach (Chunk adjCh in chunksTouchingBlockCoord(blockCoord) )
-			updateChunk(adjCh);
-
-
-	}
 
 	public System.Collections.IEnumerable chunksTouchingBlockCoord(Coord blockWorldCoord)
 	{
@@ -610,6 +576,42 @@ public class ChunkManager : MonoBehaviour
 
 //		destroyBlockAt (blockCoord );
 	}
+	
+	
+	public void destroyBlockAt(Coord blockCoord) 
+	{
+		Block destroyMe = blocks [blockCoord]; 
+
+		if (destroyMe.type == BlockType.Air) {
+			bug ("block was air already! " + blockCoord.toString());
+			return;
+		}
+
+		destroyMe.type = BlockType.Air;
+
+		Chunk ch = chunkContainingCoord (blockCoord);
+
+		if (ch == null) {
+			bug ("null chunk, nothing to update");
+			return;
+		}
+
+		blocks [blockCoord] = destroyMe; // get NoisePatch to update lists.
+		
+		
+#if FAST_BLOCK_REPLACE
+		Coord chunkRelCo = chunkRelativeCoord(blockCoord);
+		ch.editBlockAtCoord(chunkRelCo, BlockType.Air);
+#else
+		updateChunk (ch);
+#endif
+
+		// also update any chunks touching the destroyed block
+		foreach (Chunk adjCh in chunksTouchingBlockCoord(blockCoord) )
+			updateChunk(adjCh);
+
+
+	}
 
 	public void handlePlaceBlockAt(RaycastHit hit)
 	{
@@ -643,8 +645,14 @@ public class ChunkManager : MonoBehaviour
 		ch.noNeedToRenderFlag = false;
 
 		blocks [placingCoord] = b; // get saved blocks to update.
-
+		
+#if FAST_BLOCK_REPLACE
+		Coord chunkRelCo = chunkRelativeCoord(placingCoord);
+		ch.editBlockAtCoord(chunkRelCo, b.type);
+#else
 		updateChunk (ch);
+#endif
+		
 
 	}
 

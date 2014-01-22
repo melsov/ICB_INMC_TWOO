@@ -220,7 +220,6 @@ public class MeshBuilder
 		int mesh_tri_count = _gameObj.GetComponent<MeshFilter>().mesh.triangles.Length;
 		int[] subMeshTris = _gameObj.GetComponent<MeshFilter>().mesh.GetTriangles(0);
 		int sub_tri_count = subMeshTris.Length;
-		b.bug(" mesh triangles count: " + mesh_tri_count + " sub mesh tri count: " + sub_tri_count);
 		
 		_gameObj.GetComponent<MeshFilter>().mesh.RecalculateNormals();
 		_gameObj.GetComponent<MeshFilter>().mesh.RecalculateBounds();
@@ -230,9 +229,8 @@ public class MeshBuilder
 		
 	}
 	
-
-	
 	#endregion
+	
 	public void compileGeometryAndKeepMeshSet(ref int starting_tri_index) 
 	{
 //	TODO: GET RID OF LIST THAT DUPLICATE MESHSET MEM VAR
@@ -266,6 +264,31 @@ public class MeshBuilder
 		return this.meshSetFromMemberLists();
 	}
 	
+	private MeshSet compileGeometryDontRecalculate(ref int starting_tri_index)
+	{
+#if SEP_MESH_SETS
+		clearMeshSets();
+		int dummy_tri = 0;
+		meshSetXY = collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggregatorsXY, ref dummy_tri);
+		int dummy2 = 0;
+		meshSetXZ = collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggregatorsXZ, ref dummy2);
+		int dum3 = 0;
+		meshSetZY = collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggregatorsZY, ref dum3);
+		
+		//fake return
+		return meshSetXZ;
+#endif
+		clearMeshArrays();
+		
+		foreach(FaceAggregator[] faceAggs in getFaceAggCollection())
+		{
+			MeshSet mset = collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggs, ref starting_tri_index);	
+			addMeshSetToMemberLists(mset);
+		}
+		
+		return this.meshSetFromMemberLists();
+	}
+	
 	private void addMeshSetToMemberLists(MeshSet mset) 
 	{
 		GeometrySet gset = mset.geometrySet;
@@ -278,19 +301,6 @@ public class MeshBuilder
 	
 	private MeshSet meshSetFromMemberLists() {
 		return new MeshSet(new GeometrySet(triangles, vertices), uvs, col32s);
-	}
-	
-	private MeshSet compileGeometryDontRecalculate(ref int starting_tri_index)
-	{
-		clearMeshArrays();
-		
-		foreach(FaceAggregator[] faceAggs in getFaceAggCollection())
-		{
-			
-			collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggs, ref starting_tri_index);	
-		}
-
-		return new MeshSet(new GeometrySet(triangles, vertices), uvs);
 	}
 	
 	public MeshSet newMeshSetByRemovingBlockAtCoord(Coord co)
@@ -318,11 +328,11 @@ public class MeshBuilder
 		Coord z_one = new Coord(0,0,1);
 		
 		// X
-		editFaceAggregatorsAtCoordAndAxis(co, Axis.X, new AlignedCoord(co.z, co.y), x_one, faceAggregatorsZY, add_block, btype);
+		editFaceAggregatorsAtCoordAndAxis(co, Axis.X, new AlignedCoord(co.z, co.y), x_one, add_block, btype);
 		// Y
-		editFaceAggregatorsAtCoordAndAxis(co, Axis.Y, new AlignedCoord(co.x, co.z), y_one, faceAggregatorsXZ, add_block, btype);
+		editFaceAggregatorsAtCoordAndAxis(co, Axis.Y, new AlignedCoord(co.x, co.z), y_one, add_block, btype);
 		// Z
-		editFaceAggregatorsAtCoordAndAxis(co, Axis.Z, new AlignedCoord(co.x, co.y), z_one, faceAggregatorsXY, add_block, btype);
+		editFaceAggregatorsAtCoordAndAxis(co, Axis.Z, new AlignedCoord(co.x, co.y), z_one, add_block, btype);
 	}
 	
 	private Direction posDirectionForAxis(Axis a) {
@@ -333,11 +343,17 @@ public class MeshBuilder
 		return Direction.zpos;
 	}
 	
-	private void editFaceAggregatorsAtCoordAndAxis(Coord co, Axis axis, AlignedCoord alco, Coord nudgeCoord, FaceAggregator[] aggregatorArray, bool add_block, BlockType btype)
+	private void editFaceAggregatorsAtCoordAndAxis(Coord co, Axis axis, AlignedCoord alco, Coord nudgeCoord, bool add_block, BlockType btype)
 	{
-		// OH DEAR: THIS WAS VERY NOT WORKING AND CAUSED TWO DIFFERENT EXCEPTIONS ON A FIRST RUN!
-		// one exception was inside face set, in the dreaded 'optimize strips funcs. (index out of range or something)
-		// another was...I forget at this point.
+		if (add_block) {
+			this.addBlockAtCoordAndAxis(co, axis, alco, nudgeCoord, btype);	
+		} else {
+			this.removeBlockAtCoordAndAxis(co, axis, alco, nudgeCoord, btype);
+		}
+	}
+	
+	private void removeBlockAtCoordAndAxis(Coord co, Axis axis, AlignedCoord alco, Coord nudgeCoord, BlockType btype)
+	{
 		Block test_b;
 		test_b = this.m_chunk.blockAt(new ChunkIndex( co - nudgeCoord)); //x_one
 		int relevantComponent = Coord.SumOfComponents (co * nudgeCoord);
@@ -345,29 +361,24 @@ public class MeshBuilder
 		
 		Direction relevantPosDir = this.posDirectionForAxis(axis);
 		
+		FaceAggregator faXY = faceAggregatorAt(co, relevantPosDir); 
+		
+		// *Neg direction neighbor block wasn't air?
+		// *we need to add a face on its pos side
 		if (test_b.type != BlockType.Air)
 		{
 			if (relevantComponent > 0)
 			{
-				FaceAggregator faXminusOne = aggregatorArray[relevantComponent - 1];
-								
-				if (add_block) // take away x_pos face
-				{
-					faXminusOne.removeBlockFaceAtCoord(alco, true, false);
-					faXminusOne.getFaceGeometry(relevantComponent - 1);
-				} else {
-					faXminusOne.addFaceAtCoordBlockType(co, test_b.type, relevantPosDir + 1); // x neg right (for the way we ar elooking at it)?
-					faXminusOne.getFaceGeometry(relevantComponent - 1);
-				}
+				FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
+				// TODO: make sure this func is really 'add face if not exists.'
+				faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, test_b.type));
+				faXminusOne.getFaceGeometry(relevantComponent - 1);
 			}
-		} else { // it is air at x - 1
+		} else { // it is air at x (or whichever co) - 1
 			
-			if (add_block)
-			{
-				FaceAggregator faXY = aggregatorArray[relevantComponent];
-				faXY.addFaceAtCoordBlockType(co, btype, relevantPosDir); // again xpos dir for neg side of block
-				faXY.getFaceGeometry(relevantComponent);
-			} // else nothing : air next to air
+			// * neighbor is an air block, so there should be a face to remove at our block in this direction
+			faXY.removeBlockFaceAtCoord(alco, false, true);
+			faXY.getFaceGeometry(relevantComponent);
 		}
 		
 		// x plus one
@@ -376,61 +387,87 @@ public class MeshBuilder
 		{
 			if (relevantComponent < relevantUpperLimit - 1)
 			{
-				FaceAggregator faXplusone = aggregatorArray[relevantComponent + 1];
+				FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
+					
+				faXplusone.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type));
+				faXplusone.getFaceGeometry(relevantComponent + 1);
+			}
+		} else {
+			// * neighbor was air, so there should be a face to remove
+			faXY.removeBlockFaceAtCoord(alco, true, false);
+			faXY.getFaceGeometry(relevantComponent);
+		}
+	}
+	
+	private void addBlockAtCoordAndAxis(Coord co, Axis axis, AlignedCoord alco, Coord nudgeCoord, BlockType btype)
+	{
+		// OH DEAR: THIS WAS VERY NOT WORKING AND CAUSED TWO DIFFERENT EXCEPTIONS ON A FIRST RUN!
+		// one exception was inside face set, in the dreaded 'optimize strips funcs. (index out of range or something)
+		// another was...I forget at this point.
+		
+		Block test_b;
+		test_b = this.m_chunk.blockAt(new ChunkIndex( co - nudgeCoord)); //x_one
+		int relevantComponent = Coord.SumOfComponents (co * nudgeCoord);
+		int relevantUpperLimit = Coord.SumOfComponents (Chunk.DIMENSIONSINBLOCKS * nudgeCoord);
+		
+		Direction relevantPosDir = this.posDirectionForAxis(axis);
+		
+		FaceAggregator faXY = faceAggregatorAt(co, relevantPosDir); // aggregatorArray[relevantComponent];
+		
+		if (test_b.type != BlockType.Air)
+		{
+			if (relevantComponent > 0)
+			{
+				// * neighbor not air, so there should be a face that is now occluded and that we should remove
 				
-				if (add_block) 
-				{
-					faXplusone.removeBlockFaceAtCoord(alco, false, true); // remove lower
-					faXplusone.getFaceGeometry(relevantComponent + 1);
-				} else {
-					faXplusone.addFaceAtCoordBlockType(co, test_b.type, relevantPosDir);
-					faXplusone.getFaceGeometry(relevantComponent + 1);
-				}
+				FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
+				faXminusOne.removeBlockFaceAtCoord(alco, true, false);
+				faXminusOne.getFaceGeometry(relevantComponent - 1);
+			}
+		} else { 
+			
+			b.bug("adding a block!!");
+			// * neighbor is air, so we need to add a face at our coord
+			
+			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, btype));
+			faXY.getFaceGeometry(relevantComponent);
+		}
+		
+		// x plus one
+		test_b = this.m_chunk.blockAt(new ChunkIndex( co + nudgeCoord));
+		if (test_b.type != BlockType.Air)
+		{
+			if (relevantComponent < relevantUpperLimit - 1)
+			{
+				// * neighbor not air, remove occluded face
+				FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
 				
+				b.bug("adding a block");
+				faXplusone.removeBlockFaceAtCoord(alco, false, true); // remove lower
+				faXplusone.getFaceGeometry(relevantComponent + 1);
 			}
 		} else {
 			
-			if (add_block)
-			{
-				FaceAggregator fXY = aggregatorArray[relevantComponent];
-				fXY.addFaceAtCoordBlockType(co, btype, relevantPosDir + 1);
-				fXY.getFaceGeometry(relevantComponent);
-			}
-		}
-	}
-	
-	private void collectMeshDataWithFaceAggregatorsDontRecalculate(FaceAggregator[] faceAggs, ref int starting_tri_index)
-	{
-		FaceAggregator fa;
-		for (int i = 0; i < faceAggs.Length ; ++i)
-		{
-			fa = faceAggs[i];
-
+			// * neighbor is air, need to add a face at this coord
 			
-			if (fa != null)
-			{
-				fa.baseTriangleIndex = starting_tri_index;
-				
-				MeshSet mset = fa.meshSet;
-				GeometrySet gset = mset.geometrySet;
-				
-				vertices.AddRange(gset.vertices);	
-				
-				for(int j = 0; j < gset.indices.Count; ++j) {
-					gset.indices[j] += starting_tri_index;
-				}
-				
-				triangles.AddRange(gset.indices);
-				uvs.AddRange(mset.uvs);
-				col32s.AddRange(mset.color32s);
-				
-				starting_tri_index += gset.vertices.Count;
-			}
+			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, btype));
+			faXY.getFaceGeometry(relevantComponent);
 		}
 	}
 	
-
+	//TODO: must update verts...
+	
+	private MeshSet collectMeshDataWithFaceAggregatorsDontRecalculate(FaceAggregator[] faceAggs, ref int starting_tri_index)
+	{
+		return collectMeshDataWithFaceAggregators(faceAggs, ref starting_tri_index, false);
+	}
+	
 	private MeshSet collectMeshDataWithFaceAggregators(FaceAggregator[] faceAggs, ref int starting_tri_index)
+	{
+		return collectMeshDataWithFaceAggregators(faceAggs, ref starting_tri_index, true);
+	}
+
+	private MeshSet collectMeshDataWithFaceAggregators(FaceAggregator[] faceAggs, ref int starting_tri_index, bool wantToRecalculate)
 	{
 		// TODO: keep track of the lowest and highest (vertically speaking) face aggs.
 		// then avoid iterating over empty faceAggs.
@@ -438,7 +475,7 @@ public class MeshBuilder
 		List<Vector3> temp_vertices = new List<Vector3>();
 		List<Vector2> temp_uvs = new List<Vector2>();
 		List<int> temp_triangles = new List<int>();
-		List<Color32> temp_col32s = new List<Color32>();		
+		List<Color32> temp_col32s = new List<Color32>();
 		
 		FaceAggregator fa;
 		for (int i = 0; i < faceAggs.Length ; ++i)
@@ -449,13 +486,25 @@ public class MeshBuilder
 			{
 				fa.baseTriangleIndex = starting_tri_index; // for editing mesh (potentially)
 				
-				MeshSet mset = fa.getFaceGeometry(i);
+				MeshSet mset;
+				if (wantToRecalculate)
+					mset = fa.getFaceGeometry(i);
+				else
+					mset = fa.meshSet;
+				
 				GeometrySet gset = mset.geometrySet;
 				
-				temp_vertices.AddRange(gset.vertices);	
+				temp_vertices.AddRange(gset.vertices);
 				
 				for(int j = 0; j < gset.indices.Count; ++j) {
 					gset.indices[j] += starting_tri_index;
+					
+					//TODO: figure out how to avoid incrementing the indices twice when we are not recalculating.
+					// check out: http://stackoverflow.com/questions/222598/how-do-i-clone-a-generic-list-in-c
+					//DEBUG
+					if (gset.indices[j] >= temp_vertices.Count) {
+						b.bug("indices > vertices: index: " + gset.indices[j] + " vert count: " + gset.vertices.Count + " indices index: " + j );	
+					}
 				}
 				
 				temp_triangles.AddRange(gset.indices);
@@ -476,6 +525,8 @@ public static class b
 	public static void bug(string str) {
 		UnityEngine.Debug.Log(str);	
 	}
+	
+	
 }
 
 

@@ -99,7 +99,9 @@ public class FaceSet
 			throw new Exception("an index was out of range when trying to add a coord to table. the coord: " +coord.toString() + " table dims: " + 	quadTable.GetLength(0) +  " 2nd length: " + quadTable.GetLength(1) + "\n the quad: " + qq.quad.toString());
 		}
 		
+		
 		quads.Add(qq);
+		
 		return curQuadCount - FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER;
 	}
 	
@@ -166,10 +168,16 @@ public class FaceSet
 		{
 			Strip str = strips[i];
 			Range1D ra = str.range;
-			if (ra.contains(removeLevel) ) {
+			if (ra.contains(removeLevel) ) 
+			{
 				// split range	
 				if (ra.start == removeLevel)
 				{
+					// did we erase the last tile?
+					if (ra.range == 1) {
+						strips.RemoveAt(i);
+						break;
+					}
 					ra.start++;
 					ra.range--;
 					str.range = ra;
@@ -181,14 +189,6 @@ public class FaceSet
 				} else {
 					Range1D new_above = str.range.subRangeAbove(removeLevel);
 					Range1D new_below = str.range.subRangeBelow(removeLevel);
-					
-//					if (Range1D.Equal(new_above, Range1D.theErsatzNullRange())) {
-//						throw new Exception("range above is ersatz null");	
-//					}
-//					
-//					if (Range1D.Equal(new_below, Range1D.theErsatzNullRange())) {
-//						throw new Exception("range below is ersatz null");	
-//					}
 					
 					str.range = new_below;
 					strips[i] = str;
@@ -400,26 +400,38 @@ public class FaceSet
 		}
 	}
 	
-	private void resetStripsQuadIndices() {
-		foreach	(List<Strip> strips in stripsArray) {
-			if (strips != null)
-				foreach(Strip ss in strips) {
-					ss.resetQuadIndex();	
+	private void resetStripsQuadIndices() 
+	{
+		List<Strip> strips;
+		for(int i = 0; i < stripsArray.Length; ++i) {
+			strips = stripsArray[i];
+			if (strips != null) 
+			{
+				for(int j = 0; j < strips.Count; ++j) {
+					Strip ss = strips[j];
+					ss.resetQuadIndex();
+					strips[j] = ss;
 				}
+			}
 		}
 	}
 	
+	private void clearQuadTable() {
+		int table_length = quadTable.GetLength(0) * quadTable.GetLength(1);
+		Array.Clear(quadTable, 0, table_length);
+	}
+	
+	// TODO: test whether we got any overlapping quads...
 	private void optimizeStrips()
 	{
 		//clear quads
-		quads.Clear();
+		this.quads.Clear();
 		resetStripsQuadIndices(); 
-
+		clearQuadTable(); //helpful?
 		
 #if NO_OPTIMIZATION
 		optimizeStripsSafeVersion(); 
 		return;///!!!!
-		
 #endif
 		
 		// deal with the case where there's only one list of strips
@@ -438,10 +450,7 @@ public class FaceSet
 					continue;
 				}
 #endif
-//				Quad quadd = Quad.QuadFromStrip(stripp, faceSetLimits.origin.s);
-//				LightCorners lightcorners = LightCorners.LightCornersFromRangeTopBottom(stripp.range);
 				LitQuad litquadd = LitQuad.LitQuadFromStrip(stripp, faceSetLimits.origin.s); // new LitQuad(quadd, lightcorners);
-				
 				addNewQuadAtCoord(litquadd, new PTwo(faceSetLimits.origin.s, stripp.range.start) );
 			}
 			return;
@@ -459,56 +468,50 @@ public class FaceSet
 		if (horizDimEnd > stripsArray.Length )
 			throw new Exception("wha extents greater than strips array length?");
 		
-
+		// Go through adjacent strips lists two at a time
 		int horizontalDim = horizDimStart;
-		List<Strip> currentStrips;
-		List<Strip> lastStrips;
+		List<Strip> currentStrips = new List<Strip>();
+		List<Strip> lastStrips = new List<Strip>();
 		for(; horizontalDim < horizDimEnd ; ++horizontalDim)
 		{
 			currentStrips = stripsArray[horizontalDim];
 			lastStrips = stripsArray[horizontalDim - 1];
 			
-			//			if (horizontalDim == horizDimEnd - 1) // THROWING UP HANDS WAY!
-			//			{
+			// *isolated list of 'current Strips'?
 			if (lastStrips == null && horizontalDim == horizDimEnd - 1)
 			{
 				if (currentStrips != null)
-					foreach(Strip lastRowStrip in currentStrips)
-					{
-						Quad lq = Quad.QuadFromStrip(lastRowStrip, horizontalDim);
-						LightCorners lightcorners = LightCorners.LightCornersFromRangeTopBottom(lastRowStrip.range);
-						LitQuad litlq = new LitQuad(lq, lightcorners);
+					foreach(Strip lastRowStrip in currentStrips) {
+						LitQuad litlq = LitQuad.LitQuadFromStrip(lastRowStrip, horizontalDim);
 						addNewQuadAtCoord(litlq, new PTwo(horizontalDim, lastRowStrip.range.start) );
 					}
-				
-				// THROWING UP HANDS WAY!
-//				break; // doesn't help??
 			}
 			
+			
+			// *go through last strips
 			int lastStripsCount = 0;
 			if ( lastStrips != null ) //currentStrips == null) // ||
 				lastStripsCount = lastStrips.Count;
-			
-			// TODO: test whether we got any overlapping quads...
 			
 			for(int j = 0 ; j < lastStrips.Count ; ++j) 
 			{
 				Strip lstp = lastStrips[j];
 				
-				if (horizontalDim == 1)
+				// *is this 'last strip' in the first row ('leftmost')? if so, make a quad from it.
+				if (horizontalDim == horizDimStart)
 				{
-//					Quad qq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
-					
 					LitQuad litqq = LitQuad.LitQuadFromStrip(lstp, horizontalDim - 1);
 					lstp.quadIndex = addNewQuadAtCoord(litqq, new PTwo(horizontalDim - 1, lstp.range.start) );
 					
 					if (lstp.quadIndex < 0)
-						bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString());
+						b.bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString());
 					
 					lastStrips[j] = lstp;
 				}
 				
 				int curCount = currentStrips == null?  0 : currentStrips.Count;
+				
+				// *go through current strips for each last strip
 				for(int i = 0; i < curCount ; ++i) 
 				{
 					Strip stp = currentStrips[i];
@@ -518,12 +521,11 @@ public class FaceSet
 						// has a quad index?
 						if (lstp.quadIndex != -1)
 						{
-							//TEST
 							LitQuad qua;
 							try {
 								qua = quads[lstp.quadIndex];
 							} catch(ArgumentOutOfRangeException e) {
-								throw new Exception("argument out of range. index was: " + lstp.quadIndex );		
+								throw new Exception("argument out of range. index was: " + lstp.quadIndex + "\nhoriz dim: " + horizontalDim );		
 							}
 							
 							qua.quad.dimensions.s++;
@@ -532,16 +534,12 @@ public class FaceSet
 							if (lstp.quadIndex < 0)
 								bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString() + "else from lstp qI == -1" + "\n BTW: the shift number is: " + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER);
 							
-							try {
-								quads[lstp.quadIndex] = qua;
-							} catch(IndexOutOfRangeException e) {
-								throw new Exception("index out of range. index was: " + lstp.quadIndex );		
-							}
+							quads[lstp.quadIndex] = qua;
 							stp.quadIndex = lstp.quadIndex;
 							
 						} else {
-							// make a new quad with these two 
 							
+							//* make a new quad with these two 
 							Quad doubleWidthqq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
 							doubleWidthqq.dimensions.s = 2;
 							LightCorners lightCorners = new LightCorners(lstp.range.top_light_level, stp.range.top_light_level, lstp.range.bottom_light_level, stp.range.bottom_light_level);

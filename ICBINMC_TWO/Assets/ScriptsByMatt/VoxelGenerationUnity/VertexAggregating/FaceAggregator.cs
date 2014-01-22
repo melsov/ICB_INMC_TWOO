@@ -365,9 +365,7 @@ public class FaceAggregator
 			rel_tri_index += geomset.vertices.Count;
 			
 			resUVs.AddRange(mset.uvs);
-//			resColors.AddRange(mset.colors);
 			resCol32s.AddRange(mset.color32s);
-			
 		}
 
 		MeshSet ret_mset = new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs, resCol32s);
@@ -427,9 +425,11 @@ public class FaceAggregator
 			FaceSet fs = faceSets[i];
 			if (fs != null) 
 			{
+				b.bug("geom for faceSet: " + i);
 				MeshSet mset = fs.CalculateGeometry(4f);
 				
 				result.Add(mset);
+				faceSets[i] = fs; // need this?
 				
 			} else {
 				bug("face set was null");
@@ -502,7 +502,7 @@ public class FaceAggregator
 
 public class FaceAggregatorTest
 {
-	public Coord[] testCoords = new Coord[256];
+	public Coord[] testCoords;
 	public FaceAggregator fa;
 	
 	private static Coord[] excludedCoords = new Coord[]{
@@ -536,14 +536,17 @@ public class FaceAggregatorTest
 	
 	private static Coord[] removeCoords = new Coord[]{
 		
-//		new Coord(0, 0, 5),
-//		new Coord(0, 0, 7),
-//		new Coord(1, 0, 7),
-//		new Coord(5, 0, 9),
+		new Coord(0, 0, 0),
+		new Coord(0, 0, 7),
+		new Coord(1, 0, 2),
+		new Coord(5, 0, 9),
 //		
-//		new Coord(12, 4, 6),
-//		new Coord(12, 4, 7),
-//		new Coord(12, 4, 8),
+		new Coord(15, 4, 14),
+		new Coord(15, 4, 15),
+		
+		new Coord(13, 4, 8),
+		new Coord(13, 4, 6),
+		new Coord(13, 4, 7),
 
 	};
 	
@@ -557,14 +560,15 @@ public class FaceAggregatorTest
 	{
 		fa = new FaceAggregator(Axis.Y);
 		
-		int coord_count = 16 * 16;
-		int i = 16 * 0; // TODO: fix bug (if it matters which it probably does): if i > 0 we get a trying to add a face where there already was one
+		int COORD_DIMS = 16;
+		int coord_count = COORD_DIMS * COORD_DIMS;
+		int i = COORD_DIMS * 0; // TODO: fix bug (if it matters which it probably does): if i > 0 we get a trying to add a face where there already was one
 		// the face is at aligned coord: 0,0.
 		Coord[] coords = new Coord[coord_count];
 		for(; i < coord_count ; ++i)
 		{
-			int z = i % 16;
-			int x = i / 16;
+			int z = i % COORD_DIMS;
+			int x = i / COORD_DIMS;
 			coords[i] = new Coord(x, 4, z);
 		}
 		
@@ -583,8 +587,10 @@ public class FaceAggregatorTest
 				}
 			} //dont remove for now
 			
-			if (include)
-				fa.addFaceAtCoordBlockType(co, BlockType.Grass, Direction.ypos);	
+			if (include) {
+				FaceInfo faceinfo = new FaceInfo(co, Block.MAX_LIGHT_LEVEL, Direction.ypos , BlockType.Grass);
+				fa.addFaceAtCoordBlockType(faceinfo);	
+			}
 
 		}
 		
@@ -598,7 +604,9 @@ public class FaceAggregatorTest
 	
 	public List<MeshSet> getMeshResults()
 	{
-//		fa.getMeshResults(); // calling this twice produces odd results: mesh loses some quads.
+		 // calling this twice produces odd results: mesh loses some quads.
+//		List<MeshSet> ret_before = fa.getMeshResults();
+		
 		int vertsbefore = fa.totalVertices();
 		bug ("verts before: " + vertsbefore);
 		foreach (Coord removeco in removeCoords)
@@ -606,6 +614,7 @@ public class FaceAggregatorTest
 			fa.removeBlockAtCoord(new AlignedCoord(removeco.x, removeco.z) );
 		}
 		
+		b.bug("###NEW RESULTS AFTER REMOVING COORDS###");
 		List<MeshSet> ret = fa.getMeshResults();
 		
 		bug("verts after: " + fa.totalVertices() );

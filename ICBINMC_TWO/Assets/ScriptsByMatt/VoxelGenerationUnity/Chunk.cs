@@ -131,7 +131,8 @@ public class Chunk : ThreadedJob
 //			applyMesh ();
 	}
 	
-	public void editBlockAtCoord(Coord relCo, BlockType btype) {
+	public void editBlockAtCoord(Coord relCo, BlockType btype) 
+	{
 		MeshSet mset;
 		if (btype == BlockType.Air)
 		{
@@ -141,6 +142,9 @@ public class Chunk : ThreadedJob
 		{
 			mset = meshBuilder.newMeshSetByAddingBlockAtCoord(relCo, btype);
 		}
+		
+		//TODO: now that mesh builder actually builds the mesh anyway
+		// get rid of some of this spaghetti-ness.
 		
 		applyMeshToGameObjectWithMeshSet(mset);
 		clearMeshLists(); // why not now...
