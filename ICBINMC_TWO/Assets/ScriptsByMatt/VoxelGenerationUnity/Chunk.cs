@@ -147,7 +147,7 @@ public class Chunk : ThreadedJob
 		// get rid of some of this spaghetti-ness.
 		
 		applyMeshToGameObjectWithMeshSet(mset);
-		clearMeshLists(); // why not now...
+//		clearMeshLists(); // why not now...
 	}
 
 	Block nextBlock(Direction d, ChunkIndex ci)
@@ -618,12 +618,8 @@ public class Chunk : ThreadedJob
 						Block b;
 						// deal with the start heights
 						
-#if ONLY_HIGHEST_Y_FACES
-						bool no_lower_faces = false;
-#else
-						bool no_lower_faces = h_range.start != 0;
-#endif
-						if (no_lower_faces) //don't draw below bedrock
+
+						if (h_range.start != 0) //don't draw below bedrock
 						{
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
 							targetBlockIndex = new ChunkIndex(blockCoord);
@@ -631,6 +627,18 @@ public class Chunk : ThreadedJob
 							if (b != null) 
 							{
 #if FACE_AG
+//								// CONSIDER: resolve confusingness: Direction sometimes indicates the direction that camera looks at face
+								// sometimes indicates the offset of the face with respect to the center of the block 
+								// these two are opposites by definition. (!)
+								// But we are not handling them consistently, we think. E.g. in face agg, Direction positive sometimes
+								// means one, sometimes the other sense of 'direction'--no one consistent metaphor.
+								// TODO: make sure that this critique is valid -- and then --
+								// change the code so that Direction always means "offset with respect to block center."
+								// probably, faceset will then put a '!' somewhere when checking its neg/pos status to
+								// figure out which tri indices to use.
+								//RELATED TODO: in face Agg. make two public func where there's now one: editFaceSet(alco, editPos, editNeg) becomes-->
+								// editPositiveSideFaceSet(alco) editNegativeSideFaceSet(alco)
+								
 //								addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos);								
 								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.ypos, b.type));								
 #else

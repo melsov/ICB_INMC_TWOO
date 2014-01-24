@@ -600,22 +600,7 @@ public class FaceSet
 	{
 		optimizeStrips();
 		
-		//there needs to be a start offset
-		//based on the faceSetLimits.origin.t
-		// because by the time these verts go to the shader, they will have 'forgotten' their 
-		// pos. relative to this face set.
-		// so it origin.t is (say) 5,
-		// the value for the first tile will be held in the 4^1 of the color32 number 
-		// the value for the fourth tiles (at 8) will be held in 4^0 (i.e. (place (i.e. 3) + start_offset( i.e. 5 % 4) % 4)
-		
-//		int upperHalfLightLevel = lightLevelTable.getUpperHalfBits();
-//		int lowerHalfLightLevel = lightLevelTable.getLowerHalfBits();
-		//65536 ushort.max
-//		float max = 65535.00f;
-//		Vector2 colorReallyOverhangLightLevel = new Vector2(1.5999f, 1.599f); // new Vector2((float) upperHalfLightLevel/max , (float) lowerHalfLightLevel/max);
-		
 		int t_offset = faceSetLimits.origin.t;
-//		Color32 fake_color32 = new Color32(255, 255, 255, 255); //lightLevelTable.color32ForLightLevels(t_offset); //0 fake // 
 		
 		int curTriIndex = 0;
 		
@@ -660,7 +645,6 @@ public class FaceSet
 			Quad quad = quads[i];
 #endif
 			
-			
 			int vertsAddedByStrip = 0;
 			
 			int curULindex = curTriIndex; // + i * 4;
@@ -677,66 +661,45 @@ public class FaceSet
 			
 			test_color = (float) dims;
 			
-//			test_color = (float)((int) (quad.dimensions.s ) % 16);
-			
 			test_color /= 16f;
 			
-//			test_color = faceSetLimits.dimensions.s == 5 ?  : test_color;
-//			test_color = faceSetLimits.dimensions.s == 4 ? 4f/8f : test_color;
-//			test_color = faceSetLimits.dimensions.s == 3 ? 3f/8f : test_color;
-			monoUVValue = new Vector2(uvIndex, test_color); // origin ;
+			monoUVValue = new Vector2(uvIndex, test_color); 
 			//END TEST
 			
-			//TODO: switch vecs for XY and ZY cases
-				
-//			Vector3 ulVec = new Vector3((float) quad.origin.s - half_unit, 
-//				verticalHeight, 
-//				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			Vector3 ulVec = positionVectorForAcrossUpVertical((float)quad.origin.s - half_unit, 
 				verticalHeight, 
 				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(ulVec);
 			vertsAddedByStrip++;
 			returnUVS.Add(monoUVValue);
-//			returnColors.Add(colorReallyOverhangLightLevel);
 			returnCol32s.Add(cornerColors[0] );
 		
-//			Vector3 llVec = new Vector3((float) quad.origin.s - half_unit, 
-//				verticalHeight, 
-//				(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
+
 			Vector3 llVec = positionVectorForAcrossUpVertical((float) quad.origin.s - half_unit, 
 				verticalHeight, 
 				(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(llVec);
-//			returnColors.Add(colorReallyOverhangLightLevel);
+			vertsAddedByStrip++;
+			returnUVS.Add(monoUVValue);
 			returnCol32s.Add(cornerColors[1]);
 			
-			vertsAddedByStrip++;
 		
-			returnUVS.Add(monoUVValue);
 
-//			Vector3 urVec = new Vector3((float) quad.extent().s - half_unit, 
-//				verticalHeight, 
-//				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			Vector3 urVec = positionVectorForAcrossUpVertical((float) quad.extent().s - half_unit, 
 				verticalHeight, 
 				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(urVec);
 			vertsAddedByStrip++;
-			returnUVS.Add( monoUVValue); // + Vector2.Scale(uvURTexDim, uvScalingVec) );
-//			returnColors.Add(colorReallyOverhangLightLevel);
+			returnUVS.Add( monoUVValue); 
 			returnCol32s.Add(cornerColors[2]);
 			
-//			Vector3 lrVec = new Vector3((float)quad.extent().s - half_unit, 
-//				verticalHeight, 
-//				(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
+
 			Vector3 lrVec = positionVectorForAcrossUpVertical((float)quad.extent().s - half_unit, 
 				verticalHeight, 
 				(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(lrVec);
 			vertsAddedByStrip++;
-			returnUVS.Add(monoUVValue); // + Vector2.Scale(uvLRTexDim, uvScalingVec) );
-//			returnColors.Add(colorReallyOverhangLightLevel);
+			returnUVS.Add(monoUVValue);
 			returnCol32s.Add(cornerColors[3]);
 			
 			int[] tris;

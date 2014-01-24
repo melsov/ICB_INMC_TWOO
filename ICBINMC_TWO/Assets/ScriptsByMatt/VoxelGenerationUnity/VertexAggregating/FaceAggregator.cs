@@ -39,7 +39,7 @@ public class FaceAggregator
 	
 	private Axis faceNormal;
 	
-	public int baseTriangleIndex;
+	public int baseTriangleIndex = 0;
 	public MeshSet meshSet;
 	
 	public FaceAggregator(Axis faceNormalAxis) 
@@ -130,8 +130,6 @@ public class FaceAggregator
 		// if there is a face set here
 		int faceSetIndex = indexOfFaceSetAtCoord(adjacentCoord, dir);
 		
-		
-//		if (faceSetIndex > -1)
 		if (indexRepresentsAnOccupiedCoord(faceSetIndex))
 		{
 			FaceSet fset = faceSets[faceSetIndex];

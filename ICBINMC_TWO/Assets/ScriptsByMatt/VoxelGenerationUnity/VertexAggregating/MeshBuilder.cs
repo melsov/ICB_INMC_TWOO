@@ -267,7 +267,7 @@ public class MeshBuilder
 	private MeshSet compileGeometryDontRecalculate(ref int starting_tri_index)
 	{
 #if SEP_MESH_SETS
-		clearMeshSets();
+//		clearMeshSets(); // don't clear here. want the old data...
 		int dummy_tri = 0;
 		meshSetXY = collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggregatorsXY, ref dummy_tri);
 		int dummy2 = 0;
@@ -405,8 +405,8 @@ public class MeshBuilder
 		// one exception was inside face set, in the dreaded 'optimize strips funcs. (index out of range or something)
 		// another was...I forget at this point.
 		
-		Block test_b;
-		test_b = this.m_chunk.blockAt(new ChunkIndex( co - nudgeCoord)); //x_one
+		Block neighbor_block;
+		neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co - nudgeCoord)); //x_one
 		int relevantComponent = Coord.SumOfComponents (co * nudgeCoord);
 		int relevantUpperLimit = Coord.SumOfComponents (Chunk.DIMENSIONSINBLOCKS * nudgeCoord);
 		
@@ -414,15 +414,27 @@ public class MeshBuilder
 		
 		FaceAggregator faXY = faceAggregatorAt(co, relevantPosDir); // aggregatorArray[relevantComponent];
 		
-		if (test_b.type != BlockType.Air)
+		if (neighbor_block.type != BlockType.Air)
 		{
 			if (relevantComponent > 0)
 			{
+				
+				
 				// * neighbor not air, so there should be a face that is now occluded and that we should remove
 				
 				FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
+				
+				//DEBUG:
+				int faXMinusOneCountBefore = faXminusOne.meshSet.geometrySet.vertices.Count;
+				
 				faXminusOne.removeBlockFaceAtCoord(alco, true, false);
 				faXminusOne.getFaceGeometry(relevantComponent - 1);
+				
+				//DEBUG:
+				int faXMinusOneCount = faXminusOne.meshSet.geometrySet.vertices.Count;
+				b.bug(" f agg minus one vert count before: " + faXMinusOneCountBefore + " and after: " + faXMinusOneCount);
+				
+				
 			}
 		} else { 
 			
@@ -434,8 +446,8 @@ public class MeshBuilder
 		}
 		
 		// x plus one
-		test_b = this.m_chunk.blockAt(new ChunkIndex( co + nudgeCoord));
-		if (test_b.type != BlockType.Air)
+		neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co + nudgeCoord));
+		if (neighbor_block.type != BlockType.Air)
 		{
 			if (relevantComponent < relevantUpperLimit - 1)
 			{
@@ -484,8 +496,7 @@ public class MeshBuilder
 			
 			if (fa != null)
 			{
-				fa.baseTriangleIndex = starting_tri_index; // for editing mesh (potentially)
-				
+
 				MeshSet mset;
 				if (wantToRecalculate)
 					mset = fa.getFaceGeometry(i);
@@ -495,22 +506,29 @@ public class MeshBuilder
 				GeometrySet gset = mset.geometrySet;
 				
 				temp_vertices.AddRange(gset.vertices);
-				
-				for(int j = 0; j < gset.indices.Count; ++j) {
-					gset.indices[j] += starting_tri_index;
+				int j = 0;
+				for(; j < gset.indices.Count; ++j) {
+					
+					if (wantToRecalculate) {
+						gset.indices[j] += starting_tri_index;
+					}
+					else {
+						gset.indices[j] += starting_tri_index - fa.baseTriangleIndex;
+					}
 					
 					//TODO: figure out how to avoid incrementing the indices twice when we are not recalculating.
 					// check out: http://stackoverflow.com/questions/222598/how-do-i-clone-a-generic-list-in-c
 					//DEBUG
-					if (gset.indices[j] >= temp_vertices.Count) {
-						b.bug("indices > vertices: index: " + gset.indices[j] + " vert count: " + gset.vertices.Count + " indices index: " + j );	
-					}
+//					if (gset.indices[j] >= temp_vertices.Count) {
+//						b.bug("indices > vertices: index: " + gset.indices[j] + " vert count: " + gset.vertices.Count + " indices index: " + j );	
+//					}
 				}
 				
 				temp_triangles.AddRange(gset.indices);
 				temp_uvs.AddRange(mset.uvs);
 				temp_col32s.AddRange(mset.color32s);
 				
+				fa.baseTriangleIndex = starting_tri_index; // for editing mesh (potentially)
 				starting_tri_index += gset.vertices.Count;
 			}
 		}
