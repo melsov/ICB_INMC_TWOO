@@ -165,7 +165,33 @@ public class FaceAggregator
 			return true;
 		return false;
 	}
-
+	
+	private void removeFaceSetAtCoord(AlignedCoord alco, Direction dir) {
+		int index = indexOfFaceSetAtCoord(alco, dir);
+		
+		//NOTE: problems will/should arise if this face set has more than one face!
+		// only remove < 1 face faceSet please!
+		
+		if (index < faceSets.Count)
+			faceSets.RemoveAt(index);
+		
+		//set the index in the table to zero	
+		setIndexOfFaceSetAtCoord(0, alco, dir);
+	}
+	
+	private void setIndexOfFaceSetAtCoord(int _index, AlignedCoord coord, Direction dir)
+	{
+		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
+		
+		try {
+			faceSetTable[coord.across * 2 + nudge_lookup, coord.up] = _index; // - FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		} 
+		catch(IndexOutOfRangeException e)
+		{
+			throw new Exception("this index was: across " + (coord.across * 2 + nudge_lookup) + " up: " + coord.up + ". face table length was: dim 0: " +faceSetTable.GetLength(0) + " 1 " + faceSetTable.GetLength(1) + " coord was " + coord.toString() + "Direction was: " + dir + " my face axis is: " + faceNormal);
+		}
+	}
+	
 	private int indexOfFaceSetAtCoord(AlignedCoord coord, Direction dir)
 	{
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
@@ -233,8 +259,12 @@ public class FaceAggregator
 		
 		if (index < 0)
 			return null;
-		
-		return faceSets[index];
+		try {
+			return faceSets[index];
+		} catch(ArgumentOutOfRangeException e) {
+			throw new Exception("index was out of range: index was: " + index + " aligned coord: " + alco.toString() + "direction: " + dir);
+		}
+		return null;
 	}
 	
 	private Direction direction(bool positive) {
@@ -256,12 +286,19 @@ public class FaceAggregator
 		return result;
 	}
 	
-	public void removeBlockAtCoord(AlignedCoord alco)
-	{
+	public void removeBothPositiveAndNegativeFacesAtCoord(AlignedCoord alco) {
 		removeBlockFaceAtCoord(alco, true, true);
 	}
 	
-	public void removeBlockFaceAtCoord(AlignedCoord alco, bool removePosFace, bool removeNegFace)
+	public void removePositiveSideFaceAtCoord(AlignedCoord alco) {
+		removeBlockFaceAtCoord(alco, true, false);	
+	}
+	
+	public void removeNegativeSideFaceAtCoord(AlignedCoord alco) {
+		removeBlockFaceAtCoord(alco, false, true);	
+	}
+	
+	private void removeBlockFaceAtCoord(AlignedCoord alco, bool removePosFace, bool removeNegFace)
 	{
 		if (removePosFace)
 		{
@@ -270,6 +307,10 @@ public class FaceAggregator
 			if (posFaceSet != null)
 			{
 				posFaceSet.removeFaceAtCoord(alco);
+				//now empty?
+				if (posFaceSet.faceCount == 0) {
+					removeFaceSetAtCoord(alco, direction(true) );	
+				}
 			}
 		}
 		
@@ -280,7 +321,16 @@ public class FaceAggregator
 			if (negFaceSet != null)
 			{
 				negFaceSet.removeFaceAtCoord(alco);
+				if (negFaceSet.faceCount == 0) {
+					removeFaceSetAtCoord(alco, direction(false));	
+				}
 			}
+		}
+	}
+	
+	public int faceSetCount {
+		get {
+			return faceSets.Count;	
 		}
 	}
 	
@@ -609,7 +659,7 @@ public class FaceAggregatorTest
 		bug ("verts before: " + vertsbefore);
 		foreach (Coord removeco in removeCoords)
 		{
-			fa.removeBlockAtCoord(new AlignedCoord(removeco.x, removeco.z) );
+			fa.removeBothPositiveAndNegativeFacesAtCoord(new AlignedCoord(removeco.x, removeco.z) );
 		}
 		
 		b.bug("###NEW RESULTS AFTER REMOVING COORDS###");

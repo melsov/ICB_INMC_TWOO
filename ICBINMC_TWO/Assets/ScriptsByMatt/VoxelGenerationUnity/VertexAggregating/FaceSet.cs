@@ -52,7 +52,7 @@ public class FaceSet
 	
 	List<VertexTwo>[] vertexColumns = new List<VertexTwo>[(int) ChunkManager.CHUNKLENGTH + 1];
 	
-	private int iterationSafety = 0;
+//	private int iterationSafety = 0;
 	
 	private const int SPECIAL_QUAD_LOOKUP_NUMBER = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH * 805);
 	
@@ -162,6 +162,10 @@ public class FaceSet
 	
 	private List<Strip> rangesWithRemovedFaceAt(int removeLevel, List<Strip> strips)
 	{
+		if (strips != null) {
+			b.bug("this strips list was null. remove Level was: " + removeLevel + "block face dir of this face set: "
+				+ blockFaceDirection + " block type: " + blockType + " face set limits: " + faceSetLimits.toString() );	
+		}
 		int i = 0;
 //		Range1D range = Range1D.theErsatzNullRange();
 		for (; i < strips.Count; ++i)
@@ -197,6 +201,8 @@ public class FaceSet
 					
 				}
 				break;
+				
+				//TODO: adjust faceSetLimits if needed.
 			}
 		}
 		return strips;
@@ -211,6 +217,20 @@ public class FaceSet
 	{
 		List<Strip> strips = stripsArray[alco.across];
 		stripsArray[alco.across] = rangesWithRemovedFaceAt(alco.up, strips);
+	}
+	
+	public int faceCount {
+		get {
+			int result = 0;
+			foreach(List<Strip> strips in stripsArray) {
+				if (strips != null) {
+					foreach(Strip strip in strips) {
+						result += strip.range.range;	
+					}
+				}
+			}
+			return result;
+		}
 	}
 	
 	public Quad getFaceSetLimits() {
@@ -608,7 +628,8 @@ public class FaceSet
 		
 		bool isZFace = (blockFaceDirection >= Direction.zpos); // must flip tri indices if z face!!
 		
-		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
+//		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
+		verticalHeight += (faceIsOnPosSide ? 0.5f : -0.5f);
 		
 		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
 		
@@ -704,10 +725,16 @@ public class FaceSet
 			
 			int[] tris;
 			
+//			if (faceIsOnPosSide != isZFace) { // if Z face we want the opposite
+//				tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
+//			} else {
+//				tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
+//			}
+			
 			if (faceIsOnPosSide != isZFace) { // if Z face we want the opposite
-				tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
+				tris = new int[]  {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
 			} else {
-				tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
+				tris = new int[]{curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
 			}
 			
 			returnTriIndices.AddRange(tris);

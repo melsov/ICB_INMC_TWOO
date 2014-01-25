@@ -323,7 +323,7 @@ public class Chunk : ThreadedJob
 //				cY = 3 * tile_length;
 //			}
 			//end testing
-			if ( dir != Direction.yneg)
+			if ( dir != Direction.ypos)
 			{
 				cY = tile_length; 
 			}
@@ -597,7 +597,7 @@ public class Chunk : ThreadedJob
 							break;
 						#endif
 						
-						//COMBINE GEOM (MORE THOUGHTS)
+						// COMBINE GEOM (MORE THOUGHTS)
 						// every level has a geometry aggregator
 						// might be better to aggregate in the noise patch?
 						// then we'd have to edit when we broke blocks?
@@ -618,7 +618,6 @@ public class Chunk : ThreadedJob
 						Block b;
 						// deal with the start heights
 						
-
 						if (h_range.start != 0) //don't draw below bedrock
 						{
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
@@ -627,7 +626,7 @@ public class Chunk : ThreadedJob
 							if (b != null) 
 							{
 #if FACE_AG
-//								// CONSIDER: resolve confusingness: Direction sometimes indicates the direction that camera looks at face
+//								// CONSIDER: resolve confusingness: Direction sometimes indicates the direction that camera points at
 								// sometimes indicates the offset of the face with respect to the center of the block 
 								// these two are opposites by definition. (!)
 								// But we are not handling them consistently, we think. E.g. in face agg, Direction positive sometimes
@@ -636,11 +635,11 @@ public class Chunk : ThreadedJob
 								// change the code so that Direction always means "offset with respect to block center."
 								// probably, faceset will then put a '!' somewhere when checking its neg/pos status to
 								// figure out which tri indices to use.
-								//RELATED TODO: in face Agg. make two public func where there's now one: editFaceSet(alco, editPos, editNeg) becomes-->
+								// RELATED TODO: in face Agg. make two public func where there's now one: editFaceSet(alco, editPos, editNeg) becomes-->
 								// editPositiveSideFaceSet(alco) editNegativeSideFaceSet(alco)
 								
-//								addCoordToFaceAggregorAtIndex(blockCoord, b.type, Direction.ypos);								
-								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.ypos, b.type));								
+//								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.ypos, b.type));
+								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type));
 #else
 								addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
 								starting_tri_index += 4;
@@ -649,12 +648,12 @@ public class Chunk : ThreadedJob
 						}
 						
 						Coord extentBlockCoord = new Coord(xx, h_range.extentMinusOne() , zz);
-						targetBlockIndex = new ChunkIndex (extentBlockCoord) ; //(xx, h_range.extentMinusOne() , zz);	
+						targetBlockIndex = new ChunkIndex (extentBlockCoord) ; 
 						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, extentBlockCoord);
 #if FACE_AG
 						if (b != null)
-							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.yneg, b.type));
-//							addCoordToFaceAggregorAtIndex(extentBlockCoord, b.type, Direction.yneg);
+							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.ypos, b.type));
+//							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.yneg, b.type));
 #else
 						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
 						starting_tri_index += 4;
@@ -692,7 +691,8 @@ public class Chunk : ThreadedJob
 						
 #if FACE_AG_XZ
 						if (b != null)
-							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
+//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else
@@ -710,7 +710,8 @@ public class Chunk : ThreadedJob
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 #if FACE_AG_XZ
 						if (b != null)
-							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
+//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else
@@ -731,7 +732,8 @@ public class Chunk : ThreadedJob
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 #if FACE_AG_XZ
 						if (b != null)	
-							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
+//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else
@@ -748,7 +750,8 @@ public class Chunk : ThreadedJob
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
 #if FACE_AG_XZ
 						if (b != null)
-							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
+							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
+//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
 #else

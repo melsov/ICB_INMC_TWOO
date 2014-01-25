@@ -837,14 +837,14 @@ public class NoisePatch : ThreadedJob
 		//...
 		int x_start = (int)( start.x);
 		int z_start = (int)( start.z);
-		int y_start = (int)( start.y); 
+//		int y_start = (int)( start.y); 
 
 		int x_end = (int)(x_start + range.x);
-		int y_end = (int)(y_start + range.y);
+//		int y_end = (int)(y_start + range.y);
 		int z_end = (int)(z_start + range.z);
 
-		Block curBlock = null;
-		Block prevYBlock = null;
+//		Block curBlock = null;
+//		Block prevYBlock = null;
 
 		int surface_nudge = (int)(patchDimensions.y * .4f); 
 		float rmf3DValue = 0.2f;

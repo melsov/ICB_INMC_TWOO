@@ -78,9 +78,36 @@ public class MeshBuilder
 //		return Axis.Z;
 //	}
 	
-	private FaceAggregator faceAggregatorAt(Coord co, Direction dir)
+	private bool isFaceAggregatorAt(Coord co, Axis axis) 
 	{
 		// cases for different face aggs.
+		if (axis == Axis.X) {
+			return faceAggregatorsZY[co.x] != null;
+		}
+			
+		if (axis == Axis.Y) {
+			return faceAggregatorsXZ[co.y] != null;
+		}
+		
+		return faceAggregatorsXY[co.z] != null;
+	}
+	
+	private void removeFaceAggregatorAt(Coord co, Axis axis) {
+		if (axis == Axis.X) {
+			faceAggregatorsZY[co.x] = null;
+			return;
+		}
+			
+		if (axis == Axis.Y) {
+			faceAggregatorsXZ[co.y] = null;
+			return;
+		}
+		
+		faceAggregatorsXY[co.z] = null;
+	}
+	
+	private FaceAggregator faceAggregatorAt(Coord co, Direction dir)
+	{
 		if (dir <= Direction.xneg)	
 		{
 			if (faceAggregatorsZY[co.x] == null)
@@ -214,17 +241,27 @@ public class MeshBuilder
 		CombineInstance[] combines = new CombineInstance[] {combine};
 #endif	
 		
-		_gameObj.GetComponent<MeshFilter>().mesh.CombineMeshes(combines, true, false);
+		//  MESH_FULL WAY
+		Mesh mesh_full = new Mesh();
+		_gameObj.GetComponent<MeshFilter>().mesh = mesh_full; 
+		mesh_full.CombineMeshes(combines, true, false);
+		// END MESH_FULL WAY
+//		_gameObj.GetComponent<MeshFilter>().mesh.CombineMeshes(combines, true, false);
 		
 		//DEBUG
-		int mesh_tri_count = _gameObj.GetComponent<MeshFilter>().mesh.triangles.Length;
-		int[] subMeshTris = _gameObj.GetComponent<MeshFilter>().mesh.GetTriangles(0);
-		int sub_tri_count = subMeshTris.Length;
+//		int mesh_tri_count = _gameObj.GetComponent<MeshFilter>().mesh.triangles.Length;
+//		int[] subMeshTris = _gameObj.GetComponent<MeshFilter>().mesh.GetTriangles(0);
+//		int sub_tri_count = subMeshTris.Length;
 		
 		_gameObj.GetComponent<MeshFilter>().mesh.RecalculateNormals();
 		_gameObj.GetComponent<MeshFilter>().mesh.RecalculateBounds();
 //		_gameObj.GetComponent<MeshFilter>().mesh.Optimize();
-		_gameObj.GetComponent<MeshCollider>().sharedMesh =  _gameObj.GetComponent<MeshFilter>().mesh; //mesh_full; //  NO DIF?
+		
+		_gameObj.GetComponent<MeshCollider>().sharedMesh =  mesh_full; //  MESH_FULL WAY
+		// TODO: learn why the above line works (new geometry is included in the collider)
+		// and the below line doesn't (collider made of the old geometry)
+//		_gameObj.GetComponent<MeshCollider>().sharedMesh =  _gameObj.GetComponent<MeshFilter>().mesh; //mesh_full; //  NO DIF?
+		
 		
 		
 	}
@@ -303,6 +340,8 @@ public class MeshBuilder
 		return new MeshSet(new GeometrySet(triangles, vertices), uvs, col32s);
 	}
 	
+	#region block editing
+	
 	public MeshSet newMeshSetByRemovingBlockAtCoord(Coord co)
 	{
 		editfaceAggregatorsByChangingBlockAtCoord(co, false, BlockType.Air);
@@ -334,14 +373,7 @@ public class MeshBuilder
 		// Z
 		editFaceAggregatorsAtCoordAndAxis(co, Axis.Z, new AlignedCoord(co.x, co.y), z_one, add_block, btype);
 	}
-	
-	private Direction posDirectionForAxis(Axis a) {
-		if (a == Axis.X)
-			return Direction.xpos;
-		if (a == Axis.Y)
-			return Direction.ypos;
-		return Direction.zpos;
-	}
+
 	
 	private void editFaceAggregatorsAtCoordAndAxis(Coord co, Axis axis, AlignedCoord alco, Coord nudgeCoord, bool add_block, BlockType btype)
 	{
@@ -361,7 +393,13 @@ public class MeshBuilder
 		
 		Direction relevantPosDir = this.posDirectionForAxis(axis);
 		
-		FaceAggregator faXY = faceAggregatorAt(co, relevantPosDir); 
+//		if (!isFaceAggregatorAt(co, axis ) ) {
+//			throw new Exception("Whoa, what's going on here? trying to remove a coord from a face agg that doesn't exist yet??");	
+//		}
+		
+		FaceAggregator faXY = null;
+		if (isFaceAggregatorAt(co, axis))
+			faXY = faceAggregatorAt(co, relevantPosDir); 
 		
 		// *Neg direction neighbor block wasn't air?
 		// *we need to add a face on its pos side
@@ -369,16 +407,29 @@ public class MeshBuilder
 		{
 			if (relevantComponent > 0)
 			{
-				FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
-				// TODO: make sure this func is really 'add face if not exists.'
-				faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, test_b.type));
-				faXminusOne.getFaceGeometry(relevantComponent - 1);
+//				if (isFaceAggregatorAt(co - nudgeCoord, axis))
+//				{
+					FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
+					// TODO: make sure this func is really 'add face if not exists.'
+					faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type));
+					faXminusOne.getFaceGeometry(relevantComponent - 1);
+//				}
 			}
 		} else { // it is air at x (or whichever co) - 1
 			
-			// * neighbor is an air block, so there should be a face to remove at our block in this direction
-			faXY.removeBlockFaceAtCoord(alco, false, true);
-			faXY.getFaceGeometry(relevantComponent);
+			if (faXY != null) {
+				// * neighbor is an air block, so there should be a face to remove at our block in this direction
+				faXY.removeNegativeSideFaceAtCoord(alco);
+	//			faXY.removeBlockFaceAtCoord(alco, false, true);
+//				faXY.getFaceGeometry(relevantComponent);
+				
+				if (faXY.faceSetCount == 0) {
+					removeFaceAggregatorAt(co, axis);	
+				} else {
+					// else get Face geom...
+					faXY.getFaceGeometry(relevantComponent);
+				}
+			}
 		}
 		
 		// x plus one
@@ -387,15 +438,29 @@ public class MeshBuilder
 		{
 			if (relevantComponent < relevantUpperLimit - 1)
 			{
-				FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
-					
-				faXplusone.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type));
-				faXplusone.getFaceGeometry(relevantComponent + 1);
+//				if (isFaceAggregatorAt(co + nudgeCoord, axis))
+//				{
+					FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
+						
+					faXplusone.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, test_b.type));
+					faXplusone.getFaceGeometry(relevantComponent + 1);
+//				}
 			}
 		} else {
-			// * neighbor was air, so there should be a face to remove
-			faXY.removeBlockFaceAtCoord(alco, true, false);
-			faXY.getFaceGeometry(relevantComponent);
+			if (faXY != null) {
+				// * neighbor was air, so there should be a face to remove
+				faXY.removePositiveSideFaceAtCoord(alco);
+				
+				if (faXY.faceSetCount == 0) {
+					removeFaceAggregatorAt(co, axis);	
+				} else {
+					// else get Face geom...
+					faXY.getFaceGeometry(relevantComponent);
+				}
+				
+	//			faXY.removeBlockFaceAtCoord(alco, true, false);
+				faXY.getFaceGeometry(relevantComponent);
+			}
 		}
 	}
 	
@@ -414,58 +479,99 @@ public class MeshBuilder
 		
 		FaceAggregator faXY = faceAggregatorAt(co, relevantPosDir); // aggregatorArray[relevantComponent];
 		
+		//NEG NEIGHBOR
 		if (neighbor_block.type != BlockType.Air)
 		{
 			if (relevantComponent > 0)
 			{
-				
-				
-				// * neighbor not air, so there should be a face that is now occluded and that we should remove
-				
-				FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
-				
-				//DEBUG:
-				int faXMinusOneCountBefore = faXminusOne.meshSet.geometrySet.vertices.Count;
-				
-				faXminusOne.removeBlockFaceAtCoord(alco, true, false);
-				faXminusOne.getFaceGeometry(relevantComponent - 1);
-				
-				//DEBUG:
-				int faXMinusOneCount = faXminusOne.meshSet.geometrySet.vertices.Count;
-				b.bug(" f agg minus one vert count before: " + faXMinusOneCountBefore + " and after: " + faXMinusOneCount);
-				
-				
+				// * neighbor not air, so there should be a face that is now hidden and that we should remove
+				if (isFaceAggregatorAt(co - nudgeCoord, axis))
+				{
+					FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
+					
+					// DEBUG:
+					int faXMinusOneCountBefore = faXminusOne.meshSet.geometrySet.vertices.Count;
+					
+					faXminusOne.removePositiveSideFaceAtCoord(alco);
+	//				faXminusOne.removeBlockFaceAtCoord(alco, true, false);
+					
+					// if faceSetCount now zero, remove faceAgg
+					if (faXminusOne.faceSetCount == 0) {
+						removeFaceAggregatorAt(co - nudgeCoord, axis);	
+					} else {
+						// else get Face geom...
+						faXminusOne.getFaceGeometry(relevantComponent - 1);
+					}
+					
+					//DEBUG:
+					int faXMinusOneCount = faXminusOne.meshSet.geometrySet.vertices.Count;
+					b.bug(" f agg minus one vert count before: " + faXMinusOneCountBefore + " and after: " + faXMinusOneCount);
+				}
 			}
 		} else { 
 			
 			b.bug("adding a block!!");
 			// * neighbor is air, so we need to add a face at our coord
 			
-			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, btype));
+			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, btype));
 			faXY.getFaceGeometry(relevantComponent);
 		}
 		
-		// x plus one
+		// POS NEIGHBOR
 		neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co + nudgeCoord));
 		if (neighbor_block.type != BlockType.Air)
 		{
 			if (relevantComponent < relevantUpperLimit - 1)
 			{
-				// * neighbor not air, remove occluded face
-				FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
-				
-				b.bug("adding a block");
-				faXplusone.removeBlockFaceAtCoord(alco, false, true); // remove lower
-				faXplusone.getFaceGeometry(relevantComponent + 1);
+				if (isFaceAggregatorAt(co + nudgeCoord, axis))
+				{
+					// * neighbor not air, remove occluded face
+					FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
+					
+					b.bug("adding a block");
+					faXplusone.removeNegativeSideFaceAtCoord(alco);
+	
+					//check if face agg now empty
+					if (faXplusone.faceSetCount == 0) {
+						removeFaceAggregatorAt(co + nudgeCoord, axis);	
+					} else {
+						// else get Face geom...
+						faXplusone.getFaceGeometry(relevantComponent + 1);
+					}
+					
+					
+				}
 			}
 		} else {
 			
 			// * neighbor is air, need to add a face at this coord
 			
-			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, btype));
+			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, btype));
 			faXY.getFaceGeometry(relevantComponent);
 		}
 	}
+	
+		
+	private static Direction posDirectionForAxis(Axis a) {
+		if (a == Axis.X)
+			return Direction.xpos;
+		if (a == Axis.Y)
+			return Direction.ypos;
+		return Direction.zpos;
+	}
+	
+	private static Axis axisForDirection(Direction dir) {
+		// cases for different face aggs.
+		if (dir <= Direction.xneg) {
+			return Axis.X;
+		}
+		if (dir <= Direction.yneg) {
+			return Axis.Y;
+		}
+		return Axis.Z;
+	}
+	
+	#endregion
 	
 	//TODO: must update verts...
 	
@@ -503,25 +609,14 @@ public class MeshBuilder
 				else
 					mset = fa.meshSet;
 				
-				GeometrySet gset = mset.geometrySet;
+				List<int> geomSetIndices = new List<int>(mset.geometrySet.indices); //copy list...
+				GeometrySet gset = new GeometrySet(geomSetIndices, mset.geometrySet.vertices);
+//				GeometrySet gset = mset.geometrySet;
 				
 				temp_vertices.AddRange(gset.vertices);
 				int j = 0;
 				for(; j < gset.indices.Count; ++j) {
-					
-					if (wantToRecalculate) {
-						gset.indices[j] += starting_tri_index;
-					}
-					else {
-						gset.indices[j] += starting_tri_index - fa.baseTriangleIndex;
-					}
-					
-					//TODO: figure out how to avoid incrementing the indices twice when we are not recalculating.
-					// check out: http://stackoverflow.com/questions/222598/how-do-i-clone-a-generic-list-in-c
-					//DEBUG
-//					if (gset.indices[j] >= temp_vertices.Count) {
-//						b.bug("indices > vertices: index: " + gset.indices[j] + " vert count: " + gset.vertices.Count + " indices index: " + j );	
-//					}
+					gset.indices[j] += starting_tri_index;
 				}
 				
 				temp_triangles.AddRange(gset.indices);
