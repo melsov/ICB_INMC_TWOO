@@ -528,7 +528,7 @@ public struct BiomeInputs
 		BiomeInputs inputs = new BiomeInputs();
 		
 		//cragginess
-		inputs.hilliness = .4f;
+		inputs.hilliness = .75f;
 		inputs.cragginess = 3.2f;
 		inputs.overhangness = 8.5f;
 		inputs.caveVerticalFrequency = 9.4f;

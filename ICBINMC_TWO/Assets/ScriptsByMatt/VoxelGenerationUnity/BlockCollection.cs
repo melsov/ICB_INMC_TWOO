@@ -27,6 +27,16 @@ public class BlockCollection
 	                                                                                                   (int) ChunkManager.CHUNKHEIGHT, 
 	                                                                                                   (int)ChunkManager.CHUNKLENGTH);
 	private const string NOISE_PATCHES_SAVE_NAME = "SavedNoisePatches";
+	
+	// TODO: set up a save system where different sets of noise patches are saved by
+	// seed. basically, there should be a 'world' object.
+	// it knows its seed(s)
+	// it can have a handy name, maybe a screen shot (? why not.)
+	// and it knows its noise_patch_save_name.
+	
+	// basically, there's a PlayerPrefs key: "SavedGames"
+	// and this holds a list of 'World' objects.
+	// and these objects have the nec info to load the world in question, etc...
 
 	public BlockCollection () 
 	{
@@ -45,7 +55,7 @@ public class BlockCollection
 			var b = new BinaryFormatter();
 			//Create a memory stream with the data
 			var m = new MemoryStream(Convert.FromBase64String(data));
-				noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
+			noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
 
 		} 
 	}

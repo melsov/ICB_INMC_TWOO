@@ -25,6 +25,26 @@ using System.Diagnostics;
 
 using System.Runtime.Serialization.Formatters.Binary;
 
+
+				
+//generated phenomena notes:
+/*
+ * Generated phenomena objects (structures) 
+  * keep a table2d of lists of ranges 
+  * and to make them, you would often feed them a seed number
+  * they have a point of origin which can be negative (lower xz corner)
+  * and the table dimensions adjust to accommodate only the positive side.
+  * 
+  * noisepatches--
+  * when noise patches come into being, they ask the four noise patches next to them xz pos neg
+  * for any of their structures.
+  * and when they generate from noise, they keep a list of the structures that they want to give to 
+  * each of their neighbors.
+  * they always ask their neighbors for the structures, (and if those noisepatches exist, great if not see below)
+  * and always try to give all of the structures that they have once they've generated them.
+*/
+//end generated phenomena nots
+
 // TODO: object wish list:
 // a Topography object. 
 // like a height map except that it 
@@ -85,6 +105,7 @@ public class NoisePatch : ThreadedJob
 
 	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
 	private List<Range1D>[] heightMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
+	private List<Range1D>[] savedRangeLists = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 //	private List<Range1D>[] structureMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	
 	private const int BIOMELOOKUPOFFSET = 100;
@@ -143,7 +164,7 @@ public class NoisePatch : ThreadedJob
 	}
 
 	public bool coordIsInBlocksArray(Coord indexCo) {
-		if (!indexCo.isIndexSafe(patchDimensions)) // throw an exception—only for debugging.
+		if (!indexCo.isIndexSafe(patchDimensions)) // debugging
 		{
 			throw new Exception ("coord out of array bounds for this noise patch: coord: " + indexCo.toString() + " array bounds: " + patchDimensions.toString ());
 			return false;
@@ -161,6 +182,7 @@ public class NoisePatch : ThreadedJob
 		info.AddValue ("NoiseCoord", coord, typeof(NoiseCoord));
 		updateSavableBlockList ();
 		info.AddValue ("SavedBlocks", savedBlocks, typeof(List<SavableBlock>));
+		info.AddValue ("SavedRanges", savedRangeLists, typeof(List<Range1D>[]));
 	}
 //
 //	protected override void doSerializeConstructor(SerializationInfo info, StreamingContext context)
@@ -173,7 +195,12 @@ public class NoisePatch : ThreadedJob
 		otherConstructorStuff ();
 
 		coord = (NoiseCoord) info.GetValue("NoiseCoord", typeof(NoiseCoord));
+		
 		savedBlocks = (List<SavableBlock>) info.GetValue("SavedBlocks", typeof(List<SavableBlock>));
+		
+		//TODO: set up range saving... (NOTE: savedRangeList mem var was added but saving mechanics are incomplete...)
+//		heightMap = (List<Range1D>[]) info.GetValue ("SavedRanges", typeof(List<Range1D>[]));
+		
 		updateSavableAndNormalBlocksArray ();
 		generatedBlockAlready = false;
 		startedBlockSetup = false;
@@ -477,6 +504,10 @@ public class NoisePatch : ThreadedJob
 		addSavableBlock (bb, relCo);
 
 		updateYSurfaceMapWithBlockAndRelCoord (bb, relCo);
+		
+		//SAVED RANGE LISTS
+		List<Range1D> updatedRanges = heightRangesAtCoord(relCo);
+		setSavedRangesAtCoord(relCo, updatedRanges);
 	}
 
 	private void debugList(List<int> list) {
@@ -489,6 +520,10 @@ public class NoisePatch : ThreadedJob
 	
 	private List<Range1D> heightRangesAtCoord(Coord relCo) {
 		return heightMap [relCo.x * patchDimensions.x + relCo.z];
+	}
+	
+	private void setSavedRangesAtCoord(Coord relCo, List<Range1D> ranges) {
+		savedRangeLists[relCo.x * patchDimensions.x + relCo.z] = ranges;
 	}
 	
 	private void updateYSurfaceMapWithBlockAndRelCoord(Block bb, Coord relCo) 
@@ -837,10 +872,8 @@ public class NoisePatch : ThreadedJob
 		//...
 		int x_start = (int)( start.x);
 		int z_start = (int)( start.z);
-//		int y_start = (int)( start.y); 
 
 		int x_end = (int)(x_start + range.x);
-//		int y_end = (int)(y_start + range.y);
 		int z_end = (int)(z_start + range.z);
 
 //		Block curBlock = null;
@@ -899,9 +932,9 @@ public class NoisePatch : ThreadedJob
 //				float noise_val = 0.5f; // FLAT TEST get2DNoise(xx, zz);
 			
 #if FLAT_TOO
+				//FOR DEBUGGING
 				noise_val = .4f; // get2DNoise(xx, zz);
 				biomeInputs = BiomeInputs.Pasture();
-				
 #else
 				noise_shifted2 = getAlt2DNoise(xx + 123, zz + 123); //  valueByShiftingValueLeft(noise_val, 1);
 				noise_val = get2DNoise(xx - (int)(0 * noise_shifted2) , zz -(int)(0 * noise_shifted2));
@@ -970,8 +1003,6 @@ public class NoisePatch : ThreadedJob
 //				Range1D zero_ToSurface_range = new Range1D(0, noiseAsWorldHeight);
 //				heightRanges.Add(zero_ToSurface_range);
 				
-				
-				
 //#if FLAT_TOO
 //#else
 				PTwo patchRelCo = new PTwo(xx, zz);
@@ -991,24 +1022,7 @@ public class NoisePatch : ThreadedJob
 //#endif
 				
 				heightMap[xx * patchDimensions.x + zz] = heightRanges;
-				
-				//generated phenomena notes:
-				/*
-				 * Generated phenomena objects (structures) 
-				  * keep a table2d of lists of ranges 
-				  * and to make them, you would often feed them a seed number
-				  * they have a point of origin which can be negative (lower xz corner)
-				  * and the table dimensions adjust to accommodate only the positive side.
-				  * 
-				  * noisepatches--
-				  * when noise patches come into being, they ask the four noise patches next to them xz pos neg
-				  * for any of their structures.
-				  * and when they generate from noise, they keep a list of the structures that they want to give to 
-				  * each of their neighbors.
-				  * they always ask their neighbors for the structures, (and if those noisepatches exist, great if not see below)
-				  * and always try to give all of the structures that they have once they've generated them.
-				*/
-				//end generated phenomena nots
+
 				
 				// NOTE: still need a  way of adding the saved blocks! (TODO:)
 				

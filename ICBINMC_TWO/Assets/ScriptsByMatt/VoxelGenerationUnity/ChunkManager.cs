@@ -112,6 +112,8 @@ public class ChunkManager : MonoBehaviour
 	public LibNoiseNetHandler m_libnoiseNetHandler;
 	
 	private NoiseCoord currentTargetedForCreationNoiseCo;
+	
+	public Transform cursorBlock;
 
 	public ChunkManager()
 	{
@@ -535,24 +537,35 @@ public class ChunkManager : MonoBehaviour
 	}
 
 	#region handle block hits
+	
+	private void moveCursorBlockToPosition(Vector3 wopo)
+	{
+		cursorBlock.renderer.enabled = true;
+		cursorBlock.position = wopo;			
+	}
+	
+	private void hideCursorBlock() {
+		cursorBlock.renderer.enabled = false;
+	}
+	
+	public void handleBreakBlockInProgress(RaycastHit hit)
+	{
+		Vector3 hitWoPo = worldPositionOfBlock(hit);
+		moveCursorBlockToPosition(hitOrPlaceBlockCoordFromWorldPos(hitWoPo).toVector3());
+	}
+	
+	public void handleBreakBlockAborted() {
+		hideCursorBlock();	
+	}
 
 	public void handleBreakBlockAt(RaycastHit hit)
 	{
-//		Coord blockCoord = new Coord (hit.point);
-
-		// triangle technique...
-		// TODO: if is destroyable...? etc.
-
-
-//		Vector3 avg = chunkRelativePointFromHit (hit);
-//		Chunk ch = chunkContainingCoord (blockCoord);
-//		Coord startOfChunkCoord = ch.chunkCoord * CHUNKLENGTH;
-//		Coord altBlockCoord = startOfChunkCoord + new Coord (avg);
-//		Coord altBlockCoord = startOfChunkCoord + new Coord (avg);
+		hideCursorBlock();
 
 		Vector3 blockWorldPos = worldPositionOfBlock (hit);
 
 		Coord altBlockCoord =  hitOrPlaceBlockCoordFromWorldPos (blockWorldPos);// new Coord (blockWorldPos);
+		moveCursorBlockToPosition(altBlockCoord.toVector3());
 
 		if (altBlockCoord.y == 0) //BEDROCK
 		{
@@ -616,8 +629,11 @@ public class ChunkManager : MonoBehaviour
 	public void handlePlaceBlockAt(RaycastHit hit)
 	{
 		Vector3 blockWorldPos = worldPositionOfBlock (hit, true);
+		
 		Coord placingCoord = hitOrPlaceBlockCoordFromWorldPos (blockWorldPos); //  new Coord (blockWorldPos);
 
+//		moveCursorBlockToPosition(placingCoord.toVector3());
+		
 		if (playerOccupiesCoord(placingCoord)){
 			bug ("player occupies coord");
 			return;
@@ -1428,6 +1444,8 @@ public class ChunkManager : MonoBehaviour
 	
 	void drawDebugCubesForAllCreatedNoisePatches()
 	{
+		if (!blocks.noisePatches.ContainsKey(currentTargetedForCreationNoiseCo))
+			return;
 		// current to be created n patch
 		NoisePatch curTargeted = blocks.noisePatches[currentTargetedForCreationNoiseCo];
 		
@@ -2186,7 +2204,7 @@ public class ChunkManager : MonoBehaviour
 //		#endif
 		//**want
 		
-		drawDebugCubesForAllCreatedNoisePatches();
+//		drawDebugCubesForAllCreatedNoisePatches();
 		drawDebugCubesForAllUncreatedChunks();
 //		drawDebugCubesForAllUncreatedNoisePatches();
 //		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));

@@ -22,10 +22,21 @@ public class BlockHitter : MonoBehaviour {
 
 
 	private float blockBreakTimeSeconds;
+	
+	//TODO: block cursor should really show whenever midscreen is aimed at a block
+	// block cursor should also actually be a plain that goes on the face in question (b/c they might want to add not subtract)
+	// the current cube --could appear over blocks that are being destroyed
+	// it would have a version of the normal block shader that could animate somehow.
+	// maybe we could tweak the texture offset so that it moves around, change color? change scale, etc..
 
 	//High score table
 //	public List<Thing> highScores = new List<Thing>();
 //	public Thing[,,] highScores = new Thing [16,256,16];
+	
+	public void handleLeftButtonUp()
+	{
+		blockDelegate.handleBreakBlockAborted();
+	}
 
 	public void handleLeftButtonHit(RaycastHit hit)
 	{
@@ -36,13 +47,17 @@ public class BlockHitter : MonoBehaviour {
 			hitBlockCoord = worldHitCoord;
 			punchStartTime = Time.fixedTime;
 			blockBreakTimeSeconds = getBlockBreakTimeSeconds(hitBlockCoord);
+			
+			//break block in progress tell the block delegate
+			blockDelegate.handleBreakBlockInProgress(hit);
+			
 			return;
 		}
 
 		if (Time.fixedTime - punchStartTime > blockBreakTimeSeconds)
 		{
 			if (hitBlockCoord.equalTo (alreadyHandledBlockCoord)) {
-//				bug (" already handled: " + alreadyHandledBlockCoord.toString () + " hitBlock: " + hitBlockCoord.toString ());
+				
 				return;
 			}
 
@@ -61,7 +76,7 @@ public class BlockHitter : MonoBehaviour {
 
 	private float getBlockBreakTimeSeconds(Coord b_coord)
 	{
-		return 0.3f; // for now
+		return 0.7f; // for now
 	}
 
 	void bug(string str) {
