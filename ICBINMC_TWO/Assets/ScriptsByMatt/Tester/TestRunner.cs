@@ -10,8 +10,8 @@ public class TestRunner : MonoBehaviour {
 	private static bool dontRunGame = false;
 //	public const bool DontRunDoTerrainTestInstead = true;
 	public const bool DontRunDoTerrainTestInstead = false;
-	public const bool RunGameOnlyOneNoisePatch = true;
-//	public const bool RunGameOnlyOneNoisePatch = false;	
+//	public const bool RunGameOnlyOneNoisePatch = true;
+	public const bool RunGameOnlyOneNoisePatch = false;	
 	
 	private bool doRunTest = true;
 	
@@ -77,7 +77,7 @@ public class TestRunner : MonoBehaviour {
 			
 			float cos_col1 = (float) Mathf.Cos (color_cycle * 3.14159f);
 			float cos_col2 = (float) Mathf.Cos (color_cycle2 * 3.14159f * .75f);
-			add_color = new Color( (cos_col1 + cos_col2) * .5f , cos_col1 , cos_col2 , 1f);
+			add_color = new Color( (cos_col1 + cos_col2) * .15f , cos_col1 * .5f , cos_col2 , 1f);
 			int i = 0;
 			for(;i< indices.Count; i += 3)
 			{
@@ -113,6 +113,11 @@ public class TestRunner : MonoBehaviour {
 	static void debugLineV(Vector3 aa, Vector3 bb)
 	{
 		UnityEngine.Debug.DrawLine (aa, bb);
+	}
+	
+	public static void bug(string str) {
+		if (dontRunGame)
+			UnityEngine.Debug.Log(str);	
 	}
 	
 	

@@ -45,16 +45,11 @@ public class MeshBuilder
 ////		return new MeshSet(	
 //	}
 	
-//	public void addCoordToFaceAggregatorAtIndex(Coord co, BlockType type, Direction dir)
 	public void addCoordToFaceAggregatorAtIndex(FaceInfo faceInfo)
 	{
-//		FaceAggregator fa = faceAggregatorAt(co, dir );
-		FaceAggregator fa = faceAggregatorAt(faceInfo.coord, faceInfo.direction  );
-//		fa.addFaceAtCoordBlockType(co, type, dir );
-		fa.addFaceAtCoordBlockType(faceInfo); //.coord, faceInfo.blockType, faceInfo.direction );
-//		faceAggregators[co.y] = fa; // put back...
-//		setFaceAggregatorsAt(fa, co, dir);	
-		setFaceAggregatorsAt(fa, faceInfo.coord, faceInfo.direction );
+		FaceAggregator fa = faceAggregatorAt(faceInfo.coord, faceInfo.direction );
+		fa.addFaceAtCoordBlockType(faceInfo);
+//		setFaceAggregatorsAt(fa, faceInfo.coord, faceInfo.direction ); //necessary?? fa not an immutable type...
 	}
 	
 	public void resetFaceAggregators() 

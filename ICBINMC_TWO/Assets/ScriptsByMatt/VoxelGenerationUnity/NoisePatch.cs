@@ -1,6 +1,6 @@
 ﻿#define NO_CAVES
 #define LIGHT_HACK
-#define FLAT_TOO
+//#define FLAT_TOO
 //#define TERRAIN_TEST
 //#define FLAT
 

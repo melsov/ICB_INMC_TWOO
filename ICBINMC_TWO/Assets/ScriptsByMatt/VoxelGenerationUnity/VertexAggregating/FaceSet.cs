@@ -162,13 +162,14 @@ public class FaceSet
 	
 	private List<Strip> rangesWithRemovedFaceAt(int removeLevel, List<Strip> strips)
 	{
-		if (strips != null) {
-			b.bug("this strips list was null. remove Level was: " + removeLevel + "block face dir of this face set: "
-				+ blockFaceDirection + " block type: " + blockType + " face set limits: " + faceSetLimits.toString() );	
+//		TestRunner.bug("removing at remove level: " + removeLevel + "\n strips count: " + strips.Count);
+		if (strips == null) {
+			b.bug("this strips list was null. remove Level: " + removeLevel + "\nblock face dir of this face set: "
+				+ blockFaceDirection + " block type: " + blockType + "\nface set limits: " + faceSetLimits.toString() );	
 		}
 		int i = 0;
-//		Range1D range = Range1D.theErsatzNullRange();
-		for (; i < strips.Count; ++i)
+		int numberOfStrips = strips == null ? 0 : strips.Count;
+		for (; i < numberOfStrips; ++i)
 		{
 			Strip str = strips[i];
 			Range1D ra = str.range;
@@ -188,11 +189,25 @@ public class FaceSet
 					strips[i] = str;
 				} else if (ra.extentMinusOne() == removeLevel) {
 					ra.range--;	
+					if (ra.range == 0) {
+						throw new Exception("whoa. range is zero after remove Level == extentMinus one??? \ndirection: " + blockFaceDirection +"\n removeLevel : " + removeLevel);	
+					}
 					str.range = ra;
+					
+					
 					strips[i] = str;
 				} else {
+					
 					Range1D new_above = str.range.subRangeAbove(removeLevel);
 					Range1D new_below = str.range.subRangeBelow(removeLevel);
+					
+					b.bug("*** Editing middle of strip in face set new below range: " + new_below.toString() + "\nnew above range: " + new_above.toString() 
+						+ "\norig strip: " + str.toString() + "block face dir: " + blockFaceDirection + "\nblock type: " + blockType );
+					
+					//DEBUG
+					if (new_above.isErsatzNull() ) {
+						throw new Exception("new above is ersatz null");	
+					}
 					
 					str.range = new_below;
 					strips[i] = str;
@@ -217,6 +232,36 @@ public class FaceSet
 	{
 		List<Strip> strips = stripsArray[alco.across];
 		stripsArray[alco.across] = rangesWithRemovedFaceAt(alco.up, strips);
+		
+		if (stripsArray[alco.across].Count == 0) {
+			stripsArray[alco.across] = null;	
+		}
+		
+//		TestRunner.bug(" face set now has this many non null strip lists: " + this.nonNullStripListCount + "\n strips with count > 0 : " + this.greaterThanZeroCountStripListCount );
+	}
+	
+	public int nonNullStripListCount {
+		get {
+			int result = 0;
+			foreach(List<Strip> strips in stripsArray) {
+				if (strips != null) {
+					result++;
+				}
+			}
+			return result;
+		}
+	}
+	
+	public int greaterThanZeroCountStripListCount {
+		get {
+			int result = 0;
+			foreach(List<Strip> strips in stripsArray) {
+				if (strips != null && strips.Count > 0) {
+					result++;
+				}
+			}
+			return result;
+		}
 	}
 	
 	public int faceCount {
@@ -456,8 +501,15 @@ public class FaceSet
 		
 		// deal with the case where there's only one list of strips
 		if (faceSetLimits.dimensions.s == 1) {
+			
+//			TestRunner.bug("!! face set limits dimension was only one: " + faceSetLimits.toString() );
+			
 			List<Strip> the_strips = stripsArray[faceSetLimits.origin.s  ];
-			foreach(Strip stripp in the_strips) {
+			int stripsCount = the_strips != null ? the_strips.Count : 0;
+			for(int u = 0; u < stripsCount ; ++u) {
+//			foreach(Strip stripp in the_strips) {
+				
+				Strip stripp = the_strips[u];
 #if GLOSS_QUAD_ARRAY_INDEX_BUG
 				if (stripp.range.start >= quadTableDimensions.t)
 				{
@@ -500,6 +552,7 @@ public class FaceSet
 			// *isolated list of 'current Strips'?
 			if (lastStrips == null && horizontalDim == horizDimEnd - 1)
 			{
+//				TestRunner.bug(" ^^^^ isolated last row of stips condition met.");
 				if (currentStrips != null)
 					foreach(Strip lastRowStrip in currentStrips) {
 						LitQuad litlq = LitQuad.LitQuadFromStrip(lastRowStrip, horizontalDim);
@@ -513,7 +566,7 @@ public class FaceSet
 			if ( lastStrips != null ) //currentStrips == null) // ||
 				lastStripsCount = lastStrips.Count;
 			
-			for(int j = 0 ; j < lastStrips.Count ; ++j) 
+			for(int j = 0 ; j < lastStripsCount ; ++j) 
 			{
 				Strip lstp = lastStrips[j];
 				
@@ -619,6 +672,8 @@ public class FaceSet
 	public MeshSet CalculateGeometry(float verticalHeight) //need param y height...
 	{
 		optimizeStrips();
+		
+		TestRunner.bug("quads count after optimize strips: " + quads.Count );
 		
 		int t_offset = faceSetLimits.origin.t;
 		

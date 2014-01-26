@@ -175,6 +175,9 @@ public class FaceAggregator
 		if (index < faceSets.Count)
 			faceSets.RemoveAt(index);
 		
+		//TODO: decrement the faceSetTable for greater than index
+		adjustLookupTableForRemovalOfIndex(index);
+		
 		//set the index in the table to zero	
 		setIndexOfFaceSetAtCoord(0, alco, dir);
 	}
@@ -205,6 +208,21 @@ public class FaceAggregator
 			throw new Exception("this index was: across " + (coord.across * 2 + nudge_lookup) + " up: " + coord.up + ". face table length was: dim 0: " +faceSetTable.GetLength(0) + " 1 " + faceSetTable.GetLength(1) + " coord was " + coord.toString() + "Direction was: " + dir + " my face axis is: " + faceNormal);
 		}
 		return ret;
+	}
+	
+	private void adjustLookupTableForRemovalOfIndex(int index) {
+		int shifted_index = index + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
+		
+		if (index < 0) throw new Exception("adjusting lookup table. index < 0??!!");
+		
+		int j = 0;
+		for (int i = 0 ; i < faceSetTable.GetLength(0) ; ++i) {
+			for( j = 0; j < faceSetTable.GetLength(1) ; ++j) {
+				if (faceSetTable[i,j] > shifted_index) {
+					faceSetTable[i,j] = faceSetTable[i,j] - 1;	
+				}
+			}
+		}
 	}
 	
 	private bool indexRepresentsAnOccupiedCoord(int index) {
@@ -259,6 +277,7 @@ public class FaceAggregator
 		
 		if (index < 0)
 			return null;
+		
 		try {
 			return faceSets[index];
 		} catch(ArgumentOutOfRangeException e) {
@@ -584,17 +603,17 @@ public class FaceAggregatorTest
 	
 	private static Coord[] removeCoords = new Coord[]{
 		
-		new Coord(0, 0, 0),
-		new Coord(0, 0, 7),
-		new Coord(1, 0, 2),
-		new Coord(5, 0, 9),
+		new Coord(1, 0, 0),
+//		new Coord(0, 0, 7),
+//		new Coord(1, 0, 2),
+//		new Coord(5, 0, 9),
+////		
+//		new Coord(15, 4, 14),
+//		new Coord(15, 4, 15),
 //		
-		new Coord(15, 4, 14),
-		new Coord(15, 4, 15),
-		
-		new Coord(13, 4, 8),
-		new Coord(13, 4, 6),
-		new Coord(13, 4, 7),
+//		new Coord(13, 4, 8),
+//		new Coord(13, 4, 6),
+//		new Coord(13, 4, 7),
 
 	};
 	
@@ -608,16 +627,23 @@ public class FaceAggregatorTest
 	{
 		fa = new FaceAggregator(Axis.Y);
 		
-		int COORD_DIMS = 16;
-		int coord_count = COORD_DIMS * COORD_DIMS;
-		int i = COORD_DIMS * 0; // TODO: fix bug (if it matters which it probably does): if i > 0 we get a trying to add a face where there already was one
+//		int COORD_DIMS = 16;
+		int COORD_DIMS1 = 3, COORD_DIMS2 = 1;
+		int coord_count = COORD_DIMS1 * COORD_DIMS2;
+//		int i = COORD_DIMS * 0; // TODO: fix bug (if it matters which it probably does): if i > 0 we get a trying to add a face where there already was one
 		// the face is at aligned coord: 0,0.
 		Coord[] coords = new Coord[coord_count];
-		for(; i < coord_count ; ++i)
-		{
-			int z = i % COORD_DIMS;
-			int x = i / COORD_DIMS;
-			coords[i] = new Coord(x, 4, z);
+//		for(; i < coord_count ; ++i)
+//		{
+//			int z = i % COORD_DIMS;
+//			int x = i / COORD_DIMS;
+//			coords[i] = new Coord(x, 4, z);
+//		}
+		
+		for(int j = 0; j < COORD_DIMS1 ; ++j) {
+			for (int k = 0; k < COORD_DIMS2 ; ++k) {
+				coords[j * COORD_DIMS2 + k] = new Coord(j , 4, k);
+			}
 		}
 		
 		testCoords = coords;
@@ -653,7 +679,7 @@ public class FaceAggregatorTest
 	public List<MeshSet> getMeshResults()
 	{
 		 // calling this twice produces odd results: mesh loses some quads.
-//		List<MeshSet> ret_before = fa.getMeshResults();
+		List<MeshSet> ret_before = fa.getMeshResults();
 		
 		int vertsbefore = fa.totalVertices();
 		bug ("verts before: " + vertsbefore);
