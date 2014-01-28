@@ -170,35 +170,16 @@ public class MeshBuilder
 	private Mesh meshWithMeshSet(MeshSet mset)
 	{
 		Mesh mesh = new Mesh();
-
-//		GameObject otherGameOb = (GameObject) Transform.Instantiate(_gameObj, _gameObj.transform.position, _gameObj.transform.rotation);
-//		Transform trans = (Transform) Transform.Instantiate(_gameObj.transform, _gameObj.transform.position, _gameObj.transform.rotation);
-//		GameObject otherGameOb = trans.gameObject;
-//		otherGameOb.transform.parent = _gameObj.transform;
 		
-//		otherGameOb.GetComponent<MeshFilter>().mesh = mesh; 
-
-//		mesh.Clear ();
-		
-		if (mset.geometrySet.vertices.Count < 1) {
-			throw new System.Exception("empty vertices!");
-		}
+//		if (mset.geometrySet.vertices.Count < 1) { // NOT a reason to get upset. just a flat (or pos. staircase-like) chunk
+////			throw new System.Exception("empty vertices! my chunk's coord is: " + this.m_chunk.chunkCoord.toString() + "triangles count: " + mset.geometrySet.indices.Count );
+//		}
 		
 		mesh.vertices = mset.geometrySet.vertices.ToArray();
 		mesh.triangles = mset.geometrySet.indices.ToArray();
 		mesh.uv = mset.uvs.ToArray();
 		mesh.colors32 = mset.color32s.ToArray();
-		
-//		mesh.RecalculateNormals();
-//		mesh.RecalculateBounds();
-//		mesh.Optimize();
-		
 
-//		CombineInstance combine = new CombineInstance();
-//		combine.mesh = mesh;
-//		combine.transform = _gameObj.transform.localToWorldMatrix;	
-//		
-//		return combine;
 		return mesh;
 	}
 	

@@ -632,6 +632,10 @@ public struct Coord
 		aa.z = (aa.z != 0)? 0 : 1;
 		return aa;
 	}
+	
+	public static Coord TheErsatzNullCoord() {
+		return new Coord (-187923, -123123, -23);	
+	}
 }
 
 public struct CoRange
@@ -802,6 +806,10 @@ public struct NoiseCoord
 
 	public static NoiseCoord operator + (NoiseCoord aa, NoiseCoord bb) {
 		return new NoiseCoord(aa.x + bb.x, aa.z + bb.z); 
+	}
+	
+	public static NoiseCoord operator - (NoiseCoord aa, NoiseCoord bb) {
+		return new NoiseCoord(aa.x - bb.x, aa.z - bb.z); 
 	}
 	
 	public static NoiseCoord operator * (NoiseCoord aa, NoiseCoord bb) {

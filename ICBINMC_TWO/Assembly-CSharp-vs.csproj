@@ -48,6 +48,7 @@
      <Compile Include="Assets\GraveYardCode.cs" />
      <Compile Include="Assets\Materials\ShadersMP\GameClock.cs" />
      <Compile Include="Assets\ScriptsByMatt\Camera-Player\BlockPointer.cs" />
+     <Compile Include="Assets\ScriptsByMatt\Item\Item.cs" />
      <Compile Include="Assets\ScriptsByMatt\PowerCollections\Algorithms.cs" />
      <Compile Include="Assets\ScriptsByMatt\PowerCollections\AssemblyInfo.cs" />
      <Compile Include="Assets\ScriptsByMatt\PowerCollections\Bag.cs" />

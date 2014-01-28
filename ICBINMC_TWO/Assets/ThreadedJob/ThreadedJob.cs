@@ -21,6 +21,11 @@ public class ThreadedJob : ISerializable
 	private bool m_IsDone = false;
 	private object m_Handle = new object();
 	private System.Threading.Thread m_Thread = null;
+	
+	//MMP
+	//HAS STARTED
+	private bool m_hasStarted = false;
+	private object m_StartedHandle = new object(); // do we need a sep handle?
 
 	public ThreadedJob () 
 	{
@@ -46,9 +51,30 @@ public class ThreadedJob : ISerializable
 			}
 		}
 	}
+	
+	public bool hasStarted
+	{
+		get
+		{
+			bool tmp;
+			lock (m_StartedHandle)
+			{
+				tmp = m_hasStarted;
+			}
+			return tmp;
+		}
+		set
+		{
+			lock (m_StartedHandle)
+			{
+				m_hasStarted = value;
+			}
+		}
+	}
 
 	public virtual void Start()
 	{
+		hasStarted = true; //MMP
 		m_Thread = new System.Threading.Thread(Run);
 		m_Thread.Start();
 	}
@@ -72,8 +98,10 @@ public class ThreadedJob : ISerializable
 	}
 	private void Run()
 	{
+		
 		ThreadFunction();
 		IsDone = true;
+		hasStarted = false; //MMP
 	}
 
 	#region Serializable interface

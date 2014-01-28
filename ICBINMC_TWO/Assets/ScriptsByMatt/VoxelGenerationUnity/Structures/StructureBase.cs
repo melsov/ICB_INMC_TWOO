@@ -15,16 +15,23 @@ public class StructureBase
 	// just a 2D array of lists of ranges
 	
 	protected List<Range1D>[,] ranges;
-	public PTwo undividedDimensions; // plot without intersection
 	public Quad plot;// dimensions;
 	public Quad groundLevelPlot;
 //	public PTwo patchRelativeOrigin;
 	public int y_origin;
+	protected float seed = 0f;
 //	public uint precedence; // decides whic structures appear in the case of an overlap
 #if TREE_OFFSET_METHOD	
 	protected PTwo constructOffsetStart;
 	protected PTwo constructOffsetEnd;
 #endif
+	
+	protected Quad nonTruncatedPatchRelativePlot;
+	public PTwo undividedDimensions {
+		get{
+			return nonTruncatedPatchRelativePlot.dimensions;
+		}
+	} // plot without intersection
 	
 	protected static PTwo noisePatchXZDims = new PTwo(NoisePatch.patchDimensions.x, NoisePatch.patchDimensions.z);
 	
@@ -49,7 +56,8 @@ public class StructureBase
 		this.constructOffsetStart =	PTwo.Abs(offset);
 #endif
 		
-		this.undividedDimensions = _patchRelativePlot.dimensions;
+		this.nonTruncatedPatchRelativePlot = _patchRelativePlot;
+//		this.undividedDimensions = _patchRelativePlot.dimensions;
 		_patchRelativePlot = Quad.Intersection(_patchRelativePlot, new Quad(new PTwo(0,0), noisePatchXZDims) ); 
 		
 #if TREE_OFFSET_METHOD
@@ -61,7 +69,8 @@ public class StructureBase
 		
 		if (_patchRelativePlot.isErsatzNull())
 		{
-			throw new Exception ("Structure plot was null was null. patch rel plot: " + _patchRelativePlot.toString() + "construct offset: " + constructOffsetStart.toString() );
+			throw new Exception ("Structure plot was null. patch rel plot: " + _patchRelativePlot.toString() + "construct offset: " + constructOffsetStart.toString() + 
+				"\n non truncated plot: " + nonTruncatedPatchRelativePlot.toString() );
 			this.ranges = new List<Range1D>[0,0];
 		}
 		else 
@@ -108,12 +117,19 @@ public class StructureBase
 	public bool sDimensionWasTruncated() {
 		return this.undividedDimensions.s > this.plot.dimensions.s;	
 	}
+
 }
 
 public class Tree : StructureBase
 {
-	public Tree(PTwo _patchRelOrigin, int y_height, float seed)
+	public Tree(PTwo _patchRelOrigin, int y_height, float _seed) : this(_patchRelOrigin, y_height, _seed, true)
 	{
+		
+	}
+	
+	public Tree(PTwo _patchRelOrigin, int y_height, float _seed, bool adjustOriginWithOffset)
+	{
+		seed = _seed;
 		int structure_height = 8;
 		structure_height += (int) (Utils.DecimatLeftShift(seed, 1) * structure_height * .33f);
 		
@@ -136,15 +152,12 @@ public class Tree : StructureBase
 		dimensions = new Coord(length * 0 + 2, structure_height, length); // TEST
 		center_coord = new PTwo(rel_trunk_coord * 0 + 1, rel_trunk_coord);
 #endif
-		
-		
 
 #if TREE_OFFSET_METHOD
 		//shift the origin to put the trunk at the coord that noise patch chose
-		_patchRelOrigin = _patchRelOrigin - center_coord; // no, need a different way?
+		if (adjustOriginWithOffset) //don't do this if "copying" for a section
+			_patchRelOrigin = _patchRelOrigin - center_coord; // no, need a different way?
 #endif
-		
-		
 		
 		Quad _patchRelPlot = new Quad(_patchRelOrigin, PTwo.PTwoXZFromCoord(dimensions) );
 		
@@ -176,8 +189,6 @@ public class Tree : StructureBase
 		
 		i_end = this.undividedDimensions.s - this.constructOffsetEnd.s;
 		j_end = this.undividedDimensions.t - this.constructOffsetEnd.t;
-		
-		
 #endif
 		
 		
@@ -222,6 +233,21 @@ public class Tree : StructureBase
 			}
 		}
 		
+	}
+	
+	public Tree sectionOfTreeContainedByNoisePatchNeighborInDirection(NeighborDirection neighborDir) {
+		if (this.wasNotTruncated())
+			return null;
+
+		PTwo neighborRelOrigin = NeighborDirectionUtils.neighborPatchRelativeCoordForNeighborInDirection(neighborDir, this.nonTruncatedPatchRelativePlot.origin);
+		
+		Quad nonTruncNeighPlot = new Quad(neighborRelOrigin, this.undividedDimensions); 
+		Quad intersection = Quad.Intersection(nonTruncNeighPlot, new Quad(new PTwo(0,0), noisePatchXZDims));
+		
+		if (intersection.isErsatzNull())
+			return null;
+		
+		return new Tree(neighborRelOrigin, this.y_origin, this.seed, false);
 	}
 }
 

@@ -211,7 +211,9 @@ public struct PTwo
 	}
 	
 	public bool isIndexSafe(PTwo indexPoint) {
-		return indexPoint.s < this.s && indexPoint.t < this.t;	
+		// NOTE. this index safe works backwards resp. to coord's isIndexSafe (yikes!)
+		return PTwo.GreaterThan(this, indexPoint) && PTwo.GreaterThanOrEqual(indexPoint, PTwo.PTwoZero());
+//		return (indexPoint.s < this.s && indexPoint.t < this.t);	
 	}
 	
 	public bool hasANegativeElement() {

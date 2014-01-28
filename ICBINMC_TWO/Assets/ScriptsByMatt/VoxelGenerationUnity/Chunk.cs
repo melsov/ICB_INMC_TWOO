@@ -77,11 +77,9 @@ public class Chunk : ThreadedJob
 
 	public NoisePatch m_noisePatch; // replace chunk manager?
 
-
 	List<Vector3> vertices_list; // = new List<Vector3> ();
 	List<int> triangles_list; // = new List<int> ();
 	List <Vector2> uvcoords_list; // = new List<Vector2> ();
-//	List<Vector2> colors_list = new List<Vector2>();
 	List<Color32> col32s_list = new List<Color32>();
 
 	public bool noNeedToRenderFlag;
@@ -91,14 +89,12 @@ public class Chunk : ThreadedJob
 	public GameObject meshHoldingGameObject;
 
 	private int random_new_chunk_color_int_test;
-
-//	private static int[] m_meshGenPhaseOneDirections = new int[] {}; // {1, 4, 5}; // {0, 1, 4, 5}; // (Direction enum)
 	
-#if NO_MESHBUILDER
-	private FaceAggregator[] faceAggregators = new FaceAggregator[CHUNKHEIGHT];
-#else
+//#if NO_MESHBUILDER
+//	private FaceAggregator[] faceAggregators = new FaceAggregator[CHUNKHEIGHT];
+//#else
 	private MeshBuilder meshBuilder;
-#endif
+//#endif
 	public const float VERTEXSCALE = 1f;
 	
 	public const int TEXTURE_ATLAS_TILES_PER_DIM = 4;
@@ -131,6 +127,10 @@ public class Chunk : ThreadedJob
 //			applyMesh ();
 	}
 	
+	public void resetCalculatedAlready() {
+		this.calculatedMeshAlready = false;	
+	}
+	
 	public void editBlockAtCoord(Coord relCo, BlockType btype) 
 	{
 		MeshSet mset;
@@ -150,56 +150,7 @@ public class Chunk : ThreadedJob
 //		clearMeshLists(); // why not now...
 	}
 
-	Block nextBlock(Direction d, ChunkIndex ci)
-	{
-		return nextBlock (d, ci, false);
-	}
 
-	Block nextBlock(Direction d, ChunkIndex ci, bool notOnlyWithinThisChunk)
-	{
-//		Block retBlock = null;
-
-		Coord offset = new Coord (ci.x, ci.y, ci.z);
-
-		switch (d) 
-		{
-		case(Direction.xpos):
-			if ( notOnlyWithinThisChunk || ci.x < CHUNKLENGTH - 1)
-				offset = new Coord (ci.x + 1, ci.y, ci.z);
-
-			break;
-		case(Direction.xneg):
-			if (notOnlyWithinThisChunk ||ci.x >  0)
-				offset = new Coord (ci.x - 1, ci.y, ci.z);
-
-			break;
-		case(Direction.ypos): //Y IS ALWAYS WITHIN NOW!!!
-			if ( ci.y < CHUNKHEIGHT - 1)
-				offset = new Coord (ci.x , ci.y + 1, ci.z);
-
-			break;
-		case(Direction.yneg):
-			if ( ci.y  >  0) // NO MORE || NOTONLY
-				offset = new Coord (ci.x , ci.y - 1, ci.z);
-
-			break;
-		case(Direction.zpos):
-			if (notOnlyWithinThisChunk || ci.z  < CHUNKLENGTH - 1)
-				offset = new Coord (ci.x , ci.y , ci.z + 1);
-
-			break;
-		default: // zneg
-			if (notOnlyWithinThisChunk || ci.z >  0)
-				offset = new Coord (ci.x , ci.y , ci.z - 1);
-
-			break;
-		}
-
-		return m_noisePatch.blockAtChunkCoordOffset (chunkCoord, offset);
-
-//		return m_chunkManager.blockAtChunkCoordOffset (chunkCoord, offset);
-//		return retBlock;
-	}
 	
 	Vector3[] faceMesh(Direction d, ChunkIndex ci) // Vector3[] verts, int[] triangles)
 	{
@@ -355,61 +306,7 @@ public class Chunk : ThreadedJob
 			mono_v, mono_v, mono_v, mono_v 
 		};
 		
-//		//TODO DONE: replace this duplicate code with the texAtlasOrigin func. and then return vector
-//		float tile_length = 0.25f;
-////		int tiles_per_row = (int)(1.0f / tile_length);
-////		int cXBasedOnXCoord = (chunkCoord.x + random_new_chunk_color_int_test) % tiles_per_row;
-////		int cYBasedOnZCoord = chunkCoord.z % tiles_per_row;
-//
-////test...
-////		float cX = cXBasedOnXCoord * tile_length;
-////		float cY = cYBasedOnZCoord * tile_length;
-//
-//		//want
-//		float cX = 0.0f;
-//		float cY = 0.0f;
-//
-//		switch (btype) {
-//		case BlockType.Stone:
-//			cY = tile_length;
-//			cX = tile_length;
-//			break;
-//		case BlockType.Sand:
-//			cX = tile_length * 2;
-//			cY = tile_length; //<-- silly // * 2;
-//			break;
-//		case BlockType.Dirt:
-//			cY = tile_length * 3;
-//			break;
-//		case BlockType.BedRock:
-//			cY = tile_length * 2; //silly value at the moment
-//			break;
-//		default: //GRASS
-//			//testing...make geom more visible
-//			if (dir == Direction.xpos) 
-//			{
-//				cX = tile_length;
-//			} else if (dir == Direction.xneg) {
-//				cX = tile_length; cY = tile_length;
-//			} else if (dir == Direction.yneg) {
-//				cX = 2 * tile_length; cY = tile_length;
-//			} else if (dir == Direction.zneg) {
-//				cX = 3 * tile_length; cY = 3 * tile_length;
-//			} else if (dir == Direction.zpos) {
-//				cY = 3 * tile_length;
-//			}
-//			//end testing
-////			if (dir != Direction.ypos)
-////				cY = tile_length;
-//			break;
-//		}
-//
-//		return new Vector2[] { 
-//			new Vector2 (cX, cY), 
-//			new Vector2 (cX, cY + tile_length), 
-//			new Vector2 (cX + tile_length , cY + tile_length), 
-//			new Vector2 (cX + tile_length, cY) 
-//		};
+
 	}
 
 	//TEST FUNC...
@@ -1081,7 +978,52 @@ public class Chunk : ThreadedJob
 
 }
 
-	
+//	Block nextBlock(Direction d, ChunkIndex ci)
+//	{
+//		return nextBlock (d, ci, false);
+//	}
+//
+//	Block nextBlock(Direction d, ChunkIndex ci, bool notOnlyWithinThisChunk)
+//	{
+//		Coord offset = new Coord (ci.x, ci.y, ci.z);
+//
+//		switch (d) 
+//		{
+//		case(Direction.xpos):
+//			if ( notOnlyWithinThisChunk || ci.x < CHUNKLENGTH - 1)
+//				offset = new Coord (ci.x + 1, ci.y, ci.z);
+//
+//			break;
+//		case(Direction.xneg):
+//			if (notOnlyWithinThisChunk ||ci.x >  0)
+//				offset = new Coord (ci.x - 1, ci.y, ci.z);
+//
+//			break;
+//		case(Direction.ypos): //Y IS ALWAYS WITHIN NOW!!!
+//			if ( ci.y < CHUNKHEIGHT - 1)
+//				offset = new Coord (ci.x , ci.y + 1, ci.z);
+//
+//			break;
+//		case(Direction.yneg):
+//			if ( ci.y  >  0) // NO MORE || NOTONLY
+//				offset = new Coord (ci.x , ci.y - 1, ci.z);
+//
+//			break;
+//		case(Direction.zpos):
+//			if (notOnlyWithinThisChunk || ci.z  < CHUNKLENGTH - 1)
+//				offset = new Coord (ci.x , ci.y , ci.z + 1);
+//
+//			break;
+//		default: // zneg
+//			if (notOnlyWithinThisChunk || ci.z >  0)
+//				offset = new Coord (ci.x , ci.y , ci.z - 1);
+//
+//			break;
+//		}
+//
+//		return m_noisePatch.blockAtChunkCoordOffset (chunkCoord, offset);
+//	}
+
 
 //	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
 //	{

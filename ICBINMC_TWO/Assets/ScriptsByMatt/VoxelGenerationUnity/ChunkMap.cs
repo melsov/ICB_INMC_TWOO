@@ -80,13 +80,6 @@ public class ChunkMap
 	public Chunk chunkAtOrNullIfUnready(Coord coo) 
 	{
 		return chunkAt(coo);
-//		Chunk chh = chunkAt (coo);
-//
-//		if (chh == null) { //TODO: change this logic later...
-//			return null;
-//		}
-//
-//		return chh;
 	}
 
 	public bool coIsOnMap(Coord co) {
