@@ -1,5 +1,6 @@
 #define TEST_LIBNOISENET
 #define FAST_BLOCK_REPLACE
+//#define LIMITED_WORLD
 
 
 
@@ -401,8 +402,7 @@ public class ChunkManager : MonoBehaviour
 		foreach(Coord pRelChCo in patchRelChunkCoords)
 		{
 			Coord chunkCoord = pRelChCo + patchWorldChunkCo;
-			
-			
+
 			//TRYING
 			if (!createTheseVeryCloseAndInFrontChunks.Contains(chunkCoord))
 				createTheseVeryCloseAndInFrontChunks.Add(chunkCoord);
@@ -1269,7 +1269,7 @@ public class ChunkManager : MonoBehaviour
 						cullVeryCloseList(createTheseVeryCloseAndInFrontChunks);
 					}
 				}
-				else // if (false)
+				else if (!TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
 				{
 					if (shouldBeDestroyingChunksNow ()) 
 					{
@@ -2051,10 +2051,8 @@ public class ChunkManager : MonoBehaviour
 	// Use this for initialization
 	void Start () 
 	{
-		
 		if (TestRunner.DontRunGame() )
 			return;
-
 
 		m_libnoiseNetHandler = new LibNoiseNetHandler();
 
@@ -2085,7 +2083,24 @@ public class ChunkManager : MonoBehaviour
 		NoiseCoord initialNoiseCoord = new NoiseCoord (0, 0);
 		makeNewAndSetupPatchAtNoiseCoordMainThread (initialNoiseCoord);
 		
-		if(!TestRunner.RunGameOnlyOneNoisePatch)
+		if (TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
+		{
+			int xstart, zstart, xend,zend;
+			xstart = TestRunner.WorldLimits.start.x;
+			xend = TestRunner.WorldLimits.outerLimit().x;
+			zstart = TestRunner.WorldLimits.start.z;
+			zend = TestRunner.WorldLimits.outerLimit().z;
+			
+			for(int x = xstart; x < xend ; ++x)
+			{
+				for(int z = zstart; z < zend ; ++z) 
+				{
+					NoiseCoord nco = new NoiseCoord(x,z);
+					makeNewAndSetupPatchAtNoiseCoordMainThread(nco);
+				}
+			}
+		}
+		else if(!TestRunner.RunGameOnlyOneNoisePatch)
 		{
 			int times = 0;
 			while (times < 9) //test?
@@ -2166,6 +2181,27 @@ public class ChunkManager : MonoBehaviour
 
 		buildMapAtRange (nearbyCoRa);
 		
+		if (TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
+		{
+			int xstart, zstart, xend,zend;
+			xstart = TestRunner.WorldLimits.start.x;
+			xend = TestRunner.WorldLimits.outerLimit().x;
+			zstart = TestRunner.WorldLimits.start.z;
+			zend = TestRunner.WorldLimits.outerLimit().z;
+			
+			for(int x = xstart; x < xend ; ++x)
+			{
+				for(int z = zstart; z < zend ; ++z) 
+				{
+					NoiseCoord nco = new NoiseCoord(x,z);
+					Coord start = new Coord(x * NoisePatch.CHUNKDIMENSION, 0, z * NoisePatch.CHUNKDIMENSION);
+					Coord range = new Coord(NoisePatch.CHUNKDIMENSION, 1, NoisePatch.CHUNKDIMENSION);
+					CoRange noisePatchCoRange = new CoRange(start, range); //   nearbyChunkRangeInitialForNoisePatch(blocks.noisePatches[nco]);
+					buildMapAtRange(noisePatchCoRange);
+				}
+			}
+		}
+		
 		placePlayerAtSpawnPoint ();
 		//TODO: learn about why there's a floating island way up in the sky sometimes...
 		
@@ -2180,14 +2216,17 @@ public class ChunkManager : MonoBehaviour
 			
 			if (!TestRunner.RunGameOnlyOneNoisePatch) 
 			{
-				StartCoroutine (updateChunkLists ());
 				StartCoroutine (createAndDestroyChunksFromLists ()); // combined above two
 				
-				StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
-				StartCoroutine (updateSetupPatchesListI ());
-//				StartCoroutine (checkAsyncPatchesDone ());
+				if (!TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
+				{
+					StartCoroutine (updateChunkLists ());
+					StartCoroutine (setupPatchesFromPatchesList ()); // LAG CULPRIT (MAKES GAME SHAKEY)
+					StartCoroutine (updateSetupPatchesListI ());
+	//				StartCoroutine (checkAsyncPatchesDone ());
+					StartCoroutine (checkAsyncChunksList ());
+				}
 				
-				StartCoroutine (checkAsyncChunksList ());
 				
 //				StartCoroutine(rebuildChunksFromRebuildList ()); // DEFUNCT // chunks that receive structures from neighbor noise patches
 				

@@ -12,6 +12,10 @@ public class TestRunner : MonoBehaviour {
 	public const bool DontRunDoTerrainTestInstead = false;
 //	public const bool RunGameOnlyOneNoisePatch = true;
 	public const bool RunGameOnlyOneNoisePatch = false;	
+//	public const bool RunGameOnlyNoisPatchesWithinWorldLimits = true;
+	public const bool RunGameOnlyNoisPatchesWithinWorldLimits = false;
+	
+	public static CoRange WorldLimits = new CoRange(new Coord (-1, 0, -1), new Coord(3, 1, 3));
 	
 	private bool doRunTest = true;
 	
