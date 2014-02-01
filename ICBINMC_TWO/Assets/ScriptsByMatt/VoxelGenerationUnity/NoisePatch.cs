@@ -969,6 +969,14 @@ public class NoisePatch : ThreadedJob
 				heightRanges = heightsAndOverhangRangesWith(noise_val, noise_shifted2, noise_shifted3,biomeInputs);  // new List<Range1D>();
 				int highestLevel = heightRanges[heightRanges.Count - 1].extent();
 				
+				//DEBUGGING NPATCH BORDERS
+				if (xx == 0 || zz == 0)
+				{
+					Range1D topRange = heightRanges[heightRanges.Count - 1];
+					topRange.blockType = BlockType.Sand;
+					heightRanges[heightRanges.Count - 1] = topRange;
+				}
+				
 
 #if LIGHT_HACK
 				byte nextLevel;
@@ -1196,10 +1204,13 @@ public class NoisePatch : ThreadedJob
 			// get chunk man to rebuild any chunks that we're changed
 			List<Coord> patchRelCoords = new List<Coord>();
 			
-			foreach( StructureBase str in strs)
+			foreach( StructureBase str in strs) {
 				patchRelCoords = patchRelativeChunkCoordsThatTouchQuad(str.plot, ref patchRelCoords);
+//				foreach(Coord pRelCo in patchRelativeChunkCoordsThatTouchQuad(str.plot, ref patchRelCoords)
+			}
 			
 			this.patchRelativeChCosToRebuild = patchRelCoords;
+			// TEST WANT
 			this.m_chunkManager.rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(this.coord, patchRelCoords); //test want but maybe not here (go to main thread)
 		} 
 		// else this noisepatch will take what it needs later so don't bother.
@@ -1213,7 +1224,7 @@ public class NoisePatch : ThreadedJob
 		int xEnd = quad.extent().s / (int) ChunkManager.CHUNKLENGTH;
 		int zEnd = quad.extent().t / (int) ChunkManager.CHUNKLENGTH;
 		
-		List<Coord> result = new List<Coord>();
+		List<Coord> result = alreadyAddedCoords; // new List<Coord>();
 		
 		for (int xx = xStart; xx <= xEnd; ++xx)
 		{
@@ -1329,6 +1340,8 @@ public class NoisePatch : ThreadedJob
 	
 	private List<StructureBase> giveStructuresFor(NeighborDirection nDir)
 	{
+		return dataForNeighbors.structures.structureListForDirection(nDir);
+		//*********
 		List<StructureBase> structuresFor;
 		
 		structuresFor = dataForNeighbors.structures.structureListForDirection(nDir);

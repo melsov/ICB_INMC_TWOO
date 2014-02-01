@@ -1,0 +1,23 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs">
+    <Files>
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="736" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Chunk.cs" Line="120" Column="3" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="1674" Column="16" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/BlockCollection.cs" Line="189" Column="42" />
+      <File FileName="Assets/ScriptsByMatt/Tester/TestRunner.cs" Line="14" Column="52" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkMap.cs" Line="1" Column="1" />
+      <File FileName="Assets/ThreadedJob/ThreadedJob.cs" Line="1" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/MeshBuilder.cs" Line="441" Column="3" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore>
+      <Breakpoint file="/Users/didyouloseyourdog/ICBINMC_crash/ICB_INMC_TWOO/ICBINMC_TWO/Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" line="2221" />
+      <Breakpoint file="/Users/didyouloseyourdog/ICBINMC_crash/ICB_INMC_TWOO/ICBINMC_TWO/Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" line="1684" />
+      <Breakpoint file="/Users/didyouloseyourdog/ICBINMC_crash/ICB_INMC_TWOO/ICBINMC_TWO/Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" line="1678" />
+    </BreakpointStore>
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

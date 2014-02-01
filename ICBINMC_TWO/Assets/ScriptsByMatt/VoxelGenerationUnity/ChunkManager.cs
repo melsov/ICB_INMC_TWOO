@@ -402,20 +402,13 @@ public class ChunkManager : MonoBehaviour
 		{
 			Coord chunkCoord = pRelChCo + patchWorldChunkCo;
 			
-//			Coord pRelCoord = pRelChCo * (int)CHUNKLENGTH;	
-//			Coord chwoco = pRelCoord + patchWoco;
-//			Chunk ch = chunkContainingCoord(chwoco);
 			
-			rebuildChunkChunkCoordList.Add(chunkCoord);
+			//TRYING
+			if (!createTheseVeryCloseAndInFrontChunks.Contains(chunkCoord))
+				createTheseVeryCloseAndInFrontChunks.Add(chunkCoord);
 			
-//			rebuildChunkChunkCoordList.Add(chunkCoordContainingBlockCoord(chwoco));
-//			createTheseVeryCloseAndInFrontChunks.Add(ch);
-			// createtheseveryclose..Add?
-			
-//			if (ch != null)
-//			{
-//				updateChunk(ch);
-//			}
+//			rebuildChunkChunkCoordList.Add(chunkCoord); //WANT?
+
 		}
 	}
 	
@@ -1438,7 +1431,8 @@ public class ChunkManager : MonoBehaviour
 		// current to be created n patch
 		NoisePatch curTargeted = blocks.noisePatches[currentTargetedForCreationNoiseCo];
 		
-		Color tarCol = curTargeted.generatedBlockAlready ? Color.gray : Color.yellow;
+//		Color tarCol = curTargeted.generatedBlockAlready ? Color.gray : Color.yellow;
+		Color tarCol = curTargeted.IsDone ? Color.gray : Color.yellow;
 		tarCol = curTargeted.startedBlockSetup ? new Color(.3f, 1f, .5f, 1f) : tarCol;
 		
 		drawDebugLinesForNoisePatch(currentTargetedForCreationNoiseCo, tarCol);
@@ -1715,7 +1709,6 @@ public class ChunkManager : MonoBehaviour
 
 		while (true)
 		{
-			
 			if (checkDoneForThesePatches.Count > 0) 
 			{
 				NoisePatch npatch = checkDoneForThesePatches[0];
@@ -2196,7 +2189,7 @@ public class ChunkManager : MonoBehaviour
 				
 				StartCoroutine (checkAsyncChunksList ());
 				
-				StartCoroutine(rebuildChunksFromRebuildList ()); //chunks that receive structures from neighbor noise patches
+//				StartCoroutine(rebuildChunksFromRebuildList ()); // DEFUNCT // chunks that receive structures from neighbor noise patches
 				
 //				StartCoroutine(updatePlayerPositionInShader());
 			}
@@ -2233,20 +2226,14 @@ public class ChunkManager : MonoBehaviour
 		//**want
 		
 //		drawDebugCubesForAllCreatedNoisePatches();
+//		drawDebugCubesForAllUncreatedNoisePatches();
+//		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));
 		
 //		drawDebugCubesForAllUncreatedChunks();
 //		drawDebugCubesForChunksOnDestroyList();
 //		drawDebugCubesForChunksOnCheckASyncList();
 //		drawDebugCubesForEverBeenDestroyedList();
-		
-//		drawDebugCubesForAllUncreatedNoisePatches();
-//		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));
-		
-//		updateChunkLists ();
 
-//		updateSetupPatchesList ();
-
-//		jobUpdate ();
 
 //		drawDebugLinesForChunkRange (m_wantActiveRealm);
 

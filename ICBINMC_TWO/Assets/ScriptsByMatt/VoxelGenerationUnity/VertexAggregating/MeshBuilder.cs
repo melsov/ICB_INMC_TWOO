@@ -32,6 +32,19 @@ public class MeshBuilder
 	private MeshSet meshSetZY;
 #endif
 	
+//	private List<MeshSet> the_meshSets = null;
+//	private List<MeshSet> meshSets {
+//		get {
+////			if (the_meshSets == null) {
+//				the_meshSets = new List<MeshSet>() {this.meshSetXZ, this.meshSetXY, this.meshSetZY};	
+////			}
+//			return the_meshSets;
+//		} 
+//		set {
+//			the_meshSets = value;
+//		}
+//	}
+	
 //	public MeshBuilder(GameObject chunkGameObject_) {
 //		this.chunkGameObject = chunkGameObject_;
 //	} // later
@@ -192,6 +205,7 @@ public class MeshBuilder
 	
 	private CombineInstance[] combineInstancesFromAxisMeshSets() 
 	{
+
 		CombineInstance combineXZ = combineInstanceFromMeshSet(this.meshSetXZ);
 		CombineInstance combineXY = combineInstanceFromMeshSet(this.meshSetXY);
 		CombineInstance combineZY = combineInstanceFromMeshSet(this.meshSetZY);
@@ -367,7 +381,7 @@ public class MeshBuilder
 		int relevantComponent = Coord.SumOfComponents (co * nudgeCoord);
 		int relevantUpperLimit = Coord.SumOfComponents (Chunk.DIMENSIONSINBLOCKS * nudgeCoord);
 		
-		Direction relevantPosDir = this.posDirectionForAxis(axis);
+		Direction relevantPosDir = MeshBuilder.posDirectionForAxis(axis);
 		
 //		if (!isFaceAggregatorAt(co, axis ) ) {
 //			throw new Exception("Whoa, what's going on here? trying to remove a coord from a face agg that doesn't exist yet??");	
@@ -451,7 +465,7 @@ public class MeshBuilder
 		int relevantComponent = Coord.SumOfComponents (co * nudgeCoord);
 		int relevantUpperLimit = Coord.SumOfComponents (Chunk.DIMENSIONSINBLOCKS * nudgeCoord);
 		
-		Direction relevantPosDir = this.posDirectionForAxis(axis);
+		Direction relevantPosDir = MeshBuilder.posDirectionForAxis(axis);
 		
 		FaceAggregator faXY = faceAggregatorAt(co, relevantPosDir); // aggregatorArray[relevantComponent];
 		

@@ -128,6 +128,7 @@ public class Chunk : ThreadedJob
 	}
 	
 	public void resetCalculatedAlready() {
+		this.IsDone = false; // TODO: resolve these to one var!!
 		this.calculatedMeshAlready = false;	
 	}
 	

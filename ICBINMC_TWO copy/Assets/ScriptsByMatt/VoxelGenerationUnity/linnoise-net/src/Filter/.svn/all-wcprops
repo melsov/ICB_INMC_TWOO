@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter
+END
+Voronoi.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/Voronoi.cs
+END
+Pipe.cs
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/Pipe.cs
+END
+SumFractal.cs
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/SumFractal.cs
+END
+HeterogeneousMultiFractal.cs
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/HeterogeneousMultiFractal.cs
+END
+SinFractal.cs
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/SinFractal.cs
+END
+RidgedMultiFractal.cs
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/RidgedMultiFractal.cs
+END
+MultiFractal.cs
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/MultiFractal.cs
+END
+Billow.cs
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/Billow.cs
+END
+HybridMultiFractal.cs
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Filter/HybridMultiFractal.cs
+END

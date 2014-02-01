@@ -1,0 +1,101 @@
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer
+END
+Heightmap32.cs
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Heightmap32.cs
+END
+NormalMapRenderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/NormalMapRenderer.cs
+END
+Heightmap16.cs
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Heightmap16.cs
+END
+Color.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Color.cs
+END
+AbstractHeightmapRenderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/AbstractHeightmapRenderer.cs
+END
+Image.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Image.cs
+END
+Heightmap8Renderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Heightmap8Renderer.cs
+END
+IColor.cs
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/14/trunk/%20libnoise-dotnet/libnoise/src/Renderer/IColor.cs
+END
+AbstractRenderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/AbstractRenderer.cs
+END
+GradientColor.cs
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/15/trunk/%20libnoise-dotnet/libnoise/src/Renderer/GradientColor.cs
+END
+AbstractImageRenderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/AbstractImageRenderer.cs
+END
+Heightmap8.cs
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Heightmap8.cs
+END
+Heightmap32Renderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Heightmap32Renderer.cs
+END
+Heightmap16Renderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/Heightmap16Renderer.cs
+END
+GradientPoint.cs
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/14/trunk/%20libnoise-dotnet/libnoise/src/Renderer/GradientPoint.cs
+END
+ImageRenderer.cs
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/Renderer/ImageRenderer.cs
+END

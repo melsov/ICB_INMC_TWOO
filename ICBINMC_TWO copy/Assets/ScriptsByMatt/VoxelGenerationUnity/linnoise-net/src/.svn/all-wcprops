@@ -1,0 +1,101 @@
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/19/trunk/%20libnoise-dotnet/libnoise/src
+END
+IMap2D.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/18/trunk/%20libnoise-dotnet/libnoise/src/IMap2D.cs
+END
+PrimitiveModule.cs
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/PrimitiveModule.cs
+END
+NoiseFilter.cs
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/NoiseFilter.cs
+END
+IModule1D.cs
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/IModule1D.cs
+END
+IModule2D.cs
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/IModule2D.cs
+END
+IModule3D.cs
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/IModule3D.cs
+END
+Module.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/Module.cs
+END
+IModule4D.cs
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/IModule4D.cs
+END
+SelectorModule.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/19/trunk/%20libnoise-dotnet/libnoise/src/SelectorModule.cs
+END
+NoiseQuality.cs
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/NoiseQuality.cs
+END
+FilterModule.cs
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/FilterModule.cs
+END
+Libnoise.cs
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/16/trunk/%20libnoise-dotnet/libnoise/src/Libnoise.cs
+END
+ModifierModule.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/ModifierModule.cs
+END
+CombinerModule.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/CombinerModule.cs
+END
+NoisePrimitive.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/NoisePrimitive.cs
+END
+TransformerModule.cs
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/13/trunk/%20libnoise-dotnet/libnoise/src/TransformerModule.cs
+END
