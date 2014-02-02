@@ -725,9 +725,11 @@ public class NoisePatch : ThreadedJob
 		this.Start ();
 	}
 
-	public void populateBlocksFromNoise()
+	public void populateBlocksFromNoiseMainThread()
 	{
+		this.hasStarted = true;
 		doPopulateBlocksFromNoise();
+		this.IsDone = true;
 	}
 
 	private void doPopulateBlocksFromNoise()

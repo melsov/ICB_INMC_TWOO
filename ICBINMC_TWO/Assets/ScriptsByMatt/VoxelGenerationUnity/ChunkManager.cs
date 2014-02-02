@@ -402,10 +402,18 @@ public class ChunkManager : MonoBehaviour
 		foreach(Coord pRelChCo in patchRelChunkCoords)
 		{
 			Coord chunkCoord = pRelChCo + patchWorldChunkCo;
-
-			//TRYING
-			if (!createTheseVeryCloseAndInFrontChunks.Contains(chunkCoord))
-				createTheseVeryCloseAndInFrontChunks.Add(chunkCoord);
+			
+			Chunk chunk = chunkMap.chunkAt(chunkCoord);
+			if (chunk != null)
+			{
+				if (chunk.hasStarted) {
+					throw new Exception("chunk start already");
+				}
+				chunk.resetCalculatedAlready();
+			
+				if (!createTheseVeryCloseAndInFrontChunks.Contains(chunkCoord))
+					createTheseVeryCloseAndInFrontChunks.Add(chunkCoord);
+			}
 			
 //			rebuildChunkChunkCoordList.Add(chunkCoord); //WANT?
 
@@ -1433,7 +1441,9 @@ public class ChunkManager : MonoBehaviour
 		
 //		Color tarCol = curTargeted.generatedBlockAlready ? Color.gray : Color.yellow;
 		Color tarCol = curTargeted.IsDone ? Color.gray : Color.yellow;
-		tarCol = curTargeted.startedBlockSetup ? new Color(.3f, 1f, .5f, 1f) : tarCol;
+		tarCol = curTargeted.hasStarted ? new Color(.3f, 1f, .9f, 1f) : tarCol;
+		
+		//TODO: create a coroutine for getting rid of noisepatches that are far away?
 		
 		drawDebugLinesForNoisePatch(currentTargetedForCreationNoiseCo, tarCol);
 		
@@ -1445,7 +1455,7 @@ public class ChunkManager : MonoBehaviour
 			
 			NoisePatch np = npatch.Value;
 			Color col = np.startedBlockSetup ? Color.magenta : Color.cyan;
-			if (np.generatedBlockAlready)
+			if (np.IsDone)
 				col = Color.green;
 			
 			drawDebugLinesForNoisePatch(nco, col );
@@ -1731,7 +1741,7 @@ public class ChunkManager : MonoBehaviour
 	{
 		NoisePatch np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet (ncoord); 
 
-		np.populateBlocksFromNoise();
+		np.populateBlocksFromNoiseMainThread();
 
 	}
 
@@ -1977,7 +1987,7 @@ public class ChunkManager : MonoBehaviour
 		//if (mainThread)
 		//	np.pop
 		if (mainThread)
-			np.populateBlocksFromNoise();
+			np.populateBlocksFromNoiseMainThread();
 		else
 			np.Start();
 //			np.populateBlocksFromNoise (); // wha?? same func??
@@ -2264,13 +2274,13 @@ public class ChunkManager : MonoBehaviour
 //		#endif
 		//**want
 		
-//		drawDebugCubesForAllCreatedNoisePatches();
+		drawDebugCubesForAllCreatedNoisePatches();
 //		drawDebugCubesForAllUncreatedNoisePatches();
 //		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));
 		
-//		drawDebugCubesForAllUncreatedChunks();
-//		drawDebugCubesForChunksOnDestroyList();
-//		drawDebugCubesForChunksOnCheckASyncList();
+		drawDebugCubesForAllUncreatedChunks();
+		drawDebugCubesForChunksOnDestroyList();
+		drawDebugCubesForChunksOnCheckASyncList();
 //		drawDebugCubesForEverBeenDestroyedList();
 
 

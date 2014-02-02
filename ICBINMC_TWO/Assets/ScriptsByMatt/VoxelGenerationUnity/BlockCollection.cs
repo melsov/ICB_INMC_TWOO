@@ -1,4 +1,5 @@
-﻿
+﻿#define NEW_PATCH_READY
+
 using UnityEngine;
 using System.Collections;
 
@@ -207,9 +208,12 @@ public class BlockCollection
 	public bool noisePatchAtCoordIsReady(NoiseCoord nco) {
 		if (!noisePatches.ContainsKey(nco))
 			return false;
-		
+#if NEW_PATCH_READY
+		return noisePatches[nco].IsDone;
+#else
 		return noisePatches[nco].generatedBlockAlready;
-	}	
+#endif
+	}
 	
 	public List<Range1D> heightsListAtWorldCoord(Coord woco) {
 		NoisePatch np = noisePatchAtWorldCoord(woco);
