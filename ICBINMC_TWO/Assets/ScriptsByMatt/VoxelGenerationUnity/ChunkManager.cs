@@ -82,7 +82,7 @@ public class ChunkManager : MonoBehaviour
 	
 	private List<Coord> rebuildChunkChunkCoordList = new List<Coord>();
 //	private List<Coord> hasEverBeenDestroyedDebugList = new List<Coord>();
-//	private Quad 
+	private Quad m_destroyNoisePatchesOutsideOfRealm = new Quad(new PTwo(-9999,-9999), new PTwo(9999999, 9999999));
 
 	private CoRange m_wantActiveRealm;
 	private CoRange m_veryCloseAndInFrontRealm;
@@ -861,6 +861,15 @@ public class ChunkManager : MonoBehaviour
 		Coord halfR = new Coord (5, 4, 5); // larger than wActiveRealm
 		return playerChunkRange (playerLocatedAtChunkCoord (), halfR);
 	}
+	
+	Quad getDestroyNoisePatchesOutsideOfRealm(CoRange dontDestroyChunksRealm)
+	{
+		NoiseCoord startCoord = noiseCoordContainingChunkCoord(dontDestroyChunksRealm.start);
+		NoiseCoord rangeCoord = noiseCoordContainingChunkCoord(dontDestroyChunksRealm.range);
+		PTwo start = new PTwo(startCoord.x, startCoord.z);
+		PTwo range = new PTwo(rangeCoord.x, rangeCoord.z);
+		return new Quad(start, range);
+	}
 
 	CoRange playerChunkRange(Coord playerChunkCoord, Coord halfRange)
 	{
@@ -1000,6 +1009,7 @@ public class ChunkManager : MonoBehaviour
 //					m_wantActiveRealm = wantActiveRealm; 
 
 					m_dontDestroyRealm = getDontDestroyRealm ();
+					m_destroyNoisePatchesOutsideOfRealm = getDestroyNoisePatchesOutsideOfRealm(m_dontDestroyRealm);
 
 					foreach (Chunk chunk in activeChunks) 
 					{
@@ -1328,7 +1338,6 @@ public class ChunkManager : MonoBehaviour
 
 				if (createTheseVeryCloseAndInFrontChunks.Count > 0)
 				{
-	//				chunk = getAReadyChunkFromList(createTheseVeryCloseAndInFrontChunks);
 					
 					Coord chco = getChunkCoordWithinDontDestroyRealmFromList(createTheseVeryCloseAndInFrontChunks);
 					if (!chco.equalTo(Coord.TheErsatzNullCoord()))
@@ -1337,12 +1346,6 @@ public class ChunkManager : MonoBehaviour
 						if (chunk == null)
 							throw new Exception("surprising chunk was in v close list but not on chunk map!");
 					}
-					
-//					if (chunk == null)
-//					{
-	//					throw new Exception("a chunk that we were supposed to make was null. oh no!");	
-//						chunk = makeNewChunkButNotItsMesh(chco);
-//					}
 					
 					if (chunk != null)
 					{
@@ -1354,7 +1357,6 @@ public class ChunkManager : MonoBehaviour
 #endif
 						createTheseVeryCloseAndInFrontChunks.Remove(chunk.chunkCoord); // isn't that better??
 					} else {
-						//couldn't find a chunk. perhaps cull the very close list?	
 						cullVeryCloseList(createTheseVeryCloseAndInFrontChunks);
 					}
 				}
@@ -1371,38 +1373,14 @@ public class ChunkManager : MonoBehaviour
 								chunkMap.destroyChunkAt (chunk.chunkCoord);
 								activeChunks.Remove(chunk);
 								
-								
-								//DESTROY NOISEPATCHES (HACK)
-								if (true) {
-									
-								NoiseCoord nco = noiseCoordContainingChunkCoord(chunk.chunkCoord);
-								bool shouldDestroyPatch = true;
-								foreach(Coord ncoChunkCo in NoisePatchUtils.chunkCoordsWithinNoiseCoord(nco))
-								{
-									if (chunkMap.chunkAt(ncoChunkCo) != null)
-									{
-										shouldDestroyPatch = false;
-										break;
-									}
-								}
-								if (shouldDestroyPatch) {
-									// TODO: RETURN TO THIS. SHOULD DESTROY SEEMS TO NEVER BE TRUE!
-									// TODO: make sep coRoutines/list....etc.
-									blocks.destroyPatchAt(nco);
-								}
-									
-								}
-								//END DN HACK
-
 							}
-						} //argh...don't know what our logic is any more!
+						} 
 						destroyTheseChunks.Remove(chunk);
-						
 					}
 				}
 
 			}
-			yield return new WaitForSeconds(.1f);
+			yield return new WaitForSeconds(.2f);
 		}
 	}
 //	
@@ -1646,6 +1624,24 @@ public class ChunkManager : MonoBehaviour
 			yield return new WaitForSeconds(.1f);
 		}
 	}
+	
+	IEnumerator destroyFarAwayNoisePatches()
+	{
+		while(true)
+		{
+			List<NoiseCoord> furthestNCos = blocks.furthestNoiseCoords();
+			
+			foreach(NoiseCoord nco in furthestNCos) 
+			{
+				if (!m_destroyNoisePatchesOutsideOfRealm.contains(PTwo.PTwoXZFromNoiseCoord(nco)))
+				{
+					blocks.destroyPatchAt(nco);
+				}
+			}
+			
+			yield return new WaitForSeconds(1f);
+		}
+	}
 
 	void makeNewAndSetupPatchAtNoiseCoordMainThread(NoiseCoord ncoord)
 	{
@@ -1867,33 +1863,11 @@ public class ChunkManager : MonoBehaviour
 			return blocks.noisePatches [ncoord];
 
 		NoisePatch npatch = new NoisePatch (ncoord, this);
-		blocks.noisePatches.Add (ncoord, npatch);
+		blocks.addNoisePatchAt (ncoord, npatch);
 
 		return npatch;
 	}
 
-//	void makeNoisePatchIfNotExistsAtNoiseCoord(NoiseCoord ncoord) 
-//	{
-//		if (blocks.noisePatchExistsAtNoiseCoord(ncoord))
-//			return;
-//
-//		NoisePatch npatch = new NoisePatch (ncoord, this);
-//		blocks.noisePatches.Add (ncoord, npatch);
-//	}
-
-//	void generateNoiseForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
-//		if (!blocks.noisePatchExistsAtNoiseCoord(ncoord))
-//		{
-//			throw new System.ArgumentException("no noise patch at this coord", "ncoord");
-//		}
-//
-//		NoisePatch np = blocks.noisePatches [ncoord];
-//
-//		if (mainThread)
-//			np.genNoiseAndPopulateBlocksOnMainThread();
-//		else 
-//			np.populateBlocksAsync ();
-//	}
 
 	void populateBlocksForPatchAtCoord(NoiseCoord ncoord, bool mainThread) {
 		if (!blocks.noisePatchExistsAtNoiseCoord(ncoord))
@@ -1902,18 +1876,15 @@ public class ChunkManager : MonoBehaviour
 		}
 
 		NoisePatch np = blocks.noisePatches [ncoord];
-		//if (mainThread)
-		//	np.pop
+
 		if (mainThread)
 			np.populateBlocksFromNoiseMainThread();
 		else
 			np.Start();
-//			np.populateBlocksFromNoise (); // wha?? same func??
 	}
 
 	NoiseCoord noiseCoordContainingWorldCoord(Coord woco) {
 		return blocks.noiseCoordContainingWorldCoord(woco);
-//		return noiseCoordContainingChunkCoord (chunkCoordContainingBlockCoord (woco));
 	}
 	
 	NoiseCoord noiseCoordContainingPlayer() {
@@ -1928,7 +1899,6 @@ public class ChunkManager : MonoBehaviour
 	NoiseCoord noiseCoordContainingChunkCoord(Coord chcoord)
 	{
 		Coord adjustChCoord = chcoord.booleanNegative () * NoisePatch.CHUNKDIMENSION;
-//		return new NoiseCoord ((chcoord - adjustChCoord) / NoisePatch.CHUNKDIMENSION);
 
 		// -4 -> -3 -> -7 -> -1
 		return new NoiseCoord ((chcoord + chcoord.booleanNegative() - adjustChCoord) / NoisePatch.CHUNKDIMENSION);
@@ -2063,6 +2033,7 @@ public class ChunkManager : MonoBehaviour
 
 		if (TestRunner.DontRunDoTerrainTestInstead)
 		{
+/*
 			//extra noise cos 
 			for (int k = -6 ; k < 7 ; k++) 
 			{
@@ -2082,6 +2053,7 @@ public class ChunkManager : MonoBehaviour
 			File.WriteAllBytes(Application.dataPath + "/../TerrainSlice.png", terrainTex.EncodeToPNG() );
 	
 			return;
+*/
 		}
 
 
@@ -2154,6 +2126,8 @@ public class ChunkManager : MonoBehaviour
 				StartCoroutine (setupPatchesFromPatchesList ());
 				StartCoroutine (updateSetupPatchesListI ());
 				StartCoroutine (checkAsyncPatchesDone ());
+				
+//				StartCoroutine(destroyFarAwayNoisePatches()); //crash city! TODO: investigate
 				
 				StartCoroutine (updateChunkLists ());
 				StartCoroutine (checkAsyncChunksList ());

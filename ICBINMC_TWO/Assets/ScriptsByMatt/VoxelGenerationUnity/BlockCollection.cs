@@ -1,4 +1,5 @@
 ﻿#define NEW_PATCH_READY
+//#define TERRAIN_TEST
 
 using UnityEngine;
 using System.Collections;
@@ -28,6 +29,8 @@ public class BlockCollection
 	                                                                                                   (int) ChunkManager.CHUNKHEIGHT, 
 	                                                                                                   (int)ChunkManager.CHUNKLENGTH);
 	private const string NOISE_PATCHES_SAVE_NAME = "SavedNoisePatches";
+	
+	private Quad domain = Quad.theErsatzNullQuad();
 	
 	// TODO: set up a save system where different sets of noise patches are saved by
 	// seed. basically, there should be a 'world' object.
@@ -107,7 +110,7 @@ public class BlockCollection
 		}
 	}
 
-	
+#if TERRAIN_TEST
 	public Texture2D textureForTerrainAtXEqualsZero()
 	{
 		List<Color> colorData = new List<Color> ();
@@ -178,7 +181,7 @@ public class BlockCollection
 
 		return result;
 	}
-	
+#endif
 
 	public NoisePatch noisePatchAtWorldCoord (Coord woco) {
 		NoiseCoord nco = noiseCoordForWorldCoord (woco);
@@ -213,8 +216,10 @@ public class BlockCollection
 	
 	public void destroyPatchAt(NoiseCoord nco) {
 		if (noisePatches.ContainsKey(nco)) {
-			b.bug("destroying patch at: " + nco.toString());
-			noisePatches[nco] = null;
+			NoisePatch npToDestroy = noisePatches[nco];
+			if (npToDestroy.hasStarted || !npToDestroy.IsDone)
+				return;
+
 			bool destroyed = noisePatches.Remove(nco);	
 			if (!destroyed) {
 				throw new Exception("failed to destroy..." + nco.toString());
@@ -240,6 +245,100 @@ public class BlockCollection
 #else
 		return noisePatches[nco].generatedBlockAlready;
 #endif
+	}
+	
+	public void addNoisePatchAt(NoiseCoord nco, NoisePatch _npatch) {
+		noisePatches.Add(nco, _npatch);
+		//domain limits
+		if (Quad.Equal(this.domain, Quad.theErsatzNullQuad())) {
+			//first time
+			domain = new Quad(new PTwo(nco.x, nco.z), PTwo.PTwoOne());
+		} else {
+			domain = domain.expandedToContainPoint(new PTwo(nco.x, nco.z));	
+		}
+	}
+	
+	public List<NoiseCoord> furthestNoiseCoords() {
+		
+		List<NoiseCoord> result = new List<NoiseCoord>();
+		
+		if (domain.dimensions.s < 2 || domain.dimensions.t < 2)
+			return result;
+		
+		NoiseCoord xnudge = new NoiseCoord(1,0);
+		NoiseCoord znudge = new NoiseCoord(0,1);
+		
+		//mins (traverse min edge of domain on the z and x sides until we find a coord contained in noisePatches)
+		if (noisePatches.ContainsKey(NoiseCoord.NoiseCoordWithPTwo(domain.origin)))
+		{	
+			result.Add(NoiseCoord.NoiseCoordWithPTwo(domain.origin));
+		} else {
+			// xmin z
+			NoiseCoord xminz = NoiseCoord.NoiseCoordWithPTwo(domain.origin);
+			while (xminz.z < domain.extent().t)
+			{
+				xminz += znudge;
+				if (noisePatches.ContainsKey(xminz)) {
+					result.Add(xminz);
+					break;
+				}
+				if (xminz.z == domain.extent().t - 1) {
+					domain.origin.s++;	
+					domain.dimensions.s--;
+					
+				}
+			}
+			NoiseCoord zminx = NoiseCoord.NoiseCoordWithPTwo(domain.origin);
+			while (xminz.z < domain.extent().s)
+			{
+				zminx += xnudge;
+				if (noisePatches.ContainsKey(zminx)) {
+					result.Add(zminx);
+					break;
+				}
+				if (zminx.x == domain.extent().s - 1) {
+					domain.origin.t++;	
+					domain.dimensions.t--;
+					
+				}
+			}
+		}
+		
+		//maxes
+		NoiseCoord extentCoord = NoiseCoord.NoiseCoordWithPTwo(domain.extent());
+		if (noisePatches.ContainsKey(extentCoord))
+		{
+			result.Add(extentCoord);	
+		} else {
+			
+			NoiseCoord xmaxz = extentCoord;
+			while(xmaxz.z >= domain.origin.t)
+			{
+				xmaxz -= znudge;
+				if (noisePatches.ContainsKey(xmaxz)) {
+					result.Add(xmaxz);
+					break;
+				}
+				if (xmaxz.z == domain.origin.t) {
+					domain.dimensions.s--;
+				}
+			}
+			
+			NoiseCoord zmaxx = extentCoord;
+			while(zmaxx.z >= domain.origin.t)
+			{
+				zmaxx -= xnudge;
+				if (noisePatches.ContainsKey(zmaxx)) {
+					result.Add(zmaxx);
+					break;
+				}
+				if (zmaxx.x == domain.origin.s) {
+					domain.dimensions.t--;
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	public bool noisePatchAtNoiseCoordHasBuiltAtleastOnce(NoiseCoord nco) {

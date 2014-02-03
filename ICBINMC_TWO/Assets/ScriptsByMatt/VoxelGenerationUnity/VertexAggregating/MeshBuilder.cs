@@ -456,10 +456,7 @@ public class MeshBuilder
 	
 	private void addBlockAtCoordAndAxis(Coord co, Axis axis, AlignedCoord alco, Coord nudgeCoord, BlockType btype)
 	{
-		// OH DEAR: THIS WAS VERY NOT WORKING AND CAUSED TWO DIFFERENT EXCEPTIONS ON A FIRST RUN!
-		// one exception was inside face set, in the dreaded 'optimize strips funcs. (index out of range or something)
-		// another was...I forget at this point.
-		
+
 		Block neighbor_block;
 		neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co - nudgeCoord)); //x_one
 		int relevantComponent = Coord.SumOfComponents (co * nudgeCoord);
@@ -479,11 +476,7 @@ public class MeshBuilder
 				{
 					FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
 					
-					// DEBUG:
-					int faXMinusOneCountBefore = faXminusOne.meshSet.geometrySet.vertices.Count;
-					
 					faXminusOne.removePositiveSideFaceAtCoord(alco);
-	//				faXminusOne.removeBlockFaceAtCoord(alco, true, false);
 					
 					// if faceSetCount now zero, remove faceAgg
 					if (faXminusOne.faceSetCount == 0) {
@@ -492,10 +485,7 @@ public class MeshBuilder
 						// else get Face geom...
 						faXminusOne.getFaceGeometry(relevantComponent - 1);
 					}
-					
-					//DEBUG:
-					int faXMinusOneCount = faXminusOne.meshSet.geometrySet.vertices.Count;
-					b.bug(" f agg minus one vert count before: " + faXMinusOneCountBefore + " and after: " + faXMinusOneCount);
+
 				}
 			}
 		} else { 
@@ -563,8 +553,6 @@ public class MeshBuilder
 	
 	#endregion
 	
-	//TODO: must update verts...
-	
 	private MeshSet collectMeshDataWithFaceAggregatorsDontRecalculate(FaceAggregator[] faceAggs, ref int starting_tri_index)
 	{
 		return collectMeshDataWithFaceAggregators(faceAggs, ref starting_tri_index, false);
@@ -601,7 +589,6 @@ public class MeshBuilder
 				
 				List<int> geomSetIndices = new List<int>(mset.geometrySet.indices); //copy list...
 				GeometrySet gset = new GeometrySet(geomSetIndices, mset.geometrySet.vertices);
-//				GeometrySet gset = mset.geometrySet;
 				
 				temp_vertices.AddRange(gset.vertices);
 				int j = 0;

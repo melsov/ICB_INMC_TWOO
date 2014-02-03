@@ -91,7 +91,7 @@ public class NoisePatch : ThreadedJob
 					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
 					CHUNKLENGTH * PATCHDIMENSIONSCHUNKS.z);
 
-	public Block[,,] blocks { get; set;}
+//	public Block[,,] blocks { get; set;}
 
 	public NoiseCoord coord {get; set;}
 	
@@ -101,10 +101,10 @@ public class NoisePatch : ThreadedJob
 
 	private ChunkManager m_chunkManager;
 
-	private SavableBlock[,,] m_RSavedBlocks;
+//	private SavableBlock[,,] m_RSavedBlocks;
 	public List<SavableBlock> savedBlocks { get; set;}
 
-	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
+//	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
 	private List<Range1D>[] heightMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	private List<Range1D>[] savedRangeLists = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 //	private List<Range1D>[] structureMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
@@ -124,9 +124,9 @@ public class NoisePatch : ThreadedJob
 	private static SimpleRange TREE_MAX_LIKELIHOOD_VRANGE = SimpleRange.SimpleRangeWithStartAndExtent((int)(patchDimensions.y * .45), (int) (patchDimensions.y * .75));
 	private const float TREE_MAX_LIKELIHOOD_FACTOR = .125f;
 	
-//#if TERRAIN_TEST
+#if TERRAIN_TEST
 	public Color[,] terrainSlice = new Color[patchDimensions.y, patchDimensions.z];
-//#endif
+#endif
 	
 	private List<StructureBase> structures = new List<StructureBase>();
 	private DataForNeighbors dataForNeighbors = DataForNeighbors.MakeNew();
@@ -150,8 +150,8 @@ public class NoisePatch : ThreadedJob
 	private void otherConstructorStuff() {
 		savedBlocks = new List<SavableBlock> ();
 
-		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
-		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
+//		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
+//		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
 
 		BLOCKSPERPATCHLENGTH = patchDimensions.x;
 	}
@@ -208,11 +208,12 @@ public class NoisePatch : ThreadedJob
 	}
 
 	private void addSavableBlock(Block _b, Coord patchRelCo) {
-		m_RSavedBlocks [patchRelCo.x, patchRelCo.y, patchRelCo.z] = new SavableBlock (_b.type, patchRelCo);
+//		m_RSavedBlocks [patchRelCo.x, patchRelCo.y, patchRelCo.z] = new SavableBlock (_b.type, patchRelCo);
 	}
 
 	private void updateSavableBlockList() 
 	{
+/*		
 		savedBlocks.Clear ();
 
 		int x_end = m_RSavedBlocks.GetLength (0);
@@ -232,10 +233,12 @@ public class NoisePatch : ThreadedJob
 				}
 			}
 		}
+*/		
 
 	}// end func
 
 	private void updateSavableAndNormalBlocksArray() {
+/*		
 		foreach(SavableBlock sb in savedBlocks) {
 
 			//check index??
@@ -244,6 +247,7 @@ public class NoisePatch : ThreadedJob
 			if (sb.coord.isIndexSafe(patchDimensions))
 				blocks [sb.coord.x, sb.coord.y, sb.coord.z] = new Block(sb.type);
 		}
+*/ //TODO: revamp saving....
 	}
 
 	#endregion
@@ -525,10 +529,10 @@ public class NoisePatch : ThreadedJob
 	{
 		return new Block(blockTypeFromCoord(relCo));
 /*
-		if (blocks[relCo.x, relCo.y, relCo.z] == null)
-			blocks[relCo.x, relCo.y, relCo.z] = new Block(blockTypeFromCoord(relCo));
-//			blocks[relCo.x, relCo.y, relCo.z] = new Block(BlockType.Air);
-		return blocks[relCo.x, relCo.y, relCo.z];
+//		if (blocks[relCo.x, relCo.y, relCo.z] == null)
+//			blocks[relCo.x, relCo.y, relCo.z] = new Block(blockTypeFromCoord(relCo));
+
+//		return blocks[relCo.x, relCo.y, relCo.z];
 */
 	}
 	
@@ -572,7 +576,7 @@ public class NoisePatch : ThreadedJob
 	public void setBlockAtWorldCoord(Block bb, Coord woco) 
 	{
 		Coord relCo = patchRelativeBlockCoordForWorldBlockCoord (woco);
-		blocks [relCo.x, relCo.y, relCo.z] = bb;
+//		blocks [relCo.x, relCo.y, relCo.z] = bb;
 
 		//save any set block
 		addSavableBlock (bb, relCo);

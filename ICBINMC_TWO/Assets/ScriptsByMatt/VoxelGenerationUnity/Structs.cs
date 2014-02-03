@@ -125,6 +125,10 @@ public struct PTwo
 		return new PTwo(co.x, co.z);	
 	}
 	
+	public static PTwo PTwoXZFromNoiseCoord(NoiseCoord nco) {
+		return new PTwo(nco.x, nco.z);	
+	}
+	
 	public static Coord CoordFromPTwoWithY(PTwo point, int height) {
 		return new Coord(point.s, height, point.t);	
 	}

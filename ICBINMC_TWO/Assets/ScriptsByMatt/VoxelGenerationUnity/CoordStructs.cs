@@ -794,7 +794,10 @@ public struct NoiseCoord
 	public static NoiseCoord TheErsatzNullNoiseCoord() {
 		return new NoiseCoord(-99999, 9994);
 	}
-		
+	
+	public static NoiseCoord NoiseCoordWithPTwo(PTwo ptwo) {
+		return new NoiseCoord(ptwo.s, ptwo.t);	
+	}
 
 	public string toString() {
 		return "Noise Coord :) x: " + x + " z: " + z;
