@@ -1,6 +1,6 @@
 ﻿#define NO_CAVES
 #define LIGHT_HACK
-//#define TURN_ON_STRUCTURES
+//#define TURN_OFF_STRUCTURES
 //#define FLAT_TOO
 //#define TERRAIN_TEST
 //#define FLAT
@@ -280,7 +280,8 @@ public class NoisePatch : ThreadedJob
 		}
 	}
 	
-	public bool patchesAdjacentToChunkCoordAreReady(Coord chunkCoord) {
+	public bool patchesAdjacentToChunkCoordAreReady(Coord chunkCoord) 
+	{
 		if (!this.IsDone || this.hasStarted)
 			return false;
 		
@@ -328,7 +329,7 @@ public class NoisePatch : ThreadedJob
 	{
 		generatedBlockAlready = true;
 		
-#if TURN_ON_STRUCTURES
+#if TURN_OFF_STRUCTURES
 #else	
 		getStructuresFromNeighbors();
 		dropOffStructuresForNeighbors();
@@ -1258,15 +1259,15 @@ public class NoisePatch : ThreadedJob
 		
 		//add stucturs
 		addStructuresToHeightMap(structurz); 
-		//TURN ON STRUCTURES really means shared structures
-#if TURN_ON_STRUCTURES
-		
-		
 		//any structures for me from neighbors?
 		getStructuresFromNeighbors(); 
-		
+		//TURN ON STRUCTURES really means shared structures
 		//are there any neighbors who generated already and need structures?
 		dropOffStructuresForNeighbors(); 
+#if TURN_OFF_STRUCTURES
+		
+		
+		
 #endif
 		
 		
@@ -1330,9 +1331,9 @@ public class NoisePatch : ThreadedJob
 	
 	private void dropOffStructureForNeighborAt(NeighborDirection ndir)
 	{
-#if TURN_ON_STRUCTURES
-#else
+#if TURN_OFF_STRUCTURES
 		return;
+#else
 #endif
 		NoisePatch neighborPatch = null;
 		// X POS NEIGHBOR
@@ -1359,9 +1360,9 @@ public class NoisePatch : ThreadedJob
 	
 	private void getStructuresFromNeighbors()
 	{
-#if TURN_ON_STRUCTURES
-#else
+#if TURN_OFF_STRUCTURES
 		return;
+#else
 #endif
 		NoisePatch neighborPatch = null;
 		List<StructureBase> strs = null;
