@@ -524,12 +524,12 @@ public class NoisePatch : ThreadedJob
 	private Block blockAtRelativeCoord(Coord relCo) 
 	{
 		return new Block(blockTypeFromCoord(relCo));
-		/*
+/*
 		if (blocks[relCo.x, relCo.y, relCo.z] == null)
 			blocks[relCo.x, relCo.y, relCo.z] = new Block(blockTypeFromCoord(relCo));
 //			blocks[relCo.x, relCo.y, relCo.z] = new Block(BlockType.Air);
 		return blocks[relCo.x, relCo.y, relCo.z];
-		*/
+*/
 	}
 	
 	private BlockType blockTypeFromCoord(Coord relCo)
@@ -1257,6 +1257,8 @@ public class NoisePatch : ThreadedJob
 
 		} // end for xx
 		
+#if TURN_OFF_STRUCTURES
+#else
 		//add stucturs
 		addStructuresToHeightMap(structurz); 
 		//any structures for me from neighbors?
@@ -1264,10 +1266,6 @@ public class NoisePatch : ThreadedJob
 		//TURN ON STRUCTURES really means shared structures
 		//are there any neighbors who generated already and need structures?
 		dropOffStructuresForNeighbors(); 
-#if TURN_OFF_STRUCTURES
-		
-		
-		
 #endif
 		
 		
@@ -1697,7 +1695,7 @@ public struct EdgeLightLevels
 
 public struct NeighborBooleans
 {
-	public bool xpos, zpos, xzpos, xneg, zneg, xzneg;
+	public bool xpos, zpos, xzpos, xposzneg, xneg, zneg, xzneg, xnegzpos;
 	
 	public bool booleanForDirection(NeighborDirection ndir) {
 		if (ndir == NeighborDirection.XPOS)
@@ -1706,11 +1704,15 @@ public struct NeighborBooleans
 			return zpos;
 		if (ndir == NeighborDirection.XZPOS)
 			return xzpos;
+		if (ndir == NeighborDirection.XPOSZNEG)
+			return xposzneg;
 		if (ndir == NeighborDirection.XNEG)
 			return xneg;
 		if (ndir == NeighborDirection.ZNEG)
 			return zneg;
-		return xzneg;
+		if (ndir == NeighborDirection.XZNEG)
+			return xzneg;
+		return xnegzpos;
 	}
 	
 	public void setBooleanForDirection(NeighborDirection ndir, bool _boo) {
@@ -1720,12 +1722,16 @@ public struct NeighborBooleans
 			zpos = _boo;
 		else if (ndir == NeighborDirection.XZPOS)
 			xzpos = _boo;
+		else if (ndir == NeighborDirection.XPOSZNEG)
+			xposzneg = _boo;
 		else if (ndir == NeighborDirection.XNEG)
 			xneg = _boo;
 		else if (ndir == NeighborDirection.ZNEG)
 			zneg = _boo;
-		else 
+		else if (ndir == NeighborDirection.XZNEG)
 			xzneg = _boo;
+		else
+			xnegzpos = _boo;
 	}
 }
 
@@ -1736,10 +1742,12 @@ public struct StructuresForNeighbors
 	public List<StructureBase> forXPos;
 	public List<StructureBase> forZPos;
 	public List<StructureBase> forXZPos;
+	public List<StructureBase> forXPosZNeg;
 	
 	public List<StructureBase> forXNeg;
 	public List<StructureBase> forZNeg;
 	public List<StructureBase> forXZNeg;
+	public List<StructureBase> forXNegZPos;
 	
 	public NeighborBooleans givenAlready;
 	
@@ -1750,10 +1758,12 @@ public struct StructuresForNeighbors
 		sfn.forXPos = new List<StructureBase>();
 		sfn.forZPos = new List<StructureBase>();
 		sfn.forXZPos = new List<StructureBase>();
+		sfn.forXPosZNeg = new List<StructureBase>();
 		
 		sfn.forXNeg = new List<StructureBase>();
 		sfn.forZNeg = new List<StructureBase>();
 		sfn.forXZNeg = new List<StructureBase>();
+		sfn.forXNegZPos = new List<StructureBase>();
 		
 		sfn.givenAlready = new NeighborBooleans();
 		
@@ -1780,12 +1790,15 @@ public struct StructuresForNeighbors
 			return forZPos;
 		if (ndir == NeighborDirection.XZPOS)
 			return forXZPos;
+		if (ndir == NeighborDirection.XPOSZNEG)
+			return forXPosZNeg;
 		if (ndir == NeighborDirection.XNEG)
 			return forXNeg;
 		if (ndir == NeighborDirection.ZNEG)
 			return forZNeg;
-//		if (ndir == NeighborDirection.XZNEG)
-		return forXZNeg;
+		if (ndir == NeighborDirection.XZNEG)
+			return forXZNeg;
+		return forXNegZPos;
 	}
 	
 	public List<StructureBase> structureListForDirection(NeighborDirection ndir) {
@@ -1796,18 +1809,22 @@ public struct StructuresForNeighbors
 			return forZPos;
 		if (ndir == NeighborDirection.XZPOS)
 			return forXZPos;
+		if (ndir == NeighborDirection.XPOSZNEG)
+			return forXPosZNeg;
+		
 		if (ndir == NeighborDirection.XNEG)
 			return forXNeg;
 		if (ndir == NeighborDirection.ZNEG)
 			return forZNeg;
-//		if (ndir == NeighborDirection.XZNEG)
-		return forXZNeg;
+		if (ndir == NeighborDirection.XZNEG)
+			return forXZNeg;
+		return forXNegZPos;
 	}
 }
 
 public enum NeighborDirection {
-	XPOS, ZPOS, XZPOS,
-	XNEG, ZNEG, XZNEG
+	XPOS, ZPOS, XZPOS, XPOSZNEG,
+	XNEG, ZNEG, XZNEG, XNEGZPOS
 };
 
 public static class NoisePatchUtils
@@ -1847,21 +1864,39 @@ public static class NeighborDirectionUtils
 		
 		if (neighborDir	== NeighborDirection.XZNEG)
 			return new NoiseCoord(-1, -1);
-		
-		//XZPOS
-		return new NoiseCoord(1,1); 
+		if (neighborDir	== NeighborDirection.XZPOS)
+			return new NoiseCoord(1,1); 
+		if (neighborDir	== NeighborDirection.XPOSZNEG)
+			return new NoiseCoord(1,-1); 
+		//XNEGZPOS
+		return new NoiseCoord(-1, 1);
 	}
 	
-	public static IEnumerable neighborDirections() {
-		yield return NeighborDirection.XPOS;
-		yield return NeighborDirection.ZPOS;
-		yield return NeighborDirection.XZPOS;
-		yield return NeighborDirection.XNEG;
-		yield return NeighborDirection.ZNEG;
-		yield return NeighborDirection.XZNEG;
+	public static IEnumerable neighborDirectionsOLD() {
+//		yield return NeighborDirection.XPOS;
+//		yield return NeighborDirection.ZPOS;
+//		yield return NeighborDirection.XZPOS;
+//		yield return NeighborDirection.XNEG;
+//		yield return NeighborDirection.ZNEG;
+//		yield return NeighborDirection.XZNEG;
+		yield return null;
 	}
 	
-	public static PTwo neighborPatchRelativeCoordForNeighborInDirection(NeighborDirection neighborDir, PTwo currentPatchRelCoord) {
+	public static NeighborDirection[] neighborDirections() {
+		return new NeighborDirection[] {
+			NeighborDirection.XPOS,
+			NeighborDirection.ZPOS,
+			NeighborDirection.XZPOS,
+			NeighborDirection.XPOSZNEG,
+			NeighborDirection.XNEG,
+			NeighborDirection.ZNEG,
+			NeighborDirection.XZNEG,
+			NeighborDirection.XNEGZPOS
+		};
+	}
+	
+	public static PTwo neighborPatchRelativeCoordForNeighborInDirection(NeighborDirection neighborDir, PTwo currentPatchRelCoord) 
+	{
 		NoiseCoord nudgeCo = nudgeCoordFromNeighborDirection( neighborDir);
 		PTwo nudge = new PTwo(nudgeCo.x, nudgeCo.z) * PTwo.PTwoXZFromCoord(NoisePatch.patchDimensions) * -1;
 		
@@ -1870,7 +1905,7 @@ public static class NeighborDirectionUtils
 	
 	public static NeighborDirection oppositeNeighborDirection(NeighborDirection neighborDir) 
 	{
-		return (NeighborDirection) (((int)neighborDir + 3 ) % 6);
+		return (NeighborDirection) (((int)neighborDir + 4 ) % 8);
 	}
 }
 
