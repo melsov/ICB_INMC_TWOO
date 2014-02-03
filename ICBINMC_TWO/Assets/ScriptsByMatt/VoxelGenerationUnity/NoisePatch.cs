@@ -1,5 +1,6 @@
 ﻿#define NO_CAVES
 #define LIGHT_HACK
+//#define TURN_ON_STRUCTURES
 //#define FLAT_TOO
 //#define TERRAIN_TEST
 //#define FLAT
@@ -86,15 +87,15 @@ public class NoisePatch : ThreadedJob
 	private static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
 	private int BLOCKSPERPATCHLENGTH;
 
-	public static Coord patchDimensions =new Coord(CHUNKLENGTH * CHUNKDIMENSION, 
+	public static Coord patchDimensions =new Coord(CHUNKLENGTH * PATCHDIMENSIONSCHUNKS.x, 
 					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
-					CHUNKLENGTH * CHUNKDIMENSION);
+					CHUNKLENGTH * PATCHDIMENSIONSCHUNKS.z);
 
 	public Block[,,] blocks { get; set;}
 
 	public NoiseCoord coord {get; set;}
 	
-	public bool startedBlockSetup;
+//	public bool startedBlockSetup;
 //	public bool generatedNoiseAlready {get; set;}
 	public bool generatedBlockAlready {get; set;}
 
@@ -203,7 +204,7 @@ public class NoisePatch : ThreadedJob
 		
 		updateSavableAndNormalBlocksArray ();
 		generatedBlockAlready = false;
-		startedBlockSetup = false;
+		hasStarted = false;
 	}
 
 	private void addSavableBlock(Block _b, Coord patchRelCo) {
@@ -246,6 +247,73 @@ public class NoisePatch : ThreadedJob
 	}
 
 	#endregion
+	
+	#region neighbors have setup also
+	
+	public List<NoiseCoord> neighborCoordsWhoHaveNotStartedSetup()
+	{
+		List<NoiseCoord> result = new List<NoiseCoord>(6);
+		
+		foreach(NeighborDirection ndir in NeighborDirectionUtils.neighborDirections())
+		{
+			NoiseCoord nco = NeighborDirectionUtils.nudgeCoordFromNeighborDirection(ndir) + this.coord;	
+			bool hasbuilt = m_chunkManager.blocks.noisePatchAtNoiseCoordHasBuiltAtleastOnce(nco);
+			if (!hasbuilt) {
+				result.Add(nco);
+			}
+		}
+		return result;
+	}
+	
+	private bool m_neighborsHaveBuiltAtLeastOnce = false;
+	
+	public bool neighborsHaveAllBuiltAtLeastOnce {
+		get {
+			if (m_neighborsHaveBuiltAtLeastOnce)
+				return true;
+			
+			List<NoiseCoord> unbuiltNeighbors = neighborCoordsWhoHaveNotStartedSetup();
+			if ( unbuiltNeighbors.Count == 0) {
+				m_neighborsHaveBuiltAtLeastOnce = true;	
+			}
+			return unbuiltNeighbors.Count == 0;
+		}
+	}
+	
+	public bool patchesAdjacentToChunkCoordAreReady(Coord chunkCoord) {
+		if (!this.IsDone || this.hasStarted)
+			return false;
+		
+		Coord patchRelCo = patchRelativeChunkCoordForChunkCoord(chunkCoord);
+		
+		if (patchRelCo.x == PATCHDIMENSIONSCHUNKS.x - 1) {
+			// XPOS needed
+			if (!neighborInDirectionIsReady(NeighborDirection.XPOS))
+				return false;
+		}
+		else if (patchRelCo.x == 0) {
+			if (!neighborInDirectionIsReady(NeighborDirection.XNEG))
+				return false;
+		}
+		
+		if (patchRelCo.z == PATCHDIMENSIONSCHUNKS.z - 1) {
+			// XPOS needed
+			if (!neighborInDirectionIsReady(NeighborDirection.ZPOS))
+				return false;
+		}
+		else if (patchRelCo.z == 0) {
+			if (!neighborInDirectionIsReady(NeighborDirection.ZNEG))
+				return false;
+		}
+		return true;
+	}
+	
+	public bool neighborInDirectionIsReady(NeighborDirection ndir) {
+		NoiseCoord nudgeCo = NeighborDirectionUtils.nudgeCoordFromNeighborDirection(ndir);
+		return m_chunkManager.blocks.noisePatchAtNoiseCoordHasBuiltAtleastOnce(this.coord + nudgeCo);
+	}
+	
+	#endregion
 
 	#region implement threaded job funcs
 
@@ -259,12 +327,18 @@ public class NoisePatch : ThreadedJob
 	protected override void OnFinished()
 	{
 		generatedBlockAlready = true;
-		m_chunkManager.noisePatchFinishedSetup (this);
 		
-		throw new Exception("NOISE PATCH ON FINISHED WAS CALLED??"); // this func is not called (understandably)
+#if TURN_ON_STRUCTURES
+#else	
+		getStructuresFromNeighbors();
+		dropOffStructuresForNeighbors();
+#endif
+//		m_chunkManager.noisePatchFinishedSetup (this);
 		
-		if (this.patchRelativeChCosToRebuild.Count > 0)
-			this.m_chunkManager.rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(this.coord, this.patchRelativeChCosToRebuild); //test want but maybe not here (go to main thread)		
+//		throw new Exception("NOISE PATCH ON FINISHED WAS CALLED??"); // this func is not called (understandably)
+		
+//		if (this.patchRelativeChCosToRebuild.Count > 0)
+//			this.m_chunkManager.rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(this.coord, this.patchRelativeChCosToRebuild); //test want but maybe not here (go to main thread)		
 	}
 
 	#endregion
@@ -683,7 +757,6 @@ public class NoisePatch : ThreadedJob
 		{
 			int startRange = startIndex + patchDimensions.x * i;
 			retList.AddRange ( heightMap.Skip(startRange).Take(CHUNKLENGTH));
-			
 		}
 	
 		return retList.ToArray ();
@@ -712,7 +785,7 @@ public class NoisePatch : ThreadedJob
 	void resetAlreadyDoneFlags () {
 //		generatedNoiseAlready = false;
 		generatedBlockAlready = false;
-		startedBlockSetup = false;
+		hasStarted = false;
 	}
 	
 //	generateNoiseAndPopulateBlocksAsync
@@ -730,6 +803,7 @@ public class NoisePatch : ThreadedJob
 		this.hasStarted = true;
 		doPopulateBlocksFromNoise();
 		this.IsDone = true;
+		this.hasStarted = false;
 	}
 
 	private void doPopulateBlocksFromNoise()
@@ -877,7 +951,7 @@ public class NoisePatch : ThreadedJob
 	
 	private void populateBlocksFromNoise(Coord start, Coord range)
 	{
-		this.startedBlockSetup = true;
+		this.hasStarted = true;
 		
 		if (generatedBlockAlready)
 			return;
@@ -1184,12 +1258,17 @@ public class NoisePatch : ThreadedJob
 		
 		//add stucturs
 		addStructuresToHeightMap(structurz); 
+		//TURN ON STRUCTURES really means shared structures
+#if TURN_ON_STRUCTURES
+		
 		
 		//any structures for me from neighbors?
 		getStructuresFromNeighbors(); 
 		
 		//are there any neighbors who generated already and need structures?
 		dropOffStructuresForNeighbors(); 
+#endif
+		
 		
 //		#if TERRAIN_TEST
 //		textureSlice = GetTexture ();
@@ -1212,7 +1291,7 @@ public class NoisePatch : ThreadedJob
 			}
 			
 			this.patchRelativeChCosToRebuild = patchRelCoords;
-			// TEST WANT
+			
 			this.m_chunkManager.rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(this.coord, patchRelCoords); //test want but maybe not here (go to main thread)
 		} 
 		// else this noisepatch will take what it needs later so don't bother.
@@ -1249,82 +1328,48 @@ public class NoisePatch : ThreadedJob
 		return result;
 	}
 	
+	private void dropOffStructureForNeighborAt(NeighborDirection ndir)
+	{
+#if TURN_ON_STRUCTURES
+#else
+		return;
+#endif
+		NoisePatch neighborPatch = null;
+		// X POS NEIGHBOR
+		NoiseCoord nco = NeighborDirectionUtils.nudgeCoordFromNeighborDirection(ndir) + this.coord; // new NoiseCoord(this.coord.x + 1, this.coord.z);
+		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
+		{
+			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
+			if (neighborPatch.generatedBlockAlready) {
+				List<StructureBase> strs = this.giveStructuresFor(ndir);
+				if (strs != null)
+					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(strs);
+			}
+		}
+	}
+	
+	//TODO: noisepatches only ready when their neighbors have setup (their structures) (i.e. given them there structures...)
+	
 	private void dropOffStructuresForNeighbors() // if the neighbor was build before we were
 	{
-		// confusingness...as written this func should cause an exception: "Internal_Create can only be called from the main thread"
-		// it seems to happen sometimes but rarely? 
-		// the map generally ( :•) ) builds right now.
-		// todo: figure out the best way to do stuff when a NoisePatch is done with sep thread jobs.	
-	
-		
-		NoisePatch neighborPatch = null;
-//		List<StructureBase> strs = null;
-		
-		// X POS NEIGHBOR
-		NoiseCoord nco = new NoiseCoord(this.coord.x + 1, this.coord.z);
-		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
-		{
-			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
-				if (neighborPatch.generatedBlockAlready)
-					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.XPOS));
-		}
-		
-		// Z POS NEIGHBOR	
-		nco = new NoiseCoord(this.coord.x, this.coord.z + 1);
-		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
-		{
-			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
-				if (neighborPatch.generatedBlockAlready)
-					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.ZPOS));
-		}
-		
-		// X NEG NEIGHBOR
-		nco = new NoiseCoord(this.coord.x - 1, this.coord.z);
-		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
-		{
-			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
-				if (neighborPatch.generatedBlockAlready)
-					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.XNEG));
-		}
-		
-		// Z NEG NEIGHBOR	
-		nco = new NoiseCoord(this.coord.x, this.coord.z - 1);
-		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
-		{
-			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
-				if (neighborPatch.generatedBlockAlready)
-					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.ZNEG));
-		}
-		
-		// XZ POS NEIGHBOR
-		nco = new NoiseCoord(this.coord.x + 1, this.coord.z + 1);
-		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
-		{
-			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
-				if (neighborPatch.generatedBlockAlready)
-					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.XZPOS));
-		}
-		
-		// XZ NEG NEIGHBOR
-		nco = new NoiseCoord(this.coord.x - 1, this.coord.z - 1);
-		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
-		{
-			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
-				if (neighborPatch.generatedBlockAlready)
-					neighborPatch.takeStructuresAfterIGeneratedBlocksAlready(this.giveStructuresFor(NeighborDirection.XZNEG));
+		foreach(NeighborDirection ndir in NeighborDirectionUtils.neighborDirections()) {
+			dropOffStructureForNeighborAt(ndir);	
 		}
 	}
 	
 	private void getStructuresFromNeighbors()
 	{
+#if TURN_ON_STRUCTURES
+#else
+		return;
+#endif
 		NoisePatch neighborPatch = null;
 		List<StructureBase> strs = null;
 		NoiseCoord nco = new NoiseCoord(this.coord.x - 1, this.coord.z);
 		
 		foreach(NeighborDirection ndir in NeighborDirectionUtils.neighborDirections()) {
-			addStructuresFromNeighborInDirection(ndir);	
+			addStructuresFromNeighborInDirection(ndir);
 		}
-
 	}
 	
 	private void addStructuresFromNeighborInDirection(NeighborDirection directionToNeighbor)
@@ -1333,25 +1378,21 @@ public class NoisePatch : ThreadedJob
 		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
 		{
 			NoisePatch neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
-			List<StructureBase> strs = neighborPatch.giveStructuresFor(NeighborDirectionUtils.oppositeNeighborDirection(directionToNeighbor) );
-			addStructuresToHeightMap(strs);
-			strs.Clear();
+			if (neighborPatch.IsDone)
+			{
+				List<StructureBase> strs = neighborPatch.giveStructuresFor(NeighborDirectionUtils.oppositeNeighborDirection(directionToNeighbor) );
+				if (strs != null) {
+					addStructuresToHeightMap(strs);
+					strs.Clear();
+				}
+			}
 		}
 	}
 
 	
 	private List<StructureBase> giveStructuresFor(NeighborDirection nDir)
 	{
-		return dataForNeighbors.structures.structureListForDirection(nDir);
-		//*********
-		List<StructureBase> structuresFor;
-		
-		structuresFor = dataForNeighbors.structures.structureListForDirection(nDir);
-		
-		List<StructureBase> result = new List<StructureBase>();
-		result.AddRange(structuresFor); 
-		
-		return result;
+		return dataForNeighbors.structures.getStructureListForDirectionOnce(nDir);
 	}
 	
 	private void addTreeForNeighborPatches(Tree tree)
@@ -1653,6 +1694,40 @@ public struct EdgeLightLevels
 	}
 }
 
+public struct NeighborBooleans
+{
+	public bool xpos, zpos, xzpos, xneg, zneg, xzneg;
+	
+	public bool booleanForDirection(NeighborDirection ndir) {
+		if (ndir == NeighborDirection.XPOS)
+			return xpos;
+		if (ndir == NeighborDirection.ZPOS)
+			return zpos;
+		if (ndir == NeighborDirection.XZPOS)
+			return xzpos;
+		if (ndir == NeighborDirection.XNEG)
+			return xneg;
+		if (ndir == NeighborDirection.ZNEG)
+			return zneg;
+		return xzneg;
+	}
+	
+	public void setBooleanForDirection(NeighborDirection ndir, bool _boo) {
+		if (ndir == NeighborDirection.XPOS)
+			 xpos = _boo;
+		else if (ndir == NeighborDirection.ZPOS)
+			zpos = _boo;
+		else if (ndir == NeighborDirection.XZPOS)
+			xzpos = _boo;
+		else if (ndir == NeighborDirection.XNEG)
+			xneg = _boo;
+		else if (ndir == NeighborDirection.ZNEG)
+			zneg = _boo;
+		else 
+			xzneg = _boo;
+	}
+}
+
 public struct StructuresForNeighbors
 {
 //	List<StructureBase> forXNeg;
@@ -1665,11 +1740,12 @@ public struct StructuresForNeighbors
 	public List<StructureBase> forZNeg;
 	public List<StructureBase> forXZNeg;
 	
+	public NeighborBooleans givenAlready;
+	
 	public static StructuresForNeighbors MakeNew() 
 	{
 		StructuresForNeighbors sfn = new StructuresForNeighbors();
-//		sfn.forXNeg = new List<StructureBase>();
-//		sfn.forZNeg = new List<StructureBase>();
+
 		sfn.forXPos = new List<StructureBase>();
 		sfn.forZPos = new List<StructureBase>();
 		sfn.forXZPos = new List<StructureBase>();
@@ -1677,6 +1753,8 @@ public struct StructuresForNeighbors
 		sfn.forXNeg = new List<StructureBase>();
 		sfn.forZNeg = new List<StructureBase>();
 		sfn.forXZNeg = new List<StructureBase>();
+		
+		sfn.givenAlready = new NeighborBooleans();
 		
 		return sfn;
 	}
@@ -1686,7 +1764,31 @@ public struct StructuresForNeighbors
 		structureList.Add(structure);
 	}
 	
+	public List<StructureBase> getStructureListForDirectionOnce(NeighborDirection ndir) {
+		
+		if (givenAlready.booleanForDirection(ndir))
+		{
+			return null;
+		} else {
+			givenAlready.setBooleanForDirection(ndir, true);	
+		}
+		
+		if (ndir == NeighborDirection.XPOS)
+			return forXPos;
+		if (ndir == NeighborDirection.ZPOS)
+			return forZPos;
+		if (ndir == NeighborDirection.XZPOS)
+			return forXZPos;
+		if (ndir == NeighborDirection.XNEG)
+			return forXNeg;
+		if (ndir == NeighborDirection.ZNEG)
+			return forZNeg;
+//		if (ndir == NeighborDirection.XZNEG)
+		return forXZNeg;
+	}
+	
 	public List<StructureBase> structureListForDirection(NeighborDirection ndir) {
+		
 		if (ndir == NeighborDirection.XPOS)
 			return forXPos;
 		if (ndir == NeighborDirection.ZPOS)
@@ -1706,6 +1808,26 @@ public enum NeighborDirection {
 	XPOS, ZPOS, XZPOS,
 	XNEG, ZNEG, XZNEG
 };
+
+public static class NoisePatchUtils
+{
+	public static IEnumerable chunkCoordsWithinNoiseCoord(NoiseCoord nco) 
+	{
+		Coord originCoord = chunkCoordOfNoiseCoord(nco);
+		
+		for (int x = 0; x < NoisePatch.PATCHDIMENSIONSCHUNKS.x; ++x)
+		{
+			for (int z = 0; z < NoisePatch.PATCHDIMENSIONSCHUNKS.z; ++z)
+			{
+				yield return originCoord + new Coord(x , 0, z);
+			}
+		}
+	}
+	
+	public static Coord chunkCoordOfNoiseCoord(NoiseCoord nco) {
+		return new Coord(nco.x * NoisePatch.PATCHDIMENSIONSCHUNKS.x, 0, nco.z * NoisePatch.PATCHDIMENSIONSCHUNKS.z);	
+	}
+}
 
 public static class NeighborDirectionUtils
 {

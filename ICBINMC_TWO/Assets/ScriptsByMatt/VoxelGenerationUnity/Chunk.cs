@@ -84,7 +84,14 @@ public class Chunk : ThreadedJob
 
 	public bool noNeedToRenderFlag;
 	public bool isActive;
-	public bool calculatedMeshAlready=false;
+	public bool calculatedMeshAlready {
+		get {
+			return this.IsDone && !this.hasStarted;	
+		}
+//		set {
+//			calculatedMeshAlready = value;
+//		}
+	}
 
 	public GameObject meshHoldingGameObject;
 
@@ -130,7 +137,7 @@ public class Chunk : ThreadedJob
 	public void resetCalculatedAlready() {
 		this.hasStarted = false;
 		this.IsDone = false; // TODO: resolve these to one var!!
-		this.calculatedMeshAlready = false;	
+//		this.calculatedMeshAlready = false;	
 	}
 	
 	public void editBlockAtCoord(Coord relCo, BlockType btype) 
@@ -371,7 +378,7 @@ public class Chunk : ThreadedJob
 
 	public void makeMeshAltThread(int CHLEN, int CHHeight)
 	{
-		calculatedMeshAlready = false;
+//		calculatedMeshAlready = false;
 
 		int triangles_index = 0;
 
@@ -386,7 +393,7 @@ public class Chunk : ThreadedJob
 		}
 
 
-		calculatedMeshAlready = true;
+//		calculatedMeshAlready = true;
 	}
 	
 #if NO_MESHBUILDER
@@ -445,16 +452,15 @@ public class Chunk : ThreadedJob
 	}
 	
 	private void resetFaceAggregatorsArray() {
-#if NO_MESHBUILDER
-		faceAggregators = new FaceAggregator[ CHUNKHEIGHT];	
-#else
+//#if NO_MESHBUILDER
+//		faceAggregators = new FaceAggregator[ CHUNKHEIGHT];	
+//#else
 		meshBuilder.resetFaceAggregators();
-#endif
+//#endif
 	}
 	
 	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
 	{
-//		List<int>[] ySurfaceMap = m_noisePatch.ySurfaceMapForChunk (this);
 		List<Range1D>[] ySurfaceMap = m_noisePatch.heightMapForChunk (this);
 		
 		List<Range1D> heights;

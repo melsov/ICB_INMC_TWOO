@@ -187,6 +187,12 @@ public class BlockCollection
 		return noisePatches [nco];
 	}
 	
+	public NoisePatch noisePatchAtNoiseCoord (NoiseCoord nco) {
+		if (!noisePatches.ContainsKey(nco)) 
+			return null;
+		return noisePatches [nco];
+	}
+	
 	public bool noisePatchExistsAtNoiseCoord(NoiseCoord nco) {
 		return noisePatches.ContainsKey(nco);
 	}
@@ -205,14 +211,49 @@ public class BlockCollection
 		return new NoiseCoord (woco / BLOCKSPERNOISEPATCH);
 	}
 	
+	public void destroyPatchAt(NoiseCoord nco) {
+		if (noisePatches.ContainsKey(nco)) {
+			b.bug("destroying patch at: " + nco.toString());
+			noisePatches[nco] = null;
+			bool destroyed = noisePatches.Remove(nco);	
+			if (!destroyed) {
+				throw new Exception("failed to destroy..." + nco.toString());
+			}	
+		} else {
+			b.bug("we don't have the key: " + nco.toString());	
+		}
+	}
+	
 	public bool noisePatchAtCoordIsReady(NoiseCoord nco) {
+#if NEW_PATCH_READY
+		if (noisePatchAtNoiseCoordHasBuiltAtleastOnce(nco))
+		{
+			return noisePatches[nco].neighborsHaveAllBuiltAtLeastOnce;	
+		}
+		return false;
+#endif
+		
 		if (!noisePatches.ContainsKey(nco))
 			return false;
 #if NEW_PATCH_READY
-		return noisePatches[nco].IsDone;
+		
 #else
 		return noisePatches[nco].generatedBlockAlready;
 #endif
+	}
+	
+	public bool noisePatchAtNoiseCoordHasBuiltAtleastOnce(NoiseCoord nco) {
+		if (!noisePatches.ContainsKey(nco))
+			return false;
+
+		return (!noisePatches[nco].hasStarted && noisePatches[nco].IsDone);
+	}
+	
+	public bool noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(NoiseCoord nco) {
+		if (!noisePatches.ContainsKey(nco))
+			return false;
+
+		return (noisePatches[nco].hasStarted || noisePatches[nco].IsDone);
 	}
 	
 	public List<Range1D> heightsListAtWorldCoord(Coord woco) {

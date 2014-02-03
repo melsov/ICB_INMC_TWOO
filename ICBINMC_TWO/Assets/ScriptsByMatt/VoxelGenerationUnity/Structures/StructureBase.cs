@@ -7,8 +7,9 @@ using System.Collections.Generic;
 using System.IO;
 using System;
 
-public class StructureBase 
+public class StructureBase // : ICloneable
 {
+	
 	// structures are not (necessarily) caves
 	// sep class for cave structures.
 	// doing a simple implementation
@@ -34,6 +35,12 @@ public class StructureBase
 	} // plot without intersection
 	
 	protected static PTwo noisePatchXZDims = new PTwo(NoisePatch.patchDimensions.x, NoisePatch.patchDimensions.z);
+	
+//	public StructureBase Clone()
+//	{
+//		StructureBase clone = new StructureBase();
+////	TODO: implment!
+//	}
 	
 	public StructureBase() {}
 	
