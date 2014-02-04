@@ -3963,3 +3963,184 @@ public class GraveYardCode {
 //
 //		generatedBlockAlready = true;
 //	}
+
+
+//	public IEnumerator destroyFarAwayGameObjects() {
+//		bug ("destroy chunks");
+////		ChunkMesh[] chunkMeshes = gameObject.GetComponentsInChildren<ChunkMesh> () as ChunkMesh[];
+////		for (int i = 0; i < chunkMeshes.Length; ++i)
+////		foreach (Transform chunkMeshT in gameObject.GetComponentsInChildren<Transform>() as Transform[]) // gets children as all objects have a transform
+//		foreach (Transform chunkMeshT in gameObject.transform)
+//		{
+//			ChunkMesh chunkMesh = chunkMeshT.GetComponent<ChunkMesh>();
+//
+//			if (chunkMesh == null || chunkMesh == prefabMeshHolder) {
+//				bug ("null or the prefab chunk");
+//				continue;
+//			}
+//
+////			chunkMesh.really (); //test
+//
+//			Coord _meshChunkCoord = chunkCoordContainingBlockCoord( new Coord (chunkMesh.transform.position) );
+//
+//
+//			if (!_meshChunkCoord.isInsideOfRange(m_wantActiveRealm)) // will want to change logic later -- "outside of larger active realm"
+//			{
+////				if (!destroyTheseChunks.Contains (chunk)) 
+////				{
+////					destroyTheseChunks.Add (chunk);
+////				}
+//				// for now, just destroy??
+//				bug ("destroying chunk");
+//				chunkMap.destroyChunkAt (_meshChunkCoord);
+////				Destroy (chunkMesh);
+//				
+//
+//			}
+//			yield return new WaitForSeconds (.01f);
+//		}
+//	}
+
+
+//	IEnumerator createFurtherAwayChunks() // not in use.
+//	{
+//		yield return new WaitForSeconds (1.5f);
+//
+//		while(true)
+//		{
+//			if (createTheseChunks.Count == 0) 
+//			{
+//				float depth = 1.0f;
+//				Ray rayMiss;
+//				Coord chunkCo;
+//				Chunk needToActivateCh;
+//				bool foundOneCondition = false;
+//
+//				bool onMapAndNull = false; // = (needToActivateCh == null) && (chunkMap.coIsOnMap (chunkCo));
+//				bool notNullAndNeedToRender = false;
+//
+//				int attempts = 0;
+//
+//				rayMiss = frustumChecker.nextRaycastMiss ();
+//
+//				if (rayMiss.origin != Vector3.zero && rayMiss.direction != Vector3.up) {
+//					//want ***
+//					do {
+//						depth += 1.0f; // (float)frustumChecker.screenIterationCount ();
+//
+////						bug ("depth is: " + depth);
+//
+//						Vector3 nextChunkPos = rayMiss.GetPoint (CHUNKLENGTH * depth);
+//
+//						farawayRayTest = rayMiss;
+//						farAwayPos = nextChunkPos;
+//
+//						chunkCo = chunkCoordContainingBlockCoord (new Coord (nextChunkPos));
+//						needToActivateCh = chunkMap.chunkAt (chunkCo);
+//
+//						onMapAndNull = (needToActivateCh == null) && (chunkMap.coIsOnMap (chunkCo));
+//						notNullAndNeedToRender = (needToActivateCh != null) && (!needToActivateCh.noNeedToRenderFlag) && !needToActivateCh.isActive;
+//						foundOneCondition = onMapAndNull || notNullAndNeedToRender;
+//
+//						wasNullAndNeededToRenderTest = onMapAndNull;
+//						wasInactiveAndNotNullTest = notNullAndNeedToRender;
+//
+//					} while (!foundOneCondition && attempts++ < 6);
+//
+//					if (foundOneCondition) {
+//
+////					bug ("found a far away chunk with " + attempts + " attempts.");
+//						gotAFarAwayChunkTest = true;
+//						// ** want
+//						if (onMapAndNull) {
+//							needToActivateCh = makeNewChunkButNotItsMesh (chunkCo);
+//							needToActivateCh.isActive = false;
+//							chunkMap.addChunkAt (needToActivateCh, chunkCo); // danger: this code is a copy from updateCreateList (TODO: unify)...
+//						} 
+//
+//						//				want ***
+//						makeChunksFromOnMainThreadAtCoord (chunkCo);
+////						makeChunksFromOnMainThread (new ChunkCoord (chunkCo), ChunkCoord.chunkCoordOne ());
+//					} else {
+//						gotAFarAwayChunkTest = false;
+////					bug ("didn't find any far away chunks with " + attempts + " attempts.");
+//					}
+//				}
+//
+//			}
+//			yield return new WaitForSeconds (1.5f);
+//			
+//		}
+//	}
+
+//	
+//	private IEnumerator rebuildChunksFromRebuildList()
+//	{
+//		//TEST
+//		yield return null;
+//		/*
+//		
+//		while(true)
+//		{
+//			Chunk ch = null;
+//
+//			ch = getAReadyChunkCoordFromList(rebuildChunkChunkCoordList);
+//			
+//			if (ch != null) {
+//				ch.resetCalculatedAlready(); //must we really?
+//				makeChunksFromOnSepThreadAtCoord(ch.chunkCoord);
+//				rebuildChunkChunkCoordList.Remove(ch.chunkCoord);
+//			}
+//			
+//			yield return new WaitForSeconds(.1f);
+//		}
+//		*/
+//	}
+
+//	IEnumerator createChunksFromCreateList()
+//	{
+//		while (true)
+//		{
+//			if(shouldBeCreatingChunksNow())
+//			{
+//				if (createTheseChunks.Count > 0)
+//				{
+//					Chunk chunk = createTheseChunks [0];
+//
+//					if (chunk != null) {
+//						makeChunksFromOnMainThread (new ChunkCoord (chunk.chunkCoord), ChunkCoord.chunkCoordOne ());
+//					}
+//					createTheseChunks.RemoveAt (0);
+//				}
+//			}
+////			bug ("child count: " + transform.childCount + " active Chunks count: " + activeChunks.Count);
+//			yield return new WaitForSeconds (.1f);
+//		}
+//	}
+//
+//	IEnumerator destroyChunksFromDestroyList()
+//	{
+//		yield return new WaitForSeconds (5.0f);
+//
+//		while (true)
+//		{
+//			if (shouldBeDestroyingChunksNow())
+//			{
+//				if (destroyTheseChunks.Count > 0) 
+//				{
+//					Chunk chunk = destroyTheseChunks[0];
+//
+//					if (chunk != null)
+//					{
+////						if (!chunk.chunkCoord.isInsideOfRange (m_wantActiveRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
+//						if (!chunk.chunkCoord.isInsideOfRange (m_dontDestroyRealm)) { // re-check is nec. //  !createTheseChunks.Contains (chunk)) {
+//							chunkMap.destroyChunkAt (chunk.chunkCoord);
+//							activeChunks.Remove (chunk);
+//						} 
+//					}
+//					destroyTheseChunks.RemoveAt (0);
+//				}
+//			}
+//			yield return new WaitForSeconds(.1f);
+//		}
+//	}

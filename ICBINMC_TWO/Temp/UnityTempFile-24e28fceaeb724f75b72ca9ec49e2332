@@ -124,6 +124,7 @@
 'Assets/ScriptsByMatt/VoxelGenerationUnity/Structs.cs'
 'Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs'
 'Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesUtil.cs'
+'Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/RangeUtils.cs'
 'Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/Utils.cs'
 'Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceAggregator.cs'
 'Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceSet.cs'

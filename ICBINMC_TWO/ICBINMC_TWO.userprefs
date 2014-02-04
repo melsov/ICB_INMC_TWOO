@@ -1,14 +1,15 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/Chunk.cs">
     <Files>
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="2160" Column="84" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="133" Column="2" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="2038" Column="2" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="1050" Column="1" />
       <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs" Line="1" Column="1" />
       <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/MeshBuilder.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/BlockCollection.cs" Line="219" Column="54" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/BlockCollection.cs" Line="1" Column="1" />
       <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structs.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/CoordStructs.cs" Line="1" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/CoordStructs.cs" Line="242" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Chunk.cs" Line="497" Column="7" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

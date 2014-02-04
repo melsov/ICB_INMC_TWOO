@@ -65,7 +65,7 @@ public struct FaceInfo
 	}
 }
 
-public class Chunk : ThreadedJob
+public class Chunk : ThreadedJob, IEquatable<Chunk>
 {
 	public static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH; //duplicate of chunkManager's chunklength...
 	public static int CHUNKHEIGHT = (int)ChunkManager.CHUNKHEIGHT;
@@ -158,7 +158,14 @@ public class Chunk : ThreadedJob
 		applyMeshToGameObjectWithMeshSet(mset);
 //		clearMeshLists(); // why not now...
 	}
-
+	
+#region IEquatable
+	
+	public bool Equals(Chunk other) {
+		return this.chunkCoord.equalTo(other.chunkCoord);	
+	}
+	
+#endregion
 
 	
 	Vector3[] faceMesh(Direction d, ChunkIndex ci) // Vector3[] verts, int[] triangles)
@@ -285,7 +292,7 @@ public class Chunk : ThreadedJob
 			//end testing
 			if ( dir != Direction.ypos)
 			{
-				cY = tile_length; 
+				cX = tile_length * 2; 
 			}
 			break;
 		}
@@ -487,6 +494,17 @@ public class Chunk : ThreadedJob
 					int j = heights.Count - 1;	
 					int jend = heights.Count; // 1;
 #else
+					
+					//TOP DIRT TO GRASS
+//					Range1D last = heights[heights.Count - 1];
+//					if (last.blockType == BlockType.Dirt) {
+//						Range1D[] split = Range1D.splitRangeIntoTopAndRemainder(last, BlockType.Grass);
+//						heights[heights.Count - 1] = split[1];
+//						heights.Add(split[0]);
+//					}
+					
+					//whoops--trees etc.
+					
 					int j = heights.Count - 1;
 					int jend = 0;
 #endif
@@ -525,25 +543,14 @@ public class Chunk : ThreadedJob
 						
 						if (h_range.start != 0) //don't draw below bedrock
 						{
+							//don't draw if flush with next lowest
+							
 							Coord blockCoord = new Coord (xx, h_range.start, zz);
 							targetBlockIndex = new ChunkIndex(blockCoord);
 							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
 							if (b != null) 
 							{
 #if FACE_AG
-//								// CONSIDER: resolve confusingness: Direction sometimes indicates the direction that camera points at
-								// sometimes indicates the offset of the face with respect to the center of the block 
-								// these two are opposites by definition. (!)
-								// But we are not handling them consistently, we think. E.g. in face agg, Direction positive sometimes
-								// means one, sometimes the other sense of 'direction'--no one consistent metaphor.
-								// TODO: make sure that this critique is valid -- and then --
-								// change the code so that Direction always means "offset with respect to block center."
-								// probably, faceset will then put a '!' somewhere when checking its neg/pos status to
-								// figure out which tri indices to use.
-								// RELATED TODO: in face Agg. make two public func where there's now one: editFaceSet(alco, editPos, editNeg) becomes-->
-								// editPositiveSideFaceSet(alco) editNegativeSideFaceSet(alco)
-								
-//								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.ypos, b.type));
 								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type));
 #else
 								addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
@@ -684,6 +691,11 @@ public class Chunk : ThreadedJob
 		addAggregatedFaceGeomToMesh(starting_tri_index);	
 #endif
 		
+	}
+	
+	private bool solidRangeFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex, bool wantAboveRange) 
+	{
+		return false;	
 	}
 	
 	private void addAggregatedFaceGeomToMesh(int starting_tri_index) 
@@ -1075,3 +1087,15 @@ public class Chunk : ThreadedJob
 //			}
 //		}
 //	}
+
+//								// CONSIDER: (DONE) resolve confusingness: Direction sometimes indicates the direction that camera points at
+								// sometimes indicates the offset of the face with respect to the center of the block 
+								// these two are opposites by definition. (!)
+								// But we are not handling them consistently, we think. E.g. in face agg, Direction positive sometimes
+								// means one, sometimes the other sense of 'direction'--no one consistent metaphor.
+								// TODO: make sure that this critique is valid -- and then --
+								// change the code so that Direction always means "offset with respect to block center."
+								// probably, faceset will then put a '!' somewhere when checking its neg/pos status to
+								// figure out which tri indices to use.
+								// RELATED TODO: in face Agg. make two public func where there's now one: editFaceSet(alco, editPos, editNeg) becomes-->
+								// editPositiveSideFaceSet(alco) editNegativeSideFaceSet(alco)

@@ -1,5 +1,5 @@
 ﻿#define NO_CAVES
-#define LIGHT_HACK
+//#define LIGHT_HACK
 //#define TURN_OFF_STRUCTURES
 //#define FLAT_TOO
 //#define TERRAIN_TEST
@@ -78,7 +78,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 
 [Serializable]
-public class NoisePatch : ThreadedJob
+public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 {
 	public const int CHUNKDIMENSION = 4;// new Coord(4,1,4);
 	public const int CHUNKHEIGHTDIMENSION = 1;
@@ -154,6 +154,10 @@ public class NoisePatch : ThreadedJob
 //		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
 
 		BLOCKSPERPATCHLENGTH = patchDimensions.x;
+	}
+	
+	public bool Equals(NoisePatch other) {
+		return this.coord.Equals(other.coord);	
 	}
 
 	public void updateChunkManager(ChunkManager _chunkMan) {
@@ -912,7 +916,8 @@ public class NoisePatch : ThreadedJob
 		
 		int noiseAsWorldHeight = (int)(height_noise * elevationRange + elevationRange + baseElevation);
 
-		Range1D zeroToSurface = new Range1D(0, noiseAsWorldHeight);
+		Range1D zeroToSurface = new Range1D(0, noiseAsWorldHeight - 1);
+		Range1D topSod = new Range1D(noiseAsWorldHeight - 1, 1, BlockType.Grass);
 
 		// concavity insertion point (which may simply eat away at the height or may create a concavity)
 		//  overhangeness smallness and noise_val largness
@@ -925,14 +930,18 @@ public class NoisePatch : ThreadedJob
 			int concave_range = (int) (elevation * (concavity));
 
 			int concave_start = (int) (baseElevation + (elevation - concave_range) * .5f);
-			zeroToSurface = new Range1D(0, concave_start); 
+			zeroToSurface = new Range1D(0, concave_start - 1); 
+			topSod = new Range1D( concave_start - 1, 1, BlockType.Grass);
 			
 			if (concave_start + concave_range < noiseAsWorldHeight)
 			{
 				int overhang = noiseAsWorldHeight - (concave_start + concave_range);
-				Range1D topRange = new Range1D(concave_start + concave_range, overhang);
+				Range1D topRange = new Range1D(concave_start + concave_range, overhang - 1);
+				Range1D topRangeSod = new Range1D(concave_start + concave_range + overhang - 1, 1, BlockType.Grass);
 				
-				result.Add(topRange );
+				if (overhang > 1)
+					result.Add(topRange );
+				result.Add(topRangeSod);
 				
 #if LIGHT_HACK
 				thereWasAnOverhang = true;
@@ -944,13 +953,16 @@ public class NoisePatch : ThreadedJob
 //			zeroToSurface.top_light_level = nextLightLevel(thereWasAnOverhang); 
 			
 			
-			
-			result.Insert(0, zeroToSurface); //add the lower range after
+			result.Insert(0, topSod);
+			if (concave_start > 1)
+				result.Insert(0, zeroToSurface); //add the lower range after
 			
 			return result;
 		}
-	
-		result.Add(zeroToSurface);
+		
+		if (noiseAsWorldHeight > 1)
+			result.Add(zeroToSurface);
+		result.Add(topSod);
 		return result;
 	}
 	

@@ -241,7 +241,7 @@ public struct SimpleRange
 [Serializable]
 public struct Range1D
 {
-	public int start, range; // TODO: convert to short?
+	public int start, range; // TODO: convert to byte?
 	
 	public BlockType blockType;
 	public byte top_light_level; // todo: get rid of these horrible add-ons
@@ -262,7 +262,7 @@ public struct Range1D
 	
 	public Range1D(int _start, int _range) 
 	{
-		this = new Range1D(_start, _range, BlockType.Grass);
+		this = new Range1D(_start, _range, BlockType.Dirt);
 	}
 	
 	public int extent() {
@@ -388,10 +388,19 @@ public struct Range1D
 		return this.start <= r.start && this.extent() >=r.extent();	
 	}
 	
+	public static Range1D[] splitRangeIntoTopAndRemainder(Range1D splitMe, BlockType remainderType) {
+		Range1D[] result = new Range1D[2];
+		Range1D top = new Range1D(splitMe.extentMinusOne(), 1, remainderType, splitMe.top_light_level, splitMe.top_light_level);
+		splitMe.range--;
+		result[0] = top;
+		result[1] = splitMe;
+		return result;
+	}
+	
 }
 
 [Serializable]
-public struct Coord
+public struct Coord : IEquatable<Coord>
 {
 	public int x, y, z;
 
@@ -442,6 +451,11 @@ public struct Coord
 	public Coord(int xx, uint yy, int zz) 
 	{
 		x = (int) xx; y =(int) yy; z = (int)zz;
+	}
+	
+	//TODO: purge the static equals func.
+	public bool Equals(Coord other) {
+		return this.x == other.x && this.y == other.y && this.z == other.z;	
 	}
 
 	public static Coord coordZero() {
@@ -772,7 +786,7 @@ public struct ChunkRange
 }
 
 [Serializable]
-public struct NoiseCoord
+public struct NoiseCoord : IEquatable<NoiseCoord>
 {
 	public int x; 
 	public int z;
@@ -801,6 +815,10 @@ public struct NoiseCoord
 
 	public string toString() {
 		return "Noise Coord :) x: " + x + " z: " + z;
+	}
+	
+	public bool Equals(NoiseCoord other) {
+		return this.x == other.x && this.z == other.z;	
 	}
 
 	public static bool Equal(NoiseCoord aa, NoiseCoord bb) {
