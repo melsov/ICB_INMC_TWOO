@@ -49,7 +49,6 @@
      <Compile Include="Assets\Standard Assets\Character Controllers\Sources\Scripts\PlatformInputController.js" />
      <Compile Include="Assets\Standard Assets\Character Controllers\Sources\Scripts\ThirdPersonCamera.js" />
      <Compile Include="Assets\Standard Assets\Character Controllers\Sources\Scripts\ThirdPersonController.js" />
-     <Compile Include="Assets\Standard Assets\Particles\Legacy Particles\TimedObjectDestructor.js" />
      <Compile Include="Assets\Standard Assets\Scripts\Camera Scripts\MouseOrbit.js" />
      <Compile Include="Assets\Standard Assets\Scripts\Camera Scripts\SmoothFollow.js" />
      <Compile Include="Assets\Standard Assets\Scripts\Camera Scripts\SmoothLookAt.js" />
@@ -57,8 +56,6 @@
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\SkyBox.shader" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockTilingArrayTex.shader" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\FORK_flashlight_BlockTilingAtlas.shader" />
-     <None Include="Assets\Standard Assets\Skyboxes\_skybox info.txt" />
-     <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.LESSER.txt" />
      <None Include="Assets\Materials\ShadersMP\BlockTilingAtlas.shader" />
