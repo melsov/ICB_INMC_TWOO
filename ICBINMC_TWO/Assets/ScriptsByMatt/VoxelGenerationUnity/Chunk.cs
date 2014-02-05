@@ -544,32 +544,38 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 						if (h_range.start != 0) //don't draw below bedrock
 						{
 							//don't draw if flush with next lowest
-							
-							Coord blockCoord = new Coord (xx, h_range.start, zz);
-							targetBlockIndex = new ChunkIndex(blockCoord);
-							b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
-							if (b != null) 
+							if (!aSolidRangeBelowIsFlushWithRangeAtIndex(heights, j))
 							{
+								Coord blockCoord = new Coord (xx, h_range.start, zz);
+								targetBlockIndex = new ChunkIndex(blockCoord);
+								b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
+								if (b != null) 
+								{
 #if FACE_AG
-								addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type));
+									addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type));
 #else
-								addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
-								starting_tri_index += 4;
+									addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
+									starting_tri_index += 4;
 #endif
+								}
 							}
 						}
 						
 						Coord extentBlockCoord = new Coord(xx, h_range.extentMinusOne() , zz);
 						targetBlockIndex = new ChunkIndex (extentBlockCoord) ; 
 						b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, extentBlockCoord);
+						
+						if (!aSolidRangeAboveIsFlushWithRangeAtIndex(heights, j))
+						{
 #if FACE_AG
-						if (b != null)
-							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.ypos, b.type));
-//							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.yneg, b.type));
+							if (b != null)
+								addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.ypos, b.type));
+	//							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.yneg, b.type));
 #else
-						addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
-						starting_tri_index += 4;
+							addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
+							starting_tri_index += 4;
 #endif
+						}
 						
 						// DRAWING X AND Z TOO!
 						
@@ -693,8 +699,41 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		
 	}
 	
-	private bool solidRangeFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex, bool wantAboveRange) 
+	private static bool aSolidRangeBelowIsFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex) {
+		return aSolidRangeIsFlushWithRangeAtIndex(heights, currentIndex, false);	
+	}
+	private static bool aSolidRangeAboveIsFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex) {
+		return aSolidRangeIsFlushWithRangeAtIndex(heights, currentIndex, true);	
+	}
+	
+	private static bool aSolidRangeIsFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex, bool wantAboveRange) 
 	{
+		return false; // TEST
+		
+		int nudgeIndex = wantAboveRange ? 1 : -1;
+		Range1D currentRange = heights[currentIndex];
+		
+		if (wantAboveRange) {
+			if (currentIndex == heights.Count - 1)
+				return false;
+			
+			Range1D nextRangeAbove = heights[currentIndex + 1];
+			if (currentRange.extent() == nextRangeAbove.start) 
+			{
+				if (!Block.BlockTypeIsATranslucentType(nextRangeAbove.blockType))
+					return true;
+			}
+		} else {
+			if (currentIndex == 0)
+				return false;
+			
+			Range1D prevRangeBelow = heights[currentIndex - 1];
+			if (currentRange.start == prevRangeBelow.extent())
+			{
+				if(!Block.BlockTypeIsATranslucentType(prevRangeBelow.blockType))
+					return true;
+			}
+		}
 		return false;	
 	}
 	

@@ -404,6 +404,9 @@ public class MeshBuilder
 					faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type));
 					faXminusOne.getFaceGeometry(relevantComponent - 1);
 //				}
+				
+				// CONSIDER: TRY REMOVING A FACE AT THIS FACE AGG AS WELL. EVEN THOUGH THERE 'SHOULDN'T' BE ONE.
+				// AND SIMILAR FOR ADDING BLOCKS
 			}
 		} else { // it is air at x (or whichever co) - 1
 			

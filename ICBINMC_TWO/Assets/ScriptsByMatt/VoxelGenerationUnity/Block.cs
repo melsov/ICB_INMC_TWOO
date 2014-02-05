@@ -41,4 +41,8 @@ public class Block
 	{
 		type = t;
 	}
+	
+	public static bool BlockTypeIsATranslucentType(BlockType type) {
+		return 	type == BlockType.Air;
+	}
 }

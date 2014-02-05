@@ -165,7 +165,8 @@ public class FaceSet
 //		TestRunner.bug("removing at remove level: " + removeLevel + "\n strips count: " + strips.Count);
 		if (strips == null) {
 			b.bug("this strips list was null. remove Level: " + removeLevel + "\nblock face dir of this face set: "
-				+ blockFaceDirection + " block type: " + blockType + "\nface set limits: " + faceSetLimits.toString() );	
+				+ blockFaceDirection + " block type: " + blockType + "\nface set limits: " + faceSetLimits.toString() );
+			return new List<Strip>(0); //weird work around-ish procedure...
 		}
 		int i = 0;
 		int numberOfStrips = strips == null ? 0 : strips.Count;
@@ -180,6 +181,8 @@ public class FaceSet
 				{
 					// did we erase the last tile?
 					if (ra.range == 1) {
+						b.bug("editing start of strip (REMOVING STRIP) \n dir of this face set: " + this.blockFaceDirection + "" +
+						 	"at index: " + i + "remove level: " + removeLevel + " range that was removed: " + ra.toString() );
 						strips.RemoveAt(i);
 						break;
 					}
@@ -187,6 +190,10 @@ public class FaceSet
 					ra.range--;
 					str.range = ra;
 					strips[i] = str;
+					
+					b.bug("editing start of strip (shrinking strip) \n dir of this face set: " + this.blockFaceDirection + "\n" +
+						"new strip: " + ra.toString() + " index: " + i);
+					
 				} else if (ra.extentMinusOne() == removeLevel) {
 					ra.range--;	
 					if (ra.range == 0) {
@@ -194,7 +201,7 @@ public class FaceSet
 					}
 					str.range = ra;
 					
-					
+					b.bug("editing end of strip dir of face set: " + this.blockFaceDirection);
 					strips[i] = str;
 				} else {
 					
@@ -233,7 +240,7 @@ public class FaceSet
 		List<Strip> strips = stripsArray[alco.across];
 		stripsArray[alco.across] = rangesWithRemovedFaceAt(alco.up, strips);
 		
-		if (stripsArray[alco.across].Count == 0) {
+		if (stripsArray != null && stripsArray[alco.across].Count == 0) {
 			stripsArray[alco.across] = null;	
 		}
 		

@@ -1,4 +1,5 @@
 ﻿#define NO_CAVES
+#define NO_SOD
 //#define LIGHT_HACK
 //#define TURN_OFF_STRUCTURES
 //#define FLAT_TOO
@@ -930,18 +931,29 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 			int concave_range = (int) (elevation * (concavity));
 
 			int concave_start = (int) (baseElevation + (elevation - concave_range) * .5f);
+			
+#if NO_SOD
+			zeroToSurface = new Range1D(0, concave_start ); 
+#else	
 			zeroToSurface = new Range1D(0, concave_start - 1); 
 			topSod = new Range1D( concave_start - 1, 1, BlockType.Grass);
+#endif
 			
 			if (concave_start + concave_range < noiseAsWorldHeight)
 			{
 				int overhang = noiseAsWorldHeight - (concave_start + concave_range);
+				
+				
 				Range1D topRange = new Range1D(concave_start + concave_range, overhang - 1);
 				Range1D topRangeSod = new Range1D(concave_start + concave_range + overhang - 1, 1, BlockType.Grass);
 				
+				
+#if NO_SOD
+#else
 				if (overhang > 1)
 					result.Add(topRange );
 				result.Add(topRangeSod);
+#endif
 				
 #if LIGHT_HACK
 				thereWasAnOverhang = true;
@@ -952,17 +964,25 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 			
 //			zeroToSurface.top_light_level = nextLightLevel(thereWasAnOverhang); 
 			
+#if NO_SOD
+			result.Insert(0, zeroToSurface);
+#else
 			
 			result.Insert(0, topSod);
 			if (concave_start > 1)
 				result.Insert(0, zeroToSurface); //add the lower range after
+#endif
 			
 			return result;
 		}
 		
+#if NO_SOD
+		result.Add(zeroToSurface);
+#else
 		if (noiseAsWorldHeight > 1)
 			result.Add(zeroToSurface);
 		result.Add(topSod);
+#endif
 		return result;
 	}
 	
