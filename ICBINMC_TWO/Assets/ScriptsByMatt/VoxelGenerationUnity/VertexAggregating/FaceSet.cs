@@ -46,26 +46,9 @@ public class FaceSet
 #endif
 	
 	private PTwo quadTableDimensions;
-	private int[,] quadTable; // = new int[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
-	
-	private bool[,] filledFaces = new bool[(int) ChunkManager.CHUNKLENGTH, (int) ChunkManager.CHUNKLENGTH];
-	
-	List<VertexTwo>[] vertexColumns = new List<VertexTwo>[(int) ChunkManager.CHUNKLENGTH + 1];
-	
-//	private int iterationSafety = 0;
-	
+	private int[,] quadTable; 
 	private const int SPECIAL_QUAD_LOOKUP_NUMBER = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH * 805);
-	
 	public static PTwo MAX_DIMENSIONS = new PTwo(4,4);
-	
-	public int myFGIndex_Test;
-	
-//	private byte[,] lightLevelTable;
-//	private LightLevelTable lightLevelTable = new LightLevelTable();
-	
-//	private static int MAX_FACES;
-	
-//	private int internalTriIndex = 0;
 	
 	public FaceSet(BlockType _type, Direction _dir, AlignedCoord initialCoord, byte lightLevel)
 	{
@@ -181,8 +164,6 @@ public class FaceSet
 				{
 					// did we erase the last tile?
 					if (ra.range == 1) {
-						b.bug("editing start of strip (REMOVING STRIP) \n dir of this face set: " + this.blockFaceDirection + "" +
-						 	"at index: " + i + "remove level: " + removeLevel + " range that was removed: " + ra.toString() );
 						strips.RemoveAt(i);
 						break;
 					}
@@ -191,8 +172,6 @@ public class FaceSet
 					str.range = ra;
 					strips[i] = str;
 					
-					b.bug("editing start of strip (shrinking strip) \n dir of this face set: " + this.blockFaceDirection + "\n" +
-						"new strip: " + ra.toString() + " index: " + i);
 					
 				} else if (ra.extentMinusOne() == removeLevel) {
 					ra.range--;	
@@ -201,15 +180,11 @@ public class FaceSet
 					}
 					str.range = ra;
 					
-					b.bug("editing end of strip dir of face set: " + this.blockFaceDirection);
 					strips[i] = str;
 				} else {
 					
 					Range1D new_above = str.range.subRangeAbove(removeLevel);
 					Range1D new_below = str.range.subRangeBelow(removeLevel);
-					
-					b.bug("*** Editing middle of strip in face set new below range: " + new_below.toString() + "\nnew above range: " + new_above.toString() 
-						+ "\norig strip: " + str.toString() + "block face dir: " + blockFaceDirection + "\nblock type: " + blockType );
 					
 					//DEBUG
 					if (new_above.isErsatzNull() ) {
@@ -289,44 +264,75 @@ public class FaceSet
 		return faceSetLimits;	
 	}
 	
+	private Range1D maxUpDomainPos {
+		get {
+			if (faceSetLimits.isErsatzNull()) {
+				return Range1D.theErsatzNullRange();	
+			}
+			return new Range1D( faceSetLimits.origin.t, FaceSet.MAX_DIMENSIONS.t);
+		}
+	}
+	private Range1D maxUpDomainNeg {
+		get {
+			if (faceSetLimits.isErsatzNull()) {
+				return Range1D.theErsatzNullRange();	
+			}
+			return Range1D.RangeWithRangeAndExtent(FaceSet.MAX_DIMENSIONS.t, faceSetLimits.tRange().extent() );
+		}
+	}
+	
+	private Range1D usableRangeFromRange(Range1D range) 
+	{
+		if (faceSetLimits.isErsatzNull())
+			return Range1D.IntersectingRange(range, new Range1D(range.start, FaceSet.MAX_DIMENSIONS.t));
+		
+		Range1D posSection = Range1D.IntersectingRange(maxUpDomainPos, range);
+		
+		if (posSection.range == FaceSet.MAX_DIMENSIONS.t)
+			return posSection;
+		
+		Range1D negSection = Range1D.IntersectingRange(maxUpDomainNeg, range);
+		if (negSection.range == FaceSet.MAX_DIMENSIONS.t)
+			return negSection;
+		
+		if (posSection.range > negSection.range)
+			return posSection;
+		
+		return negSection;
+	}
+	
+	private bool canUseRange(Range1D range) {
+		return !usableRangeFromRange(range).isErsatzNull();	
+	}
+	
+	private void updateFaceSetLimits(AlignedCoord co) {
+		if (faceSetLimits.isErsatzNull() ) {
+			faceSetLimits = Quad.UnitQuadWithAlignedCoord(co); 
+		} else {
+			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.across, co.up));
+		}	
+	}
+	
+	private void updateFaceSetLimitsWithRange(Range1D range, int acrossIndex) 
+	{
+		Range1D withinLimitsRange = usableRangeFromRange(range); 
+		this.updateFaceSetLimits( new AlignedCoord(acrossIndex, withinLimitsRange.start));
+		this.updateFaceSetLimits( new AlignedCoord(acrossIndex, withinLimitsRange.extentMinusOne()));
+	}
+	
 	public void addCoord(AlignedCoord co, byte lightLevel)
 	{
-#if IRREGULARITY_LOG
-		string IRREGULARITY_LOG = "";
-		Strip check_irregular_strip = new Strip(new Range1D(1,1), new IndexSet(0,0,0,0), 456);
-#endif
-		
 		//sanity check
 		if (!co.isIndexSafe(new AlignedCoord(quadTable.GetLength(0), quadTable.GetLength(1) ) ))
 		{
 			throw new Exception ( "why are we trying to add a coord that's beyond bounds? coord: " + co.toString() );
 			return;
 		}
-		
-		// ADD/ADJUST STRIPS
-		
-		// for later...
-//		filledFaces[co.across, co.up] = true; 
-		if (faceSetLimits.isErsatzNull() ) {
-			faceSetLimits = Quad.UnitQuadWithAlignedCoord(co);  //( PTwo.PTwoXZFromCoord(co), new PTwo(1,1) );
-//			bug ("face set limits init: " + faceSetLimits.toString());
-		} else {
-			faceSetLimits = faceSetLimits.expandedToContainPoint(new PTwo(co.across, co.up));
 
-//			bug ("face set limits is now: " + faceSetLimits.toString());
-		}
+		updateFaceSetLimits(co);
 		
-//		lightLevelTable[co.across, co.up] = lightLevel; // NO LONGER
-		///
-		//...	assume we're dealing with xz faces and z neg is 'up' x pos is 'right'
 		int stripsIndex = co.across;
 		int addAtHeight = co.up;
-		
-//#if GLOSS_QUAD_ARRAY_INDEX_BUG 
-//		//really just a sane thing to do.
-//		if (addAtHeight >= quadTableDimensions.t) 
-//			return;
-//#endif
 		
 		List<Strip> strips = stripsAtIndex(stripsIndex);
 		
@@ -341,14 +347,7 @@ public class FaceSet
 #endif
 			strips.Add(newStrip);
 			stripsArray[stripsIndex] = strips;
-			
-#if IRREGULARITY_LOG
-			IRREGULARITY_LOG +="strips count was zero";
-#endif
-#if IRREGULARITY_LOG
-			if (addAtHeight >= quadTableDimensions.t)
-				b.bug(IRREGULARITY_LOG);
-#endif
+
 			return;
 		}
 		
@@ -390,28 +389,19 @@ public class FaceSet
 #if LIGHT_BY_RANGE
 				str.range.bottom_light_level = bottom_light_level;
 #endif
-				
-#if IRREGULARITY_LOG
-				IRREGULARITY_LOG += "add at height: " + addAtHeight + "was one above strip range: " + str.toString() ;
-				check_irregular_strip = str;
-#endif
+
 				strips[i] = str; //put it back 
 				break;
 			}
 			
 			if (str.range.isOneBelowStart(addAtHeight) ) 
 			{	
-//				str.range = str.range.subtractOneFromStart();
 #if LIGHT_BY_RANGE
 				str.range.top_light_level = lightLevel;
 #endif
 				str.range.start--;
 				str.range.range++;
-				
-#if IRREGULARITY_LOG
-				IRREGULARITY_LOG += "was one below start. add at height: " + addAtHeight;
-				check_irregular_strip = str;
-#endif
+
 				strips[i] = str;
 				break;
 			}
@@ -424,24 +414,212 @@ public class FaceSet
 				Strip newStrip = new Strip(new Range1D(addAtHeight, 1));
 #endif
 				strips.Add(newStrip);
-#if IRREGULARITY_LOG
-				IRREGULARITY_LOG += "got to the end of the strips array and made a new strip.";
-				check_irregular_strip = newStrip;
-#endif				
 				break;
 			}
 		}
 		
-		stripsArray[stripsIndex] = strips; // put it back!
+		stripsArray[stripsIndex] = strips;	
+	}
+	
+#region check range to add
+	
+	public bool canIncorporatePartOrAllOfRange(Range1D rangeToAdd, int acrossIndex)
+	{
+		b.bug("test can incorp");
 		
-#if IRREGULARITY_LOG
-		if (check_irregular_strip.range.range < 1 || check_irregular_strip.range.start >= quadTableDimensions.t ) {
-			b.bug("the irregular strip: " + check_irregular_strip.toString() );
-			b.bug(IRREGULARITY_LOG);
-			throw new Exception("getting out of here!");
+		if (this.blockType != rangeToAdd.blockType)
+			return false;
+		
+		b.bug("same block type");
+		
+		if (this.faceSetLimits.isErsatzNull()) {
+			b.bug("our face set lim is null we're incorporating");
+			return true;
 		}
 		
-#endif		
+		if(!partOrAllOfRangeIsWithinMaxDomainTRange(rangeToAdd))
+			return false;
+		
+		b.bug("part of range within max domain t");
+		
+		if (!this.faceSetLimits.sRange().containsOrFlushWithEitherEnd(acrossIndex))
+			return false;
+		
+		b.bug("was flush with one of the ends or contains");
+		
+		if (!this.faceSetLimits.sRange().contains(acrossIndex) && faceSetLimitsSDimensionHasReachedMaxDomainSDimension())
+			return false;
+		
+		b.bug("we are incorporating");
+		
+		// skip checking (thoroughly) for adjacency? ... for now...?...do we not actually rely on it?
+		
+		return true;
+	}
+	
+	private bool faceSetLimitsSDimensionHasReachedMaxDomainSDimension() {
+		return this.faceSetLimits.sRange().range == FaceSet.MAX_DIMENSIONS.s;	
+	}
+	
+	private bool partOrAllOfRangeIsWithinMaxDomainTRange(Range1D range) {
+		if (faceSetLimits.isErsatzNull())
+			return true;
+		
+		if(Range1D.RangesIntersect(this.maxUpDomainPos, range))
+			return true;
+		
+		return Range1D.RangesIntersect(this.maxUpDomainNeg, range);
+	}
+	
+#endregion
+	
+	public Range1D addRangeAtAcrossReturnAddedRange(Range1D rangeToAdd, int acrossIndex)
+	{
+		Range1D originalRange = rangeToAdd;
+		// get the intersection of the range and possible (pos/neg) MAX DIM T RANGE
+		Range1D limitedRangeToAdd = usableRangeFromRange(rangeToAdd); // Range1D.IntersectingRange(rangeToAdd, this.maxDomain.tRange()); 
+		rangeToAdd.start = limitedRangeToAdd.start; 
+		rangeToAdd.range = limitedRangeToAdd.range;
+			
+		updateFaceSetLimitsWithRange(rangeToAdd, acrossIndex);
+		
+		AssertUtil.Assert(!faceSetLimits.isErsatzNull(), "whoa face set limits is ersatz null at this point??");
+		
+		if (rangeToAdd.isErsatzNull())
+			return Range1D.theErsatzNullRange();
+		
+		List<Strip> strips = stripsAtIndex(acrossIndex);
+		
+		// no strips yet?
+		// if no strips here, simply add the range (as a strip)
+		if (strips.Count == 0)
+		{
+			b.bug("strip count was 0 returning");
+			Strip str = new Strip (rangeToAdd);
+			strips.Add(str);
+			// don't need to put back?
+			return rangeToAdd;
+		}
+		
+		// range to add at least overlappingOverEnd with last strip.range?
+		Strip last = strips[strips.Count - 1];
+		OverlapState overlapLast = last.range.overlapWithRange(rangeToAdd);
+		if (overlapLast == OverlapState.BeyondExtent) {
+			strips.Add(new Strip(rangeToAdd));
+			return rangeToAdd;
+		}
+
+		if (overlapLast == OverlapState.FlushWithExtent || overlapLast == OverlapState.OverlappingOverEnd) {
+			last.range = Range1D.Union(last.range, rangeToAdd);
+			strips[strips.Count - 1] = last;
+			return rangeToAdd;
+		}
+		
+		// before, flush with or overlapping with start?
+		Strip first = strips[0];
+		OverlapState overlapFirst = first.range.overlapWithRange(rangeToAdd);
+		if (overlapFirst == OverlapState.BeforeStart) {
+			strips.Insert(0, new Strip(rangeToAdd));
+			return rangeToAdd;
+		}
+		if (overlapFirst == OverlapState.FlushWithStart || overlapFirst == OverlapState.OverlappingOverStart) {
+			first.range = Range1D.Union(first.range, rangeToAdd);
+			strips[0] = first;
+			return rangeToAdd;
+		}
+		
+		int startCombineStripsIndex = -1;
+		int endCombineStripsIndex = -1;
+		
+		int insertAtIndex = -1;
+		
+		// find possible insertAtIndex, maybe find combine end
+		for(int i = 0; i < strips.Count ; ++i)
+		{
+			Strip str = strips[i];
+			Range1D currentRange = str.range;
+			
+			OverlapState overlapState = currentRange.overlapWithRange(rangeToAdd);
+			
+			b.bug("current range : " + currentRange.toString() + "range to add: " + rangeToAdd.toString());
+			
+			if (overlapState == OverlapState.BeforeStart) {
+				insertAtIndex = i;
+				break;	
+			}
+			
+			if (overlapState == OverlapState.FlushWithStart || overlapState == OverlapState.OverlappingOverStart) {
+				insertAtIndex = i;
+				endCombineStripsIndex = i;
+				break;
+			}
+			
+			if (overlapState == OverlapState.IContainIt) {
+				return rangeToAdd;	//nothing needs to be done
+			}
+			
+			if (Range1D.Equal(currentRange, rangeToAdd)) {
+				return rangeToAdd;
+			}
+			//still beyond?
+			if (i == strips.Count - 1) {
+				AssertUtil.Assert(OverLapUtil.OverlapStateIsABeyondState(overlapState), "(in face set add range) should be beyond");
+				insertAtIndex = i;
+				endCombineStripsIndex = i;
+			}
+		}
+		
+		AssertUtil.Assert(insertAtIndex != -1, "insert index shouldn't be neg one anymore");
+		
+		//find combine start
+		for(int j = insertAtIndex; j >= 0 ; --j) 
+		{
+			Strip str = strips[j];
+			Range1D currentRange =str.range;
+			
+			OverlapState overlapState = currentRange.overlapWithRange(rangeToAdd);
+			
+			if (overlapState == OverlapState.BeyondExtent) {
+				startCombineStripsIndex = j + 1;
+				insertAtIndex = j + 1;
+				break;
+			}
+			
+			if (overlapState == OverlapState.FlushWithExtent || overlapState == OverlapState.OverlappingOverEnd) {
+				startCombineStripsIndex = j;
+				insertAtIndex = j;
+				break;
+			}
+		}
+
+		Range1D combinedRange = rangeToAdd;
+		
+		if (endCombineStripsIndex > -1)
+		{
+			Strip endStrip = strips[endCombineStripsIndex];
+			combinedRange = Range1D.Union(endStrip.range, rangeToAdd);
+		}
+		
+		if (startCombineStripsIndex < endCombineStripsIndex && startCombineStripsIndex > -1)
+		{
+			Strip startStrip = strips[startCombineStripsIndex];
+			combinedRange = Range1D.Union(startStrip.range, combinedRange);
+		}
+		
+		//any strips to remove?
+		if (startCombineStripsIndex > -1)
+		{
+			if (startCombineStripsIndex < endCombineStripsIndex)
+				strips.RemoveRange(startCombineStripsIndex, endCombineStripsIndex - startCombineStripsIndex);
+			else 
+				strips.RemoveAt(startCombineStripsIndex);
+		} else if (endCombineStripsIndex > -1) {
+			
+			strips.RemoveAt(endCombineStripsIndex);
+		}
+		
+		strips.Insert(insertAtIndex, new Strip(combinedRange));
+		return rangeToAdd;
 	}
 	
 	private void optimizeStripsSafeVersion()
@@ -690,13 +868,11 @@ public class FaceSet
 		
 		bool isZFace = (blockFaceDirection >= Direction.zpos); // must flip tri indices if z face!!
 		
-//		verticalHeight += (faceIsOnPosSide ? -0.5f : 0.5f);
 		verticalHeight += (faceIsOnPosSide ? 0.5f : -0.5f);
 		
 		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
 		
-//		float test_color = 3f/(8.0f); // red divided by 'possible colors'
-		Vector2 monoUVValue = new Vector2(uvIndex, 0f); // origin ;
+		Vector2 monoUVValue = new Vector2(uvIndex, 0f); 
 		
 		List<Vector2> returnUVS = new List<Vector2>();
 		List<int> returnTriIndices = new List<int>();
@@ -734,20 +910,6 @@ public class FaceSet
 			int curLLindex = curULindex + 1;
 			int curURindex = curULindex + 2;
 			int curLRindex = curULindex + 3;
-			
-			//TEST
-//			float test_color = (float)((int) (quad.origin.t ) % 8)/8f;
-//			int dims = (quad.origin.t) + quad.dimensions.t + quad.origin.s + quad.dimensions.s ; // * (quad.origin.s) % 2; // faceSetLimits.dimensions.s;
-			int dims = this.myFGIndex_Test; // faceSetLimits.dimensions.s + faceSetLimits.dimensions.t; // + quad.origin.s + quad.origin.t; // 
-			dims %= 16;
-			float test_color = 15f;
-			
-			test_color = (float) dims;
-			
-			test_color /= 16f;
-			
-			monoUVValue = new Vector2(uvIndex, test_color); 
-			//END TEST
 			
 			Vector3 ulVec = positionVectorForAcrossUpVertical((float)quad.origin.s - half_unit, 
 				verticalHeight, 
@@ -787,12 +949,6 @@ public class FaceSet
 			
 			int[] tris;
 			
-//			if (faceIsOnPosSide != isZFace) { // if Z face we want the opposite
-//				tris = new int[] {curULindex, curURindex, curLLindex,   curURindex, curLRindex, curLLindex};
-//			} else {
-//				tris = new int[] {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
-//			}
-			
 			if (faceIsOnPosSide != isZFace) { // if Z face we want the opposite
 				tris = new int[]  {curULindex, curLLindex, curURindex, 	curURindex, curLLindex, curLRindex };
 			} else {
@@ -808,10 +964,7 @@ public class FaceSet
 		//now maybe just calculate the actual v3 array and the indices....
 		GeometrySet geomset = new GeometrySet(returnTriIndices, returnVecs );
 		
-//		return new MeshSet(geomset, returnUVS);
-//		return new MeshSet(geomset, returnUVS, returnColors);
 		return new MeshSet(geomset, returnUVS, returnCol32s);
-		
 	}
 	
 	private Vector3 positionVectorForAcrossUpVertical(float across,  float vertical, float up)
@@ -871,6 +1024,12 @@ public class FaceSet
 			stripsArray[ix] = new List<Strip>();		
 		}
 		return stripsArray[ix];
+	}
+	
+	private void setStripsAtIndex(List<Strip> strips, int ix) {
+		if (ix >= stripsArray.Length)
+			throw new Exception("we don't have a strips list at this index: " + ix);
+		stripsArray[ix] = strips;	
 	}
 	
 	public void logStripsArray() 

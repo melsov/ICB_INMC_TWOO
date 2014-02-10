@@ -60,8 +60,17 @@ public struct FaceInfo
 	public Direction direction;
 	public BlockType blockType;
 	
+	public Range1D range; // new (oh no!)
+	
 	public FaceInfo(Coord _coord, byte _lightlev, Direction _dir, BlockType block_type) {
 		coord = _coord; lightLevel = _lightlev;	direction = _dir; blockType = block_type;
+		range = Range1D.theErsatzNullRange();
+	}
+	
+	public FaceInfo(Coord _coord, Range1D _range, Direction _dir) {
+		coord = _coord; lightLevel = _range.top_light_level; direction = _dir;
+		blockType = _range.blockType; // arg.. duplications...
+		range = _range;
 	}
 }
 
@@ -69,51 +78,27 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 {
 	public static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH; //duplicate of chunkManager's chunklength...
 	public static int CHUNKHEIGHT = (int)ChunkManager.CHUNKHEIGHT;
-
 	public static Coord DIMENSIONSINBLOCKS = new Coord (CHUNKLENGTH, CHUNKHEIGHT, CHUNKLENGTH);
 
-	public ChunkManager m_chunkManager;
 	public Coord chunkCoord;
 
 	public NoisePatch m_noisePatch; // replace chunk manager?
 
-	List<Vector3> vertices_list; // = new List<Vector3> ();
-	List<int> triangles_list; // = new List<int> ();
-	List <Vector2> uvcoords_list; // = new List<Vector2> ();
-	List<Color32> col32s_list = new List<Color32>();
-
-	public bool noNeedToRenderFlag;
 	public bool isActive;
 	public bool calculatedMeshAlready {
 		get {
 			return this.IsDone && !this.hasStarted;	
 		}
-//		set {
-//			calculatedMeshAlready = value;
-//		}
 	}
 
 	public GameObject meshHoldingGameObject;
-
-	private int random_new_chunk_color_int_test;
-	
-//#if NO_MESHBUILDER
-//	private FaceAggregator[] faceAggregators = new FaceAggregator[CHUNKHEIGHT];
-//#else
 	private MeshBuilder meshBuilder;
-//#endif
+	
 	public const float VERTEXSCALE = 1f;
-	
 	public const int TEXTURE_ATLAS_TILES_PER_DIM = 4;
-	
-	private Mesh builtMesh;
 	
 	public Chunk()
 	{
-		vertices_list = new List<Vector3> ();
-		triangles_list = new List<int> ();
-		uvcoords_list = new List<Vector2> ();
-		
 		meshBuilder = new MeshBuilder(this);
 	}
 
@@ -121,9 +106,6 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 	{
 		if (!calculatedMeshAlready)
 			makeMeshAltThread (CHUNKLENGTH, CHUNKHEIGHT);
-//			meshHoldingGameObject.GetComponent<MonoBehaviour> ().StartCoroutine (makeMeshCoro ());
-//			MonoBehaviour monbeha = meshHoldingGameObject.GetComponent<MonoBehaviour> ();
-//			monbeha.StartCoroutine (makeMeshCoro ()); //mesh holding GO is a unity object...
 	}
 	
 
@@ -146,6 +128,8 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		if (btype == BlockType.Air)
 		{
 			mset = meshBuilder.newMeshSetByRemovingBlockAtCoord(relCo);
+			// TODO: is the block just below a dirt block (that now has air above it?)
+			// if so remove this block as well and add a grass block.
 		}
 		else 
 		{
@@ -155,13 +139,15 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		//TODO: now that mesh builder actually builds the mesh anyway
 		// get rid of some of this spaghetti-ness.
 		
-		applyMeshToGameObjectWithMeshSet(mset);
+		applyMeshToGameObject();
 //		clearMeshLists(); // why not now...
 	}
 	
 #region IEquatable
 	
 	public bool Equals(Chunk other) {
+		if (other == null)
+			return false;
 		return this.chunkCoord.equalTo(other.chunkCoord);	
 	}
 	
@@ -355,7 +341,7 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 
 	public Block blockAt(ChunkIndex ci) {
 		Coord offset = new Coord (ci.x, ci.y, ci.z);
-		return m_chunkManager.blockAtChunkCoordOffset (chunkCoord, offset);
+		return m_noisePatch.blockAtChunkCoordOffset (chunkCoord, offset);
 //		return blocks [ci.x, ci.y, ci.z];
 	}
 
@@ -385,38 +371,18 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 
 	public void makeMeshAltThread(int CHLEN, int CHHeight)
 	{
-//		calculatedMeshAlready = false;
-
 		int triangles_index = 0;
 
 		// y Face approach
-		addYFaces (CHLEN, triangles_index); //want
-
-		// ** want
-		if (!noNeedToRenderFlag) // not all air (but are we all solid and solidly surrounded?)
-		{
-			noNeedToRenderFlag = (vertices_list.Count == 0);
-
-		}
-
-
-//		calculatedMeshAlready = true;
+		addFaces (CHLEN, triangles_index); //want
+//
+//		// ** want
+//		if (!noNeedToRenderFlag) // not all air (but are we all solid and solidly surrounded?)
+//		{
+//			noNeedToRenderFlag = (vertices_list.Count == 0);
+//		}
 	}
-	
-#if NO_MESHBUILDER
-	private FaceAggregator faceAggregatorAt(int index) 
-	{
-		if(	faceAggregators[index] == null) {
-			faceAggregators[index] = new FaceAggregator( );
-		}
-		return faceAggregators[index];
-	}
-#endif
-//	private void setFaceAggrefatorsAt(FaceAggregator fa, int index) {
-////		index = (index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 );
-////		faceAggregators[(index * 2) + (Chunk.IsPosDir(dir) ? 1 : 0 )] = fa;
-//		faceAggregators[index] = fa;
-//	}
+
 	
 	private static bool IsPosDir(Direction dir) {
 		return (int) dir % 2 == 0;	
@@ -466,13 +432,13 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 //#endif
 	}
 	
-	private void addYFaces(int CHLEN, int starting_tri_index)  // starting tri index might have to be an 'out?'
+	private void addFaces(int CHLEN, int starting_tri_index) 
 	{
 		List<Range1D>[] ySurfaceMap = m_noisePatch.heightMapForChunk (this);
 		
 		List<Range1D> heights;
 		
-		resetFaceAggregatorsArray(); // TODO: face aggregators still report trying to add new facesets where there already was one...
+		resetFaceAggregatorsArray(); 
 
 		int xx = 0;
 		for (; xx < CHLEN; ++xx) 
@@ -494,17 +460,6 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 					int j = heights.Count - 1;	
 					int jend = heights.Count; // 1;
 #else
-					
-					//TOP DIRT TO GRASS
-//					Range1D last = heights[heights.Count - 1];
-//					if (last.blockType == BlockType.Dirt) {
-//						Range1D[] split = Range1D.splitRangeIntoTopAndRemainder(last, BlockType.Grass);
-//						heights[heights.Count - 1] = split[1];
-//						heights.Add(split[0]);
-//					}
-					
-					//whoops--trees etc.
-					
 					int j = heights.Count - 1;
 					int jend = 0;
 #endif
@@ -515,27 +470,6 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 					{
 						
 						h_range = heights[j];
-						#if TESTRENDER
-						if (height_index == heights.Count - 1)
-							break;
-						#endif
-						
-						// COMBINE GEOM (MORE THOUGHTS)
-						// every level has a geometry aggregator
-						// might be better to aggregate in the noise patch?
-						// then we'd have to edit when we broke blocks?
-						
-						// one way or another...
-						// let's say we figure out how to render non-rectangular shapes
-						// could do this:
-						// the aggregator master collects sets of adjacent-same-type faces
-						// given an xz coord, go back by x - 1 and check
-						// if there's a adjacent set there.
-						// how do we do the look up?
-						// a two-d array of ints [chlen, chlen] in size
-						// the int (minus one) == the index in an aggregators list of the proper face set.
-						// if there's already a face set at that next door index, add the current coord to it
-						// else make a new one there...
 						
 						ChunkIndex targetBlockIndex;
 						Block b;
@@ -551,12 +485,7 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 								b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
 								if (b != null) 
 								{
-#if FACE_AG
 									addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type));
-#else
-									addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.ypos, starting_tri_index);
-									starting_tri_index += 4;
-#endif
 								}
 							}
 						}
@@ -567,35 +496,9 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 						
 						if (!aSolidRangeAboveIsFlushWithRangeAtIndex(heights, j))
 						{
-#if FACE_AG
 							if (b != null)
 								addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.ypos, b.type));
-	//							addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.yneg, b.type));
-#else
-							addYFaceAtChunkIndex(targetBlockIndex, b.type, Direction.yneg, starting_tri_index);
-							starting_tri_index += 4;
-#endif
 						}
-						
-						// DRAWING X AND Z TOO!
-						
-						// the rules: non x = (0|CHLEN - 1) or z == (0|CHLEN - 1) ranges only draw the x and z faces on their x and z positive sides
-						// they take care of these x and z faces even when they are really attached to the column ahead of them (i.e. next column is higher)
-						// (remember possible floating columns by the way--or stalagmites next to stalagmites)
-						
-						// x,z == CHLEN - 1 ranges only draw the ranges below (may have to resort to rote block check by block check for this--since we don't have a handy way of getting an adjacent npatch's heights list...although how hard would it be...that can be a TODO maybe)
-						// and also only the x,z pos faces
-						
-						// x,z == 0 ranges deal with pos faces just like all other ranges do. 
-						// they also only draw the ranges below (i.e. below there extents) for their neg faces
-						
-						// ------ OR . (alt rules) -----
-						
-						// all ranges always draw all four directions (x/z, pos/neg)
-						// except we want to catch it when there's a face that's not overlapped by any other range.
-						// struct can have two booleans: backRubbedX--backRubbedZ (easy! ?)
-						// chunks ask noisepatchs for ranges at the chunk limits
-						// noise patches just deal with it at the noise patch limit...
 						
 						//XPOS
 						List<Range1D> adjRanges;
@@ -606,17 +509,11 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 						}
 						
 						List<Range1D> exposedRanges = exposedRangesWithinRange(h_range, adjRanges, heights.Count > 1);
-						
-#if FACE_AG_XZ
+
 						if (b != null)
 							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
-//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
-#else
-						addMeshDataForExposedRanges(exposedRanges, Direction.xneg, ref starting_tri_index, xx, zz);
-#endif
-						
 
 						//ZPOS
 						if (zz == CHLEN - 1) {
@@ -626,15 +523,12 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 						}
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
-#if FACE_AG_XZ
+
 						if (b != null)
 							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
-//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
-#else
-						addMeshDataForExposedRanges(exposedRanges, Direction.zneg, ref starting_tri_index, xx, zz);
-#endif
+
 						
 						//XNEG
 						if (xx == 0) {
@@ -643,20 +537,13 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 							adjRanges = ySurfaceMap[(xx - 1) * CHLEN + zz];
 						}
 						
-						//TODO: BUG: blocks can't be added if they are not right on top of other blocks. (index out of range exception)
-						// it wasn't always this way...
-						// also TODO: FaceAggs should deal with only one face slice (this is in question): so the upward faces of level n and downward of n+1
-						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
-#if FACE_AG_XZ
+
 						if (b != null)	
 							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xneg, xx, zz);
-//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.xpos, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
-#else
-						addMeshDataForExposedRanges(exposedRanges, Direction.xpos, ref starting_tri_index, xx, zz);
-#endif
+
 						
 						//ZNEG
 						if (zz == 0) {
@@ -666,37 +553,17 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 						}
 						
 						exposedRanges = exposedRangesWithinRange(h_range, adjRanges);
-#if FACE_AG_XZ
 						if (b != null)
 							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zneg, xx, zz);
-//							addRangeToFaceAggregatorAtXZ(exposedRanges, b.type, Direction.zpos, xx, zz);
 						else 
 							throw new Exception("got a null block at: xx: " + xx + " zz: " + zz + " ChunkCoord: " + chunkCoord.toString() );
-#else
-						addMeshDataForExposedRanges(exposedRanges, Direction.zpos, ref starting_tri_index, xx, zz);
-#endif
-
-						
-						// COMBINE GEOM?? (USING YET ANOTHER SET OF LISTS.)
-						// have an array of CHLEN lists per each dimension.
-						// come across a face column that you could add to an adjacent/same-type/flush face.
-						// add it (as part of some custom collection obj??–-minimesh) 
-						// each mini-mesh holds the verts, indices and uv coords that it needs
-						// also, in the shader itself, just draw the texture based on the uv
-						// coord of a pixel at 0?? (somehow give the shader a hint about the offset)
-						// then hardcode the tile size...and hard code the width of a block
-
-						// END DRAWING X AND Z TOO
 					}
 				}
 
 			} // end for zz
 		} // end for xx
 		
-#if FACE_AG
 		addAggregatedFaceGeomToMesh(starting_tri_index);	
-#endif
-		
 	}
 	
 	private static bool aSolidRangeBelowIsFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex) {
@@ -708,8 +575,6 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 	
 	private static bool aSolidRangeIsFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex, bool wantAboveRange) 
 	{
-		return false; // TEST
-		
 		int nudgeIndex = wantAboveRange ? 1 : -1;
 		Range1D currentRange = heights[currentIndex];
 		
@@ -770,10 +635,10 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 #else
 		MeshSet mesh_set = meshBuilder.compileGeometry(ref starting_tri_index);
 		
-		triangles_list.AddRange(mesh_set.geometrySet.indices);
-		uvcoords_list.AddRange(mesh_set.uvs);
-		vertices_list.AddRange(mesh_set.geometrySet.vertices);
-		col32s_list.AddRange(mesh_set.color32s);
+//		triangles_list.AddRange(mesh_set.geometrySet.indices);
+//		uvcoords_list.AddRange(mesh_set.uvs);
+//		vertices_list.AddRange(mesh_set.geometrySet.vertices);
+//		col32s_list.AddRange(mesh_set.color32s);
 #endif
 		
 	}
@@ -845,12 +710,8 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 			// legit below range?
 			if (!Range1D.Equal(belowAdj, Range1D.theErsatzNullRange()) )
 			{
-//				if (debug)
-//					bug ("the range below that we are adding was: " + belowAdj.toString());
 				if (belowAdj.start == Range1D.theErsatzNullRange().start ) //paranoid? (not quite?)
 					throw new Exception ("range is funky but we are adding it now" + belowAdj.toString() + " adj range was: " + adjacentRange.toString() + " the orig range was " + _range.toString());
-				
-//				if (shouldDebug) bug ("yes were adding a range: from below: " + belowAdj.toString());
 				
 				if (_range.contains(belowAdj))
 				{
@@ -863,7 +724,6 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 				else if (debug) {
 					throw new Exception ("wha? trying to add a range not contained by the original range?? : new range: " + remainderRange.toString() + "orig range: " + _range.toString() );	
 				}
-					
 				
 			}
 			else if (shouldDebug) {
@@ -933,11 +793,11 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 			tris [ii] += tri_index;
 		}
 		verts = faceMesh (oppositeDir, ci , (float) (height - 1)); //third param = extra hieght. TODO: change this silly implementation
-		vertices_list.AddRange (verts);
-		// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
-		triangles_list.AddRange (tris);
-		// 4 uv coords
-		uvcoords_list.AddRange (uvs);
+//		vertices_list.AddRange (verts);
+//		// 6 triangles (index_of_so_far + 0/1/2, 0/2/3 <-- depending on the dir!)
+//		triangles_list.AddRange (tris);
+//		// 4 uv coords
+//		uvcoords_list.AddRange (uvs);
 	}
 
 
@@ -951,62 +811,55 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		clearMeshOfGameObject (meshHoldingGameObject); 
 		return;
 	}
-	
-	private void applyMeshToGameObject()
-	{
-//#if MESH_BUILDER_BUILDS_MESH
-//		if (builtMesh == null)
-//			throw new Exception("null built mesh");
-//		Mesh mesh = builtMesh;
-//#else
-//#endif
-		GeometrySet geomset = new GeometrySet(triangles_list, vertices_list);
-		MeshSet mset = new MeshSet(geomset, uvcoords_list, col32s_list);
-		this.applyMeshToGameObjectWithMeshSet(mset);
-	}
+
 	
 	public IEnumerator applyMeshToGameObjectCoro()
 	{
-		GeometrySet geomset = new GeometrySet(triangles_list, vertices_list);
-		MeshSet mset = new MeshSet(geomset, uvcoords_list, col32s_list);
-		this.applyMeshToGameObjectWithMeshSet(mset);
+//		GeometrySet geomset = new GeometrySet(triangles_list, vertices_list);
+//		MeshSet mset = new MeshSet(geomset, uvcoords_list, col32s_list);
+		this.applyMeshToGameObject();
 		yield return null;
 	}
 	
 	private void applyMeshToGameObjectWithMeshSet(MeshSet mset) 
 	{
+		applyMeshToGameObject();
+	}
+	
+	private void applyMeshToGameObject() 
+	{
 		meshBuilder.addDataToMesh(meshHoldingGameObject);
 		return;
 #if MESH_BUILDER_BUILDS_MESH
 #endif
-		GameObject _gameObj = meshHoldingGameObject;
-		Mesh mesh = new Mesh();
-		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
-
-		mesh.Clear ();
-	
-		mesh.vertices = mset.geometrySet.vertices.ToArray ();
-		mesh.uv = mset.uvs.ToArray ();
-		mesh.triangles = mset.geometrySet.indices.ToArray ();
-		
-		mesh.colors32 = mset.color32s.ToArray();
-
-		
-		mesh.RecalculateNormals();
-		mesh.RecalculateBounds();
-		
-		mesh.Optimize();
-
-		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
+//		GameObject _gameObj = meshHoldingGameObject;
+//		Mesh mesh = new Mesh();
+//		_gameObj.GetComponent<MeshFilter>().mesh = mesh; // Can we get the mesh back ? (surely we can right? if so, don't add ivars that would duplicate)
+//
+//		mesh.Clear ();
+//	
+//		mesh.vertices = mset.geometrySet.vertices.ToArray ();
+//		mesh.uv = mset.uvs.ToArray ();
+//		mesh.triangles = mset.geometrySet.indices.ToArray ();
+//		
+//		mesh.colors32 = mset.color32s.ToArray();
+//
+//		
+//		mesh.RecalculateNormals();
+//		mesh.RecalculateBounds();
+//		
+//		mesh.Optimize();
+//
+//		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
 
 	}
 
 	public void clearMeshLists() 
 	{
-		vertices_list.Clear ();
-		uvcoords_list.Clear ();
-		triangles_list.Clear ();
-		col32s_list.Clear();
+//		vertices_list.Clear ();
+//		uvcoords_list.Clear ();
+//		triangles_list.Clear ();
+//		col32s_list.Clear();
 	}
 
 
@@ -1138,3 +991,54 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 								// figure out which tri indices to use.
 								// RELATED TODO: in face Agg. make two public func where there's now one: editFaceSet(alco, editPos, editNeg) becomes-->
 								// editPositiveSideFaceSet(alco) editNegativeSideFaceSet(alco)
+
+						
+						// COMBINE GEOM (MORE THOUGHTS)
+						// every level has a geometry aggregator
+						// might be better to aggregate in the noise patch?
+						// then we'd have to edit when we broke blocks?
+						
+						// one way or another...
+						// let's say we figure out how to render non-rectangular shapes
+						// could do this:
+						// the aggregator master collects sets of adjacent-same-type faces
+						// given an xz coord, go back by x - 1 and check
+						// if there's a adjacent set there.
+						// how do we do the look up?
+						// a two-d array of ints [chlen, chlen] in size
+						// the int (minus one) == the index in an aggregators list of the proper face set.
+						// if there's already a face set at that next door index, add the current coord to it
+						// else make a new one there...
+
+						
+						// DRAWING X AND Z TOO!
+						
+						// the rules: non x = (0|CHLEN - 1) or z == (0|CHLEN - 1) ranges only draw the x and z faces on their x and z positive sides
+						// they take care of these x and z faces even when they are really attached to the column ahead of them (i.e. next column is higher)
+						// (remember possible floating columns by the way--or stalagmites next to stalagmites)
+						
+						// x,z == CHLEN - 1 ranges only draw the ranges below (may have to resort to rote block check by block check for this--since we don't have a handy way of getting an adjacent npatch's heights list...although how hard would it be...that can be a TODO maybe)
+						// and also only the x,z pos faces
+						
+						// x,z == 0 ranges deal with pos faces just like all other ranges do. 
+						// they also only draw the ranges below (i.e. below there extents) for their neg faces
+						
+						// ------ OR . (alt rules) -----
+						
+						// all ranges always draw all four directions (x/z, pos/neg)
+						// except we want to catch it when there's a face that's not overlapped by any other range.
+						// struct can have two booleans: backRubbedX--backRubbedZ (easy! ?)
+						// chunks ask noisepatchs for ranges at the chunk limits
+						// noise patches just deal with it at the noise patch limit...
+
+
+						// COMBINE GEOM?? (USING YET ANOTHER SET OF LISTS.)
+						// have an array of CHLEN lists per each dimension.
+						// come across a face column that you could add to an adjacent/same-type/flush face.
+						// add it (as part of some custom collection obj??–-minimesh) 
+						// each mini-mesh holds the verts, indices and uv coords that it needs
+						// also, in the shader itself, just draw the texture based on the uv
+						// coord of a pixel at 0?? (somehow give the shader a hint about the offset)
+						// then hardcode the tile size...and hard code the width of a block
+
+						// END DRAWING X AND Z TOO

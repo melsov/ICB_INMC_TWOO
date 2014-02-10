@@ -8,29 +8,21 @@ using System;
 
 public class MeshBuilder 
 {
-	// handles arrays of verts, uvs and trianges
+	// handles arrays of verts, uvs and trianges (MeshSets)
 	// handles inserting into arrays.
-	private List<Vector3> vertices = new List<Vector3>();
-	private List<Vector2> uvs = new List<Vector2>();
-	private List<int> triangles = new List<int>();
-//	private List<Vector2> colors = new List<Vector2>();
-	private List<Color32> col32s = new List<Color32>();
 	
 	private FaceAggregator[] faceAggregatorsXZ = new FaceAggregator[Chunk.CHUNKHEIGHT];
 	private FaceAggregator[] faceAggregatorsXY = new FaceAggregator[Chunk.CHUNKLENGTH];
 	private FaceAggregator[] faceAggregatorsZY = new FaceAggregator[Chunk.CHUNKLENGTH];
 	
-//	private FaceAggregator[][] faceAggregatorCollection;
-	
 	private GameObject chunkGameObject;
 	
 	private Chunk m_chunk;
-	
-#if SEP_MESH_SETS
+
 	private MeshSet meshSetXZ;
 	private MeshSet meshSetXY;
 	private MeshSet meshSetZY;
-#endif
+
 	
 //	private List<MeshSet> the_meshSets = null;
 //	private List<MeshSet> meshSets {
@@ -52,17 +44,12 @@ public class MeshBuilder
 	public MeshBuilder(Chunk owner_chunk) {
 		this.m_chunk = owner_chunk;
 	}
-	
-//	public MeshSet insertBlockAtCoord(Coord co)
-//	{
-////		return new MeshSet(	
-//	}
+
 	
 	public void addCoordToFaceAggregatorAtIndex(FaceInfo faceInfo)
 	{
 		FaceAggregator fa = faceAggregatorAt(faceInfo.coord, faceInfo.direction );
 		fa.addFaceAtCoordBlockType(faceInfo);
-//		setFaceAggregatorsAt(fa, faceInfo.coord, faceInfo.direction ); //necessary?? fa not an immutable type...
 	}
 	
 	public void resetFaceAggregators() 
@@ -76,15 +63,6 @@ public class MeshBuilder
 	{
 		return new FaceAggregator[][] {faceAggregatorsXZ, faceAggregatorsXY, faceAggregatorsZY };	
 	}
-//	
-//	private static Axis axisFromDirection(Direction dir) {
-//		if (dir < Direction.yneg)	
-//			return Axis.X;
-//		if (dir < Direction.zneg)
-//			return Axis.Y;
-//		
-//		return Axis.Z;
-//	}
 	
 	private bool isFaceAggregatorAt(Coord co, Axis axis) 
 	{
@@ -164,13 +142,7 @@ public class MeshBuilder
 		
 		faceAggregatorsXY[co.z] = fa;
 	}
-	
-	private void clearMeshArrays() {
-		triangles.Clear();
-		uvs.Clear();
-		vertices.Clear();
-		col32s.Clear();
-	}
+
 	
 	private void clearMeshSets() {
 		meshSetXY.clearAll();
@@ -183,10 +155,6 @@ public class MeshBuilder
 	private Mesh meshWithMeshSet(MeshSet mset)
 	{
 		Mesh mesh = new Mesh();
-		
-//		if (mset.geometrySet.vertices.Count < 1) { // NOT a reason to get upset. just a flat (or pos. staircase-like) chunk
-////			throw new System.Exception("empty vertices! my chunk's coord is: " + this.m_chunk.chunkCoord.toString() + "triangles count: " + mset.geometrySet.indices.Count );
-//		}
 		
 		mesh.vertices = mset.geometrySet.vertices.ToArray();
 		mesh.triangles = mset.geometrySet.indices.ToArray();
@@ -218,56 +186,33 @@ public class MeshBuilder
 		
 		_gameObj.GetComponent<MeshFilter>().mesh.Clear();
 		
-#if SEP_MESH_SETS
-		
 		CombineInstance[] combines = combineInstancesFromAxisMeshSets();
-#else
-		
-		MeshSet msetfull = meshSetFromMemberLists();
-		Mesh mesh_full = meshWithMeshSet(msetfull);
-		CombineInstance combine = new CombineInstance();
-		combine.mesh = mesh_full;
-//		combine.transform = _gameObj.transform.localToWorldMatrix; // don't need since CombineMeshes (param #3 == false == ignore matrix)
-		CombineInstance[] combines = new CombineInstance[] {combine};
-#endif	
-		
-		//  MESH_FULL WAY
+
 		Mesh mesh_full = new Mesh();
 		_gameObj.GetComponent<MeshFilter>().mesh = mesh_full; 
 		mesh_full.CombineMeshes(combines, true, false);
-		// END MESH_FULL WAY
-//		_gameObj.GetComponent<MeshFilter>().mesh.CombineMeshes(combines, true, false);
-		
-		//DEBUG
-//		int mesh_tri_count = _gameObj.GetComponent<MeshFilter>().mesh.triangles.Length;
-//		int[] subMeshTris = _gameObj.GetComponent<MeshFilter>().mesh.GetTriangles(0);
-//		int sub_tri_count = subMeshTris.Length;
 		
 		_gameObj.GetComponent<MeshFilter>().mesh.RecalculateNormals();
 		_gameObj.GetComponent<MeshFilter>().mesh.RecalculateBounds();
-//		_gameObj.GetComponent<MeshFilter>().mesh.Optimize();
+//		_gameObj.GetComponent<MeshFilter>().mesh.Optimize(); // docs say this is expensive and seems unnec...
 		
 		_gameObj.GetComponent<MeshCollider>().sharedMesh =  mesh_full; //  MESH_FULL WAY
 		// TODO: learn why the above line works (new geometry is included in the collider)
 		// and the below line doesn't (collider made of the old geometry)
 //		_gameObj.GetComponent<MeshCollider>().sharedMesh =  _gameObj.GetComponent<MeshFilter>().mesh; //mesh_full; //  NO DIF?
-		
-		
-		
+
 	}
 	
 	#endregion
 	
 	public void compileGeometryAndKeepMeshSet(ref int starting_tri_index) 
 	{
-//	TODO: GET RID OF LIST THAT DUPLICATE MESHSET MEM VAR
 		compileGeometry(ref starting_tri_index);	
 	}
 	
 	
 	public MeshSet compileGeometry(ref int starting_tri_index) 
 	{
-#if SEP_MESH_SETS
 		clearMeshSets();
 		int dummy_tri = 0;
 		meshSetXY = collectMeshDataWithFaceAggregators(faceAggregatorsXY, ref dummy_tri);
@@ -278,23 +223,11 @@ public class MeshBuilder
 		
 		//fake return
 		return meshSetXZ;
-#endif
-		
-		clearMeshArrays();
-		
-		foreach(FaceAggregator[] faceAggs in getFaceAggCollection())
-		{
-			MeshSet mset = collectMeshDataWithFaceAggregators(faceAggs, ref starting_tri_index);	
-			addMeshSetToMemberLists(mset);
-		}
 
-		return this.meshSetFromMemberLists();
 	}
 	
 	private MeshSet compileGeometryDontRecalculate(ref int starting_tri_index)
 	{
-#if SEP_MESH_SETS
-//		clearMeshSets(); // don't clear here. want the old data...
 		int dummy_tri = 0;
 		meshSetXY = collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggregatorsXY, ref dummy_tri);
 		int dummy2 = 0;
@@ -304,30 +237,6 @@ public class MeshBuilder
 		
 		//fake return
 		return meshSetXZ;
-#endif
-		clearMeshArrays();
-		
-		foreach(FaceAggregator[] faceAggs in getFaceAggCollection())
-		{
-			MeshSet mset = collectMeshDataWithFaceAggregatorsDontRecalculate(faceAggs, ref starting_tri_index);	
-			addMeshSetToMemberLists(mset);
-		}
-		
-		return this.meshSetFromMemberLists();
-	}
-	
-	private void addMeshSetToMemberLists(MeshSet mset) 
-	{
-		GeometrySet gset = mset.geometrySet;
-		
-		vertices.AddRange(gset.vertices);	
-		triangles.AddRange(gset.indices);
-		uvs.AddRange(mset.uvs);
-		col32s.AddRange(mset.color32s);	
-	}
-	
-	private MeshSet meshSetFromMemberLists() {
-		return new MeshSet(new GeometrySet(triangles, vertices), uvs, col32s);
 	}
 	
 	#region block editing
@@ -348,9 +257,9 @@ public class MeshBuilder
 	
 	private void editfaceAggregatorsByChangingBlockAtCoord(Coord co, bool add_block, BlockType btype)
 	{
-		// for the x dir (say)
-		// for co.x - 1 
-		// is there a block at this coord? (and is x - 1 within our chunk?) (if not..don't edit it but we still want to know. whether it was air or not)
+		// for the x dir (for example)
+		// is there a block at this co.x - 1? (and is x - 1 within our chunk?) 
+		// (if not..don't edit it but we still want to know. whether it was air or not)
 		
 		Coord x_one = new Coord(1,0,0);
 		Coord y_one = new Coord(0,1,0);
@@ -383,10 +292,6 @@ public class MeshBuilder
 		
 		Direction relevantPosDir = MeshBuilder.posDirectionForAxis(axis);
 		
-//		if (!isFaceAggregatorAt(co, axis ) ) {
-//			throw new Exception("Whoa, what's going on here? trying to remove a coord from a face agg that doesn't exist yet??");	
-//		}
-		
 		FaceAggregator faXY = null;
 		if (isFaceAggregatorAt(co, axis))
 			faXY = faceAggregatorAt(co, relevantPosDir); 
@@ -397,13 +302,10 @@ public class MeshBuilder
 		{
 			if (relevantComponent > 0)
 			{
-//				if (isFaceAggregatorAt(co - nudgeCoord, axis))
-//				{
-					FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
-					// TODO: make sure this func is really 'add face if not exists.'
-					faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type));
-					faXminusOne.getFaceGeometry(relevantComponent - 1);
-//				}
+				FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
+				// TODO: make sure this func is really 'add face if not exists.'
+				faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type));
+				faXminusOne.getFaceGeometry(relevantComponent - 1);
 				
 				// CONSIDER: TRY REMOVING A FACE AT THIS FACE AGG AS WELL. EVEN THOUGH THERE 'SHOULDN'T' BE ONE.
 				// AND SIMILAR FOR ADDING BLOCKS
@@ -413,13 +315,10 @@ public class MeshBuilder
 			if (faXY != null) {
 				// * neighbor is an air block, so there should be a face to remove at our block in this direction
 				faXY.removeNegativeSideFaceAtCoord(alco);
-	//			faXY.removeBlockFaceAtCoord(alco, false, true);
-//				faXY.getFaceGeometry(relevantComponent);
 				
 				if (faXY.faceSetCount == 0) {
 					removeFaceAggregatorAt(co, axis);	
 				} else {
-					// else get Face geom...
 					faXY.getFaceGeometry(relevantComponent);
 				}
 			}
@@ -431,13 +330,10 @@ public class MeshBuilder
 		{
 			if (relevantComponent < relevantUpperLimit - 1)
 			{
-//				if (isFaceAggregatorAt(co + nudgeCoord, axis))
-//				{
-					FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
-						
-					faXplusone.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, test_b.type));
-					faXplusone.getFaceGeometry(relevantComponent + 1);
-//				}
+				FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
+					
+				faXplusone.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, test_b.type));
+				faXplusone.getFaceGeometry(relevantComponent + 1);
 			}
 		} else {
 			if (faXY != null) {
@@ -447,11 +343,9 @@ public class MeshBuilder
 				if (faXY.faceSetCount == 0) {
 					removeFaceAggregatorAt(co, axis);	
 				} else {
-					// else get Face geom...
 					faXY.getFaceGeometry(relevantComponent);
 				}
-				
-	//			faXY.removeBlockFaceAtCoord(alco, true, false);
+
 				faXY.getFaceGeometry(relevantComponent);
 			}
 		}
@@ -493,9 +387,7 @@ public class MeshBuilder
 			}
 		} else { 
 			
-			b.bug("adding a block!!");
 			// * neighbor is air, so we need to add a face at our coord
-			
 			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, btype));
 			faXY.getFaceGeometry(relevantComponent);
 		}
@@ -521,14 +413,11 @@ public class MeshBuilder
 						// else get Face geom...
 						faXplusone.getFaceGeometry(relevantComponent + 1);
 					}
-					
-					
 				}
 			}
 		} else {
 			
 			// * neighbor is air, need to add a face at this coord
-			
 			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, btype));
 			faXY.getFaceGeometry(relevantComponent);
 		}
@@ -568,7 +457,7 @@ public class MeshBuilder
 
 	private MeshSet collectMeshDataWithFaceAggregators(FaceAggregator[] faceAggs, ref int starting_tri_index, bool wantToRecalculate)
 	{
-		// TODO: keep track of the lowest and highest (vertically speaking) face aggs.
+		// TODO: keep track of the lowest and highest (vertical only) face aggs.
 		// then avoid iterating over empty faceAggs.
 		
 		List<Vector3> temp_vertices = new List<Vector3>();
@@ -683,4 +572,11 @@ public static class b
 //#endif
 //		_gameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
 //
+//	}
+	
+//	private void clearMeshArrays() {
+//		triangles.Clear();
+//		uvs.Clear();
+//		vertices.Clear();
+//		col32s.Clear();
 //	}

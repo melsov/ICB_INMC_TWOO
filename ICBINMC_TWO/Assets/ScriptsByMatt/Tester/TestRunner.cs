@@ -6,8 +6,8 @@ using System;
 
 public class TestRunner : MonoBehaviour {
 	
-//	private static bool dontRunGame = true;
-	private static bool dontRunGame = false;
+	private static bool dontRunGame = true;
+//	private static bool dontRunGame = false;
 //	public const bool DontRunDoTerrainTestInstead = true;
 	public const bool DontRunDoTerrainTestInstead = false;
 //	public const bool RunGameOnlyOneNoisePatch = true;

@@ -1,5 +1,5 @@
 ﻿#define NO_CAVES
-#define NO_SOD
+//#define NO_SOD
 //#define LIGHT_HACK
 //#define TURN_OFF_STRUCTURES
 //#define FLAT_TOO

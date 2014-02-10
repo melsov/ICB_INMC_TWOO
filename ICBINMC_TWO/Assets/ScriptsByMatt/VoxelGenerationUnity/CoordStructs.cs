@@ -26,6 +26,28 @@ public enum RelationToRange {
 	BelowRange, WithinRange, AboveRange
 }
 
+public enum OverlapState {
+	BeforeStart = 0, FlushWithStart, FlushWithExtent, BeyondExtent, 
+	OverlappingOverStart, OverlappingOverEnd, 
+	IContainIt, ItContainsMe
+}
+
+public static class OverLapUtil
+{
+	public static bool OverlapExists(OverlapState overlapState) {
+		return overlapState >= OverlapState.OverlappingOverStart;	
+	}
+	
+	public static bool OverlapStateIsABeyondState(OverlapState oState) {
+		return oState == OverlapState.BeyondExtent || 
+				oState == OverlapState.OverlappingOverEnd || 
+				oState == OverlapState.FlushWithExtent ||
+				oState == OverlapState.ItContainsMe;	
+	}
+	
+//	public static bool 
+}
+
 public struct AlignedCoord
 {
 	public int across, up;
@@ -265,6 +287,16 @@ public struct Range1D
 		this = new Range1D(_start, _range, BlockType.Dirt);
 	}
 	
+	public static Range1D RangeWithStartAndExtent(int start, int extent)
+	{
+		return new Range1D(start, extent - start);	
+	}
+	
+	public static Range1D RangeWithRangeAndExtent(int range, int extent)
+	{
+		return new Range1D(extent - range, range);
+	}
+	
 	public int extent() {
 		return this.start + this.range;
 	}
@@ -285,8 +317,16 @@ public struct Range1D
 		return Range1D.Equal(this, Range1D.theErsatzNullRange() );	
 	}
 	
+	public void assertNotNull(string str) {
+		AssertUtil.Assert(!Range1D.Equal(this, Range1D.theErsatzNullRange()), str);
+	}
+	
 	public bool contains(int index) {
 		return index >= this.start && index < this.extent();	
+	}
+	
+	public bool containsOrFlushWithEitherEnd(int index) {
+		return index >= this.start - 1 && index <= this.extent();
 	}
 	
 	public RelationToRange relationToRange(int index) {
@@ -316,12 +356,9 @@ public struct Range1D
 	// set funcs.
 	
 	public Range1D subRangeAboveRange(Range1D excluder) {
-		
 		return subRangeAbove(excluder.extentMinusOne());
 	}
 	
-	//TODO: fix sub range so it only can return a real sub range:
-	// this func. really gives the area above the level.
 	public Range1D subRangeAbove(int level) {
 		if (level < this.start)
 			return this;
@@ -340,6 +377,11 @@ public struct Range1D
 			return Range1D.theErsatzNullRange();
 		
 		return new Range1D(level + 1, newRange, this.blockType, this.top_light_level, this.bottom_light_level);
+	}
+	
+	public Range1D subRangeBelowRange(Range1D other) 
+	{
+		return subRangeBelow(other.start);
 	}
 	
 	public Range1D subRangeBelow(int level) {
@@ -364,12 +406,40 @@ public struct Range1D
 	}
 	
 	public Range1D extendRangeToInclude(Range1D extender) {
-		return new Range1D(this.start, extender.extentMinusOne() - this.start, this.blockType, this.top_light_level, this.bottom_light_level);	
+		return new Range1D(this.start, extender.extent() - this.start, this.blockType, this.top_light_level, this.bottom_light_level);	
 	}
 	
 	public static bool RangesIntersect(Range1D raa, Range1D rbb)
 	{
 		return !(Range1D.IntersectingRange(raa, rbb).isErsatzNull() );
+	}
+	
+	public OverlapState overlapWithRange(Range1D other)
+	{
+		if (this.start == other.extent())
+			return OverlapState.FlushWithStart;
+		
+		if (this.start > other.extent())
+			return OverlapState.BeforeStart;
+		
+		if (this.extent() == other.start)
+			return OverlapState.FlushWithExtent;
+		
+		if (RangesIntersect(this, other)) 
+		{
+			if (this.contains(other)) {
+				return OverlapState.IContainIt;					
+			}
+			if (other.contains(this)) {
+				return OverlapState.ItContainsMe;	
+			}
+			if (other.start < this.start)
+				return OverlapState.OverlappingOverStart;
+			
+			return OverlapState.OverlappingOverEnd;
+		}
+		
+		return OverlapState.BeyondExtent;
 	}
 	
 	public static Range1D IntersectingRange(Range1D raa, Range1D rbb)
@@ -382,6 +452,17 @@ public struct Range1D
 		
 		return new Range1D(interStart, interExtent - interStart, raa.blockType);
 //		int extentDif = raa.e
+	}
+	
+	public static Range1D Union(Range1D raa, Range1D rbb)
+	{
+		int unionExtent = raa.extent() > rbb.extent() ? raa.extent() : rbb.extent();
+		int unionStart = raa.start < rbb.start ? raa.start : rbb.start;	
+		
+		if (unionStart >= unionExtent)
+			return Range1D.theErsatzNullRange();
+		
+		return new Range1D(unionStart, unionExtent - unionStart, raa.blockType);
 	}
 	
 	public bool contains(Range1D r) {
@@ -524,6 +605,10 @@ public struct Coord : IEquatable<Coord>
 
 	public bool equalTo(Coord other) {
 		return this.x == other.x && this.y == other.y && this.z == other.z;
+	}
+	
+	public void assertNotNull(string str) {
+		AssertUtil.Assert(!this.equalTo(Coord.TheErsatzNullCoord()), str);	
 	}
 
 	public bool isIndexSafe( Coord arraySizes ) {

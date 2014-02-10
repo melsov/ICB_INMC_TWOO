@@ -154,7 +154,6 @@ public class ChunkManager : MonoBehaviour
 			return null;
 		}
 		
-//		if (!blocks.noisePatches.ContainsKey (new NoiseCoord (cc / NoisePatch.CHUNKDIMENSION) ))
 		if (!blocks.noisePatchExistsAtWorldCoord(index) )
 		{
 			b.bug ("(Block at chCo Offset)trying to get a block from ch coord: " + cc.toString() + "\n  offset: " + offset.toString() +" for which we don't have a noise patch coord at woco: " + index.toString() );
@@ -318,16 +317,11 @@ public class ChunkManager : MonoBehaviour
 		}
 		
 		ch.makeMesh (); // ???
-		if (!ch.noNeedToRenderFlag) {
-			ch.applyMesh ();
-			activeChunks.Add (ch);
 
-			ch.isActive = true;
-		}
-		else // why not get rid of the game object now?
-		{
-			chunkMap.destroyChunkAt (ch.chunkCoord);
-		}
+		ch.applyMesh ();
+		activeChunks.Add (ch);
+
+		ch.isActive = true;
 	}
 
 
@@ -335,7 +329,7 @@ public class ChunkManager : MonoBehaviour
 	{
 		Chunk c = new Chunk ();// (Chunk) Instantiate (prefabChunk, pos, transform.rotation);
 
-		c.m_chunkManager = this;
+//		c.m_chunkManager = this;
 
 		c.chunkCoord = coord;
 
@@ -717,7 +711,7 @@ public class ChunkManager : MonoBehaviour
 //		bug ("placing block at coord: " + placingCoord.toString());
 		
 		Chunk ch = chunkContainingCoord (placingCoord);
-		ch.noNeedToRenderFlag = false;
+//		ch.noNeedToRenderFlag = false;
 
 		blocks [placingCoord] = b; // get saved blocks to update.
 		
@@ -1279,15 +1273,15 @@ public class ChunkManager : MonoBehaviour
 
 					if (chunk != null)
 					{
-						if (!chunk.noNeedToRenderFlag) {
+//						if (!chunk.noNeedToRenderFlag) {
 							//async...
 							activeChunks.Add (chunk);
 							yield return StartCoroutine(chunk.applyMeshToGameObjectCoro ());
 							chunk.isActive = true;
-						}
-						else {
-							throw new Exception("Surprising. chunk had no need to render flag true??");
-						}
+//						}
+//						else {
+//							throw new Exception("Surprising. chunk had no need to render flag true??");
+//						}
 						
 						checkTheseAsyncChunksDoneCalculating.Remove(chunk);
 					}

@@ -133,6 +133,7 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\SimplexNoise\Noise.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structs.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structures\StructureBase.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\AssertUtil.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\DebugLinesUtil.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\RangeUtils.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\Utils.cs" />

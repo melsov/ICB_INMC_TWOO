@@ -346,6 +346,10 @@ public struct Quad
 		return new Quad( origin, extent - origin);	
 	}
 	
+	public static Quad QuadDimensionsAndExtent(PTwo dims, PTwo extent) {
+		return Quad.QuadWithOriginAndExtent(extent - dims, extent);	
+	}
+	
 	public string toString() {
 		return "Quad: origin: " + origin.toString() + " and dims: " + dimensions.toString();	
 	}
