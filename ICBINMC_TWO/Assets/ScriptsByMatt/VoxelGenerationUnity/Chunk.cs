@@ -397,17 +397,31 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		foreach(Range1D range in ranges)
 		{
 			int j = range.start;
-			int end = range.extent();
-			while(j < end)
-			{
-				finfo.coord = new Coord(x, j, z); 
-				finfo.lightLevel = (byte) Mathf.Lerp(range.bottom_light_level, range.top_light_level, (j - range.start) / range.range);
-
-//				addCoordToFaceAggregorAtIndex(new Coord	(x, j, z), type, dir);
-				addCoordToFaceAggregorAtIndex(finfo);
-				++j;
-			}
+			// ADD RANGE WAY
+			finfo.coord = new Coord(x, j, z);
+			finfo.range = range;
+			addRangeToFaceAggregorAtIndex(finfo);
+			//END RANGE WAY
+			
+			
+			//WANT IF NOT RANGE WAY
+//			int end = range.extent();
+//			while(j < end)
+//			{
+//				finfo.coord = new Coord(x, j, z); 
+//				finfo.lightLevel = (byte) Mathf.Lerp(range.bottom_light_level, range.top_light_level, (j - range.start) / range.range);
+//
+////				addCoordToFaceAggregorAtIndex(new Coord	(x, j, z), type, dir);
+//				addCoordToFaceAggregorAtIndex(finfo);
+//				++j;
+//			}
+			//END WANT IF NOT RANGE WAY
 		}
+	}
+	
+	private void addRangeToFaceAggregorAtIndex(FaceInfo _faceInfo) 
+	{
+		meshBuilder.addRangeToFaceAggregatorWithFaceInfoRange(_faceInfo);
 	}
 	
 //	private void addCoordToFaceAggregorAtIndex(Coord co, BlockType type, Direction dir) 
@@ -418,7 +432,6 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		fa.addFaceAtCoordBlockType(co, type, dir );
 		faceAggregators[co.y] = fa; // put back...
 #else
-//		meshBuilder.addCoordToFaceAggregatorAtIndex(co, type, dir);
 		meshBuilder.addCoordToFaceAggregatorAtIndex(_faceInfo);
 #endif
 

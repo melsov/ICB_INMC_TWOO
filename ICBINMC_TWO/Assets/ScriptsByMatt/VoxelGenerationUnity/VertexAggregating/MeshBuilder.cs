@@ -52,6 +52,12 @@ public class MeshBuilder
 		fa.addFaceAtCoordBlockType(faceInfo);
 	}
 	
+	public void addRangeToFaceAggregatorWithFaceInfoRange(FaceInfo faceInfo)
+	{
+		FaceAggregator fa = faceAggregatorAt(faceInfo.coord, faceInfo.direction );
+		fa.addFaceInfoRange(faceInfo);
+	}
+	
 	public void resetFaceAggregators() 
 	{
 		faceAggregatorsXZ = new FaceAggregator[Chunk.CHUNKHEIGHT];

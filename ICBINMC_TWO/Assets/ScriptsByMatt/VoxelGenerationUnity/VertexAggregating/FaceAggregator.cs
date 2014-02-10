@@ -75,7 +75,6 @@ public class FaceAggregator
 		return new FaceAggregator(Axis.Y);
 	}
 
-
 	private AlignedCoord alignedCoordFromCoord(Coord co) {
 		if (faceNormal == Axis.X)
 			return new AlignedCoord(co.z, co.y);
@@ -88,8 +87,6 @@ public class FaceAggregator
 	private int acrossIndexFromCoord(Coord co) {
 		return alignedCoordFromCoord(co).across;
 	}
-	
-//	private int 
 	
 	public void addFaceAtCoordBlockType(FaceInfo faceInfo)
 	{
@@ -117,7 +114,7 @@ public class FaceAggregator
 	
 	public void addFaceInfoRange(FaceInfo faceInfo) 
 	{
-		faceInfo.range.assertNotNull("null range for face info in face agg. add fa range");
+		faceInfo.range.assertNotNull("Ersatz null range for face info in face agg. add fa range");
 		
 		Range1D faRange = faceInfo.range;
 		int acrossI = acrossIndexFromCoord(faceInfo.coord);
@@ -134,14 +131,14 @@ public class FaceAggregator
 		
 		foreach(int faceSetIndex in faceSetsAtAcrossIndexFlushWithRange(nextToRangeIndex, addRange, dir))
 		{
-			b.bug("got some face sets flush with range");
 			FaceSet nextToFS = faceSets[faceSetIndex];
 			if (nextToFS.canIncorporatePartOrAllOfRange(addRange, nextToRangeIndex + 1))
 			{
-				Range1D usedRange = nextToFS.addRangeAtAcrossReturnAddedRange(addRange, nextToRangeIndex);
+				Range1D usedRange = nextToFS.addRangeAtAcrossReturnAddedRange(addRange, nextToRangeIndex + 1);
 				
 				AssertUtil.Assert(usedRange.range > 0, "confusing used range was zero or less? (in face agg add fs w range)");
-				setIndicesOfFaceSetsAtRangeToIndex(usedRange, nextToRangeIndex + 1, dir, faceSetIndex);
+				
+				setIndicesOfFaceSetsAtRangeToIndex(usedRange, nextToRangeIndex + 1, dir, faceSetIndex + FaceAggregator.FACETABLE_LOOKUP_SHIFT);
 				
 				Range1D unusedRangeBelow = addRange.subRangeBelowRange(usedRange);
 				if (!unusedRangeBelow.isErsatzNull())
@@ -167,7 +164,6 @@ public class FaceAggregator
 		AlignedCoord startAlco = new AlignedCoord(acrossI, addRange.start);
 		
 		int fsIndex = indexOfFaceSetAtCoord(startAlco, dir);
-		b.bug("add new FS in FA. fsIndex is: " + fsIndex);
 		
 		if (!indexRepresentsAnOccupiedCoord(fsIndex))
 			newFaceSetAtCoord(startAlco, addRange.blockType, dir, addRange.bottom_light_level);
@@ -175,10 +171,9 @@ public class FaceAggregator
 		FaceSet justAddedFS = faceSetAt(startAlco, dir);
 		
 		Range1D usedRange = justAddedFS.addRangeAtAcrossReturnAddedRange(addRange, acrossI);
-		int nowOccupiedFS = indexOfFaceSetAtCoord(startAlco, dir);
+		int nowOccupiedFS = unshiftedIndexOfFaceSetAtCoord(startAlco, dir);
 		
 		AssertUtil.Assert(nowOccupiedFS > -1, "wha negative occupied coord? " + nowOccupiedFS);
-		b.bug("coord now: " + nowOccupiedFS);
 		
 		setIndicesOfFaceSetsAtRangeToIndex(usedRange, acrossI, dir, nowOccupiedFS );
 		
@@ -270,8 +265,6 @@ public class FaceAggregator
 			AlignedCoord curAlco = new AlignedCoord(acrossI, j);
 			int fsindex = indexOfFaceSetAtCoord(curAlco, dir);
 			
-			b.bug(" got fs index: " + fsindex + " current FSI : " + currentFSI + "\ncur alco: " + curAlco.toString());
-			
 			if (fsindex >= 0 && fsindex != currentFSI)
 			{
 				currentFSI = fsindex;
@@ -281,7 +274,7 @@ public class FaceAggregator
 	}
 	
 	#endregion
-	
+	// TODO: really make an index lookup table class
 	private void setIndicesOfFaceSetsAtRangeToIndex(Range1D range, int acrossI, Direction dir, int indexToSetTo)
 	{
 		for (int i = range.start; i < range.extent(); ++i) {
@@ -300,6 +293,11 @@ public class FaceAggregator
 		{
 			throw new Exception("this index was: across " + (coord.across * 2 + nudge_lookup) + " up: " + coord.up + ". face table length was: dim 0: " +faceSetTable.GetLength(0) + " 1 " + faceSetTable.GetLength(1) + " coord was " + coord.toString() + "Direction was: " + dir + " my face axis is: " + faceNormal);
 		}
+	}
+	
+	private int unshiftedIndexOfFaceSetAtCoord(AlignedCoord coord, Direction dir)
+	{
+		return indexOfFaceSetAtCoord(coord, dir) + FaceAggregator.FACETABLE_LOOKUP_SHIFT;
 	}
 	
 	private int indexOfFaceSetAtCoord(AlignedCoord coord, Direction dir)
@@ -732,7 +730,8 @@ public class FaceAggregatorTest
 		int rangeRange = 4;
 		for(int i = 0; i < coordDims1; ++i)
 		{
-			FaceInfo faceinfo = new FaceInfo(new Coord(i, 4, 0), new Range1D(0, rangeRange), Direction.ypos);
+			int varyRangeBy = i % 2 == 0 ? 2 : 1;
+			FaceInfo faceinfo = new FaceInfo(new Coord(i, 4, 0), new Range1D(0, rangeRange - varyRangeBy ), Direction.ypos);
 			fa.addFaceInfoRange(faceinfo);
 		}
 	}

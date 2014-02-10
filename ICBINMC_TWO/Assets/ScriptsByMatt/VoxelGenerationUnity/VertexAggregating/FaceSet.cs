@@ -425,32 +425,21 @@ public class FaceSet
 	
 	public bool canIncorporatePartOrAllOfRange(Range1D rangeToAdd, int acrossIndex)
 	{
-		b.bug("test can incorp");
-		
 		if (this.blockType != rangeToAdd.blockType)
 			return false;
 		
-		b.bug("same block type");
-		
 		if (this.faceSetLimits.isErsatzNull()) {
-			b.bug("our face set lim is null we're incorporating");
 			return true;
 		}
 		
 		if(!partOrAllOfRangeIsWithinMaxDomainTRange(rangeToAdd))
 			return false;
 		
-		b.bug("part of range within max domain t");
-		
 		if (!this.faceSetLimits.sRange().containsOrFlushWithEitherEnd(acrossIndex))
 			return false;
 		
-		b.bug("was flush with one of the ends or contains");
-		
 		if (!this.faceSetLimits.sRange().contains(acrossIndex) && faceSetLimitsSDimensionHasReachedMaxDomainSDimension())
 			return false;
-		
-		b.bug("we are incorporating");
 		
 		// skip checking (thoroughly) for adjacency? ... for now...?...do we not actually rely on it?
 		
@@ -494,7 +483,6 @@ public class FaceSet
 		// if no strips here, simply add the range (as a strip)
 		if (strips.Count == 0)
 		{
-			b.bug("strip count was 0 returning");
 			Strip str = new Strip (rangeToAdd);
 			strips.Add(str);
 			// don't need to put back?
@@ -540,8 +528,6 @@ public class FaceSet
 			Range1D currentRange = str.range;
 			
 			OverlapState overlapState = currentRange.overlapWithRange(rangeToAdd);
-			
-			b.bug("current range : " + currentRange.toString() + "range to add: " + rangeToAdd.toString());
 			
 			if (overlapState == OverlapState.BeforeStart) {
 				insertAtIndex = i;
