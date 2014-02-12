@@ -1,5 +1,6 @@
 ﻿#define GLOSS_QUAD_ARRAY_INDEX_BUG
 #define LIGHT_BY_RANGE
+#define UNDO_LIGHT_BY_RANGE_TEST
 //#define IRREGULARITY_LOG
 //#define NO_OPTIMIZATION
 
@@ -42,7 +43,7 @@ public class FaceSet
 #if LIGHT_BY_RANGE
 	private List<LitQuad> quads = new List<LitQuad>();
 #else
-	private List<Lit> quads = new List<Quad>();
+	private List<Quad> quads = new List<Quad>();
 #endif
 	
 	private PTwo quadTableDimensions;
@@ -872,6 +873,12 @@ public class FaceSet
 #if LIGHT_BY_RANGE
 		Color32[] cornerColors = new Color32[4] {new Color32(0,0,0,0),new Color32(0,0,0,0),new Color32(0,0,0,0),new Color32(0,0,0,0)}; 	
 #endif
+		
+#if UNDO_LIGHT_BY_RANGE_TEST
+		byte firstRowTest = (4*4*4) * 3 + (4 * 4) * 2 + (4) * 1; // last square lit?
+		Color32 lightByFacesXRows = new Color32(firstRowTest,255,255,255); // each component sets the possible 4 faces in an x row
+		cornerColors = new Color32[4]{ lightByFacesXRows,lightByFacesXRows,lightByFacesXRows,lightByFacesXRows };
+#endif
 
 		int i = 0;
 		for(; i < quads.Count ; ++i)
@@ -879,13 +886,14 @@ public class FaceSet
 #if LIGHT_BY_RANGE
 			LitQuad litQuad = quads[i];
 			Quad quad = litQuad.quad;
-			
-			//CONSIDER: do we want to rotate (and/or flip?) the corners based on blockFaceDirection?
-			LightCorners lightCorners = litQuad.lightCorners;
-			cornerColors[0].r = lightCorners.oo;
-			cornerColors[1].r = lightCorners.mo;
-			cornerColors[2].r = lightCorners.om;
-			cornerColors[3].r = lightCorners.mm;
+
+			// WANT IF LIGHTING BY RANGE!
+//			//CONSIDER: do we want to rotate (and/or flip?) the corners based on blockFaceDirection?
+//			LightCorners lightCorners = litQuad.lightCorners;
+//			cornerColors[0].r = lightCorners.oo;
+//			cornerColors[1].r = lightCorners.mo;
+//			cornerColors[2].r = lightCorners.om;
+//			cornerColors[3].r = lightCorners.mm;
 #else
 			Quad quad = quads[i];
 #endif

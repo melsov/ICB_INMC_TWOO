@@ -2,7 +2,7 @@
 //#define NO_SOD
 //#define LIGHT_HACK
 //#define TURN_OFF_STRUCTURES
-//#define FLAT_TOO
+#define FLAT_TOO
 //#define TERRAIN_TEST
 //#define FLAT
 
@@ -872,38 +872,38 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		return false;
 	}
 	
-#if LIGHT_HACK
-	private byte nextLightLevel(bool thereWasAnOverhangAtThisXZ)
-	{
-		currentLightLevel += thereWasAnOverhangAtThisXZ ? -.05f : .05f;
-		currentLightLevel = Mathf.Max(currentLightLevel, 0f);
-		currentLightLevel = Mathf.Min((float) Block.MAX_LIGHT_LEVEL, currentLightLevel);
-		return (byte) currentLightLevel;
-	}
-	
-	private void resetLightLevelCounter(int xx) { 
-		NoiseCoord nudge = NeighborDirectionUtils.nudgeCoordFromNeighborDirection(NeighborDirection.ZNEG);
-		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(this.coord + nudge))
-		{
-			NoisePatch zNegNeihbor = this.m_chunkManager.blocks.noisePatches[this.coord + nudge];
-			this.currentLightLevel = zNegNeihbor.dataForNeighbors.edgeLightLevels.zMax[xx];
-			
-			if (this.currentLightLevel != 0)
-				return;
-		}
-		
-		
-		this.currentLightLevel = this.lastXRowStartLightLevel;
-	}
-	
-	private void setXRowStartLightLevelAtZeroZeroHack() {
-		this.lastXRowStartLightLevel = (float) Block.MAX_LIGHT_LEVEL / 1.5f ; //fake hack	
-	}
-	
-	private void influenceXRowLightLevelWithNearbyZLevel() {
-		this.lastXRowStartLightLevel = (this.lastXRowStartLightLevel + this.currentLightLevel) /2.0f;	
-	}
-#endif
+//#if LIGHT_HACK
+//	private byte nextLightLevel(bool thereWasAnOverhangAtThisXZ)
+//	{
+//		currentLightLevel += thereWasAnOverhangAtThisXZ ? -.05f : .05f;
+//		currentLightLevel = Mathf.Max(currentLightLevel, 0f);
+//		currentLightLevel = Mathf.Min((float) Block.MAX_LIGHT_LEVEL, currentLightLevel);
+//		return (byte) currentLightLevel;
+//	}
+//	
+//	private void resetLightLevelCounter(int xx) { 
+//		NoiseCoord nudge = NeighborDirectionUtils.nudgeCoordFromNeighborDirection(NeighborDirection.ZNEG);
+//		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(this.coord + nudge))
+//		{
+//			NoisePatch zNegNeihbor = this.m_chunkManager.blocks.noisePatches[this.coord + nudge];
+//			this.currentLightLevel = zNegNeihbor.dataForNeighbors.edgeLightLevels.zMax[xx];
+//			
+//			if (this.currentLightLevel != 0)
+//				return;
+//		}
+//		
+//		
+//		this.currentLightLevel = this.lastXRowStartLightLevel;
+//	}
+//	
+//	private void setXRowStartLightLevelAtZeroZeroHack() {
+//		this.lastXRowStartLightLevel = (float) Block.MAX_LIGHT_LEVEL / 1.5f ; //fake hack	
+//	}
+//	
+//	private void influenceXRowLightLevelWithNearbyZLevel() {
+//		this.lastXRowStartLightLevel = (this.lastXRowStartLightLevel + this.currentLightLevel) /2.0f;	
+//	}
+//#endif
 	
 	//NOTE: variable names may not really reflect the functionality embodied herein :)
 	private List<Range1D> heightsAndOverhangRangesWith(float noise_val, float overhangness, float caveness, BiomeInputs biomeInputs)
@@ -1091,52 +1091,52 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 				}
 				
 
-#if LIGHT_HACK
-				byte nextLevel;
-				if (heightRanges.Count > 1) // there was probably an overhang
-				{
-					Range1D secondHighestRange = heightRanges[heightRanges.Count - 2];
-					nextLevel = nextLightLevel(true);
-					secondHighestRange.top_light_level = nextLevel;
-					heightRanges[heightRanges.Count - 2] = secondHighestRange;
-					
-					Range1D highestRange = heightRanges[heightRanges.Count - 1];
-					highestRange.bottom_light_level = secondHighestRange.top_light_level;
-					heightRanges[heightRanges.Count - 1] = highestRange;
-					
-					
-					if (zz == 0)
-						this.dataForNeighbors.edgeLightLevels.zZero[xx] = nextLevel;
-					else if (zz == patchDimensions.z - 1)
-						this.dataForNeighbors.edgeLightLevels.zMax[xx] = nextLevel;
-					
-				} else {
-					nextLevel = nextLightLevel(false);	
-					
-////					if highrange not contained by last highest z
-//					if (zz > 1)
-//					{
-//						List<Range1D> prevZs = heightMap[xx * patchDimensions.x + zz - 1];
-//						if (prevZs.Count > 0)
-//						{
-//							Range1D prevZRange = prevZs[prevZs.Count - 1];
-//							Range1D highestR = heightRanges[0];
-//							if (!prevZRange.contains(highestR.extentMinusOne()))
-//							{
-//								highestR.top_light_level = nextLevel;
-//								heightRanges[0] = highestR;
-//							}
-//						}
-//					}
-				}
-				
-				
-				
-				if (zz < 5) //backwardly influence x light level
-				{
-					influenceXRowLightLevelWithNearbyZLevel();	
-				}
-#endif				
+//#if LIGHT_HACK
+//				byte nextLevel;
+//				if (heightRanges.Count > 1) // there was probably an overhang
+//				{
+//					Range1D secondHighestRange = heightRanges[heightRanges.Count - 2];
+//					nextLevel = nextLightLevel(true);
+//					secondHighestRange.top_light_level = nextLevel;
+//					heightRanges[heightRanges.Count - 2] = secondHighestRange;
+//					
+//					Range1D highestRange = heightRanges[heightRanges.Count - 1];
+//					highestRange.bottom_light_level = secondHighestRange.top_light_level;
+//					heightRanges[heightRanges.Count - 1] = highestRange;
+//					
+//					
+//					if (zz == 0)
+//						this.dataForNeighbors.edgeLightLevels.zZero[xx] = nextLevel;
+//					else if (zz == patchDimensions.z - 1)
+//						this.dataForNeighbors.edgeLightLevels.zMax[xx] = nextLevel;
+//					
+//				} else {
+//					nextLevel = nextLightLevel(false);	
+//					
+//////					if highrange not contained by last highest z
+////					if (zz > 1)
+////					{
+////						List<Range1D> prevZs = heightMap[xx * patchDimensions.x + zz - 1];
+////						if (prevZs.Count > 0)
+////						{
+////							Range1D prevZRange = prevZs[prevZs.Count - 1];
+////							Range1D highestR = heightRanges[0];
+////							if (!prevZRange.contains(highestR.extentMinusOne()))
+////							{
+////								highestR.top_light_level = nextLevel;
+////								heightRanges[0] = highestR;
+////							}
+////						}
+////					}
+//				}
+//				
+//				
+//				
+//				if (zz < 5) //backwardly influence x light level
+//				{
+//					influenceXRowLightLevelWithNearbyZLevel();	
+//				}
+//#endif				
 				//NO-Y METHOD!!
 				
 				// TODO: (pos.) make height map a class with an accessor that imitates the array that it currently is
