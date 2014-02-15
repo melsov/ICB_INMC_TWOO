@@ -48,6 +48,16 @@ public static class DirectionUtil
 		return result;
 	}
 	
+	public static Direction[] TheDirections()
+	{
+		return new Direction[] {Direction.xpos, Direction.xneg, Direction.ypos, Direction.yneg, Direction.zpos, Direction.zneg};
+	}
+	
+	public static Direction[] TheDirectionsXZ()
+	{
+		return new Direction[] {Direction.xpos, Direction.xneg, Direction.zpos, Direction.zneg};
+	}
+	
 	public static bool IsPosDirection(Direction dir)
 	{
 		return (int) dir % 2 == 0;	

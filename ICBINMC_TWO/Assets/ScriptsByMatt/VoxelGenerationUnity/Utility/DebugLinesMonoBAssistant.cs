@@ -6,6 +6,7 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 {
 	private List<Coord> unitCubes = new List<Coord>();
 	private List<CoordLine> lines = new List<CoordLine>();
+	private List<Window> windows = new List<Window>();
 	
 	public void addUnitCubeAt(Coord woco)
 	{
@@ -23,6 +24,11 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 		lines.Add(cl);
 	}
 	
+	public void addWindowToDraw(Window win)
+	{
+		windows.Add(win);	
+	}
+	
 	// Use this for initialization
 	void Start () 
 	{
@@ -32,8 +38,9 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 	// Update is called once per frame
 	void Update () 
 	{
-		drawUnitCubes();
+//		drawUnitCubes();
 //		drawTestLines();
+		drawWindows();
 	}
 	
 	void drawUnitCubes()
@@ -49,6 +56,14 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 		foreach(CoordLine line in lines)
 		{
 			DebugLinesUtil.debugLine(line.start, line.end, Color.cyan);
+		}
+	}
+	
+	void drawWindows()
+	{
+		for(int i = 0; i < windows.Count; ++i)
+		{
+			DebugLinesUtil.DrawWindow(windows[i]); //, Color.green, Color.cyan);	
 		}
 	}
 }

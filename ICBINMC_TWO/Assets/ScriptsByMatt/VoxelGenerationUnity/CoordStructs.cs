@@ -261,6 +261,10 @@ public struct SimpleRange : IEquatable<SimpleRange>
 		return covering.start <= covered.start && covering.extent() >= covered.extent();
 	}
 	
+	public static SimpleRange Average(SimpleRange _aa, SimpleRange _bb)
+	{
+		return new SimpleRange((_aa.start + _bb.start)/2, (_aa.range + _bb.range)/2);	
+	}
 	
 	public bool contains(SimpleRange r) {
 		return this.start <= r.start && this.extent() >=r.extent();	
@@ -611,6 +615,10 @@ public struct Coord : IEquatable<Coord>
 	public static Coord operator -(Coord aa, float bb) {
 		return new Coord (aa.x - bb, aa.y - bb , aa.z - bb );
 	}
+	
+	public Coord addPTwoToXZ(PTwo point) {
+		return new Coord(this.x + point.s, this.y, this.z + point.t);	
+	}
 
 	public bool equalTo(Coord other) {
 		return this.x == other.x && this.y == other.y && this.z == other.z;
@@ -707,6 +715,11 @@ public struct Coord : IEquatable<Coord>
 	public Vector3 toVector3()
 	{
 		return new Vector3 ((float)x, (float)y, (float)z);
+	}
+	
+	public Coord addNudgeForDirection(Direction dir)
+	{
+		return this + DirectionUtil.NudgeCoordForDirection(dir);
 	}
 
 	public static Vector3 GeomCenterOfBLock(Coord cc) {

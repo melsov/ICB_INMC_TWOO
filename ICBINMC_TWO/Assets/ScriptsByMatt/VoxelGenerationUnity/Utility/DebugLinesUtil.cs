@@ -180,6 +180,30 @@ public static class DebugLinesUtil
 		drawDebugCube(start, dims, Color.white);
 	}
 	
+	public static void DrawWindow(Window win)
+	{
+		Coord origin = win.worldRelativeOrigin;
+		Coord upperNeg =origin;
+		upperNeg.y += win.startRange.range;
+		Coord lowerPos = origin;
+		lowerPos.z += win.zExtent - win.patchRelativeOrigin.z;
+		Coord upperPos = lowerPos;
+		upperPos.y += win.endRange.range;
+		
+		float light  = win.midPointLight.lightValue/Window.LIGHT_LEVEL_MAX;		
+		
+		DebugBox(origin, upperNeg, lowerPos, upperPos, new Color(light, .5f, .5f, 1f), new Color(light, .5f, .5f, 1f) );
+	}
+	
+	public static void DebugBox(Coord ll, Coord ul, Coord lr, Coord ur, Color _col, Color auxCol)
+	{
+		debugLine(ll, ul, _col);
+		debugLine(ul, ur, _col);
+		debugLine(ur, lr, _col);
+		debugLine(lr, ll, _col);
+//		debugLine(ll, ur, auxCol);
+	}
+	
 	
 	static void drawDebugCube(Coord start, Coord dims, Color col)
 	{

@@ -111,6 +111,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 	private List<Range1D>[] heightMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	private List<Range1D>[] savedRangeLists = new List<Range1D>[patchDimensions.x * patchDimensions.z];
+	private byte[,] surfaceMap = new byte[patchDimensions.x, patchDimensions.z];
 	
 	// some terrain gen constants
 	private const int BIOMELOOKUPOFFSET = 100;
@@ -138,6 +139,13 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	private float lastXRowStartLightLevel = 3.5f;
 #endif
 	
+	private WindowMap m_windowMap;
+	public WindowMap windowMap {
+		get {
+			return m_windowMap;	
+		}
+	}
+	
 	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
 	{
 		coord = _noiseCo;
@@ -153,6 +161,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 //		m_RSavedBlocks = new SavableBlock[patchDimensions.x, patchDimensions.y, patchDimensions.z];
 
 		BLOCKSPERPATCHLENGTH = patchDimensions.x;
+		
+		m_windowMap = new WindowMap(this);
 	}
 	
 	public bool Equals(NoisePatch other) {
@@ -735,6 +745,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		savedRangeLists[relCo.x * patchDimensions.x + relCo.z] = ranges;
 	}
 	
+	#region update height map block, relcoord
+	
 	private void updateYSurfaceMapWithBlockAndRelCoord(Block bb, Coord relCo) 
 	{
 		List<Range1D> heights = heightRangesAtCoord(relCo);
@@ -873,7 +885,11 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 			}
 		}
 		heightMap [relCo.x * patchDimensions.x + relCo.z] = heights;
+		surfaceMap[relCo.x, relCo.z] = (byte) lastRangeAtRelativeCoordUnsafe(relCo).extent(); 
+		// TODO also update windowMap here...
 	}
+	
+	#endregion
 	
 
 	void bug(string str) {
@@ -1213,6 +1229,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 				
 				heightRanges = heightsAndOverhangRangesWith(noise_val, noise_shifted2, noise_shifted3,biomeInputs);  // new List<Range1D>();
 				int highestLevel = heightRanges[heightRanges.Count - 1].extent();
+				surfaceMap[xx,zz] = (byte)highestLevel;
 				
 				//DEBUGGING NPATCH BORDERS
 				if (xx == 0 || zz == 0)
@@ -1440,8 +1457,59 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 //		#if TERRAIN_TEST
 //		textureSlice = GetTexture ();
 //		#endif
+		
+		populateWindowMap();
+		m_windowMap.calculateLight();
 
 		generatedBlockAlready = true;
+	}
+	
+	private void populateWindowMap()
+	{
+		int xx = 0;
+		int zz = 0;
+		int j = 0;
+		List<Range1D> heightRanges = new List<Range1D>();
+		Range1D aboveRange;
+		Range1D belowRange;
+//		SurroundingSurfaceValues surroundingSurfaceHeights = SurroundingSurfaceValues.MakeNew();
+
+		for (; xx < patchDimensions.x ; xx++ ) 
+		{
+			zz = 0;
+			for (; zz < patchDimensions.z; zz++ ) 
+			{
+				heightRanges = heightMap[xx * patchDimensions.x + zz];
+				j = 1;
+				for(; j < heightRanges.Count; ++j)
+				{
+					aboveRange = heightRanges[j];
+					belowRange = heightRanges[j - 1];
+					int gap = aboveRange.start - belowRange.extent();
+					if (gap > 0)
+					{
+						m_windowMap.discontinuityAt(new SimpleRange(belowRange.extent(), gap), 
+							xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
+					}
+				}
+			}
+		}
+	}
+	
+	private SurroundingSurfaceValues valuesSurrounding(Coord relCo)
+	{
+		SurroundingSurfaceValues result = SurroundingSurfaceValues.MakeNew();
+
+		foreach(Direction dir in DirectionUtil.TheDirectionsXZ())
+		{
+			int height = highestPointAtPatchRelativeCoord(relCo + DirectionUtil.NudgeCoordForDirection(dir));	
+			if (height > 0)
+			{
+				result.setValueForDirection(height, dir);	
+			}
+		}
+		
+		return result;
 	}
 	
 	private void takeStructuresAfterIGeneratedBlocksAlready (List<StructureBase> strs)

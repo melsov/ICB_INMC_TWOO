@@ -51,6 +51,11 @@ public class LightDataProvider : ILightDataProvider
 		Coord chunkRelCoOfOrigin = chunkRelativeCoordFrom(quad, dir, normalOffset);
 		if (dir != Direction.xpos && dir != Direction.zpos)
 			chunkRelCoOfOrigin += DirectionUtil.NudgeCoordForDirection(dir);
+		
+		// check the nine blocks right in front.
+		// for those that are not solid
+		// check the windows.
+		
 //		Coord chunkWoco = CoordUtil.WorldCoordForChunkCoord(this.chunkCoord);
 		
 		CoordSurfaceStatus surfaceStatus = m_noisePatch.coordIsAboveSurface(this.chunkCoord, chunkRelCoOfOrigin);
