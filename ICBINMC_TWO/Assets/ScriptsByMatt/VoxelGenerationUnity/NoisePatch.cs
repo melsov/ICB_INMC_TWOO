@@ -2,7 +2,7 @@
 //#define NO_SOD
 //#define LIGHT_HACK
 //#define TURN_OFF_STRUCTURES
-#define FLAT_TOO
+//#define FLAT_TOO
 //#define TERRAIN_TEST
 //#define FLAT
 
@@ -81,47 +81,45 @@ using System.Runtime.Serialization.Formatters.Binary;
 [Serializable]
 public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 {
-	public const int CHUNKDIMENSION = 4;// new Coord(4,1,4);
+//	private DebugLinesMonoBAssistant debugA;
+//	private DebugLinesMonoBAssistant debugAssistant {
+//		get {
+//			if (debugA == null)
+//				debugA = ChunkManager.debugLinesAssistant;
+//			return debugA;
+//		}
+//	}
+	
+	public NoiseCoord coord {get; set;}
+	private ChunkManager m_chunkManager;
+	
+	// dimensions
+	public const int CHUNKDIMENSION = 4;
 	public const int CHUNKHEIGHTDIMENSION = 1;
 	public static Coord PATCHDIMENSIONSCHUNKS = new Coord (CHUNKDIMENSION, CHUNKHEIGHTDIMENSION, CHUNKDIMENSION);
-
 	private static int CHUNKLENGTH = (int) ChunkManager.CHUNKLENGTH;
 	private int BLOCKSPERPATCHLENGTH;
-
 	public static Coord patchDimensions =new Coord(CHUNKLENGTH * PATCHDIMENSIONSCHUNKS.x, 
 					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
 					CHUNKLENGTH * PATCHDIMENSIONSCHUNKS.z);
 
-//	public Block[,,] blocks { get; set;}
-
-	public NoiseCoord coord {get; set;}
-	
-//	public bool startedBlockSetup;
-//	public bool generatedNoiseAlready {get; set;}
 	public bool generatedBlockAlready {get; set;}
-
-	private ChunkManager m_chunkManager;
-
+	
+//	public Block[,,] blocks { get; set;}
 //	private SavableBlock[,,] m_RSavedBlocks;
 	public List<SavableBlock> savedBlocks { get; set;}
 
-//	private List<int>[] ySurfaceMap = new List<int>[patchDimensions.x * patchDimensions.z];
 	private List<Range1D>[] heightMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	private List<Range1D>[] savedRangeLists = new List<Range1D>[patchDimensions.x * patchDimensions.z];
-//	private List<Range1D>[] structureMap = new List<Range1D>[patchDimensions.x * patchDimensions.z];
 	
+	// some terrain gen constants
 	private const int BIOMELOOKUPOFFSET = 100;
-	
 	private const float BIOMEFREQUENCY = 120f;
 	private const float NOISESCALE2D = 1f;
-	
 	private static int CAVE_MAX_LIKELIHOOD_LEVEL = (int)(patchDimensions.y * .2f);
-	
-	const float CAVEBASETHRESHOLD = .75f;
-	const float CAVETHRESHOLDRANGE = 1f - CAVEBASETHRESHOLD + CAVEBASETHRESHOLD * .3f;
-	
-	const float RMF_TURBULENCE_SCALE = 2.0f;
-	
+	private const float CAVEBASETHRESHOLD = .75f;
+	private const float CAVETHRESHOLDRANGE = 1f - CAVEBASETHRESHOLD + CAVEBASETHRESHOLD * .3f;
+	private const float RMF_TURBULENCE_SCALE = 2.0f;
 	private static SimpleRange TREE_MAX_LIKELIHOOD_VRANGE = SimpleRange.SimpleRangeWithStartAndExtent((int)(patchDimensions.y * .45), (int) (patchDimensions.y * .75));
 	private const float TREE_MAX_LIKELIHOOD_FACTOR = .125f;
 	
@@ -414,7 +412,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 //		// 0 -> (BPPL = 64) 64 -> (minus booleanNeg) 63 (mod again to put pos coords back where they belong)
 //		return ((woco + BLOCKSPERPATCHLENGTH - boolNeg)) % BLOCKSPERPATCHLENGTH;
 //	}
-
+	
+	#region ask a noisepatch
 
 	public Block blockAtChunkCoordOffset(Coord chunkCo, Coord offset) 
 	{
@@ -471,6 +470,75 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		
 		return heightMap[index.x * patchDimensions.x + index.z];
 	}
+	
+	// TODO: re-consolidate funcs.
+	
+	public CoordSurfaceStatus coordIsAboveSurface(Coord chunkCo, Coord offset)
+	{
+		Coord index = NoisePatch.patchRelativeBlockCoordForChunkCoord(chunkCo) + offset;
+//		return relCoordIsAboveSurface(index, false);
+		
+		
+		if (!index.isIndexSafe(patchDimensions))
+		{
+			return m_chunkManager.coordIsAboveSurface(chunkCo, offset);
+		}
+		
+		if(!generatedBlockAlready) {
+			throw new Exception("weird. didn't gen block yet?");
+			return CoordSurfaceStatus.ABOVE_SURFACE;
+		}
+		//CONSIDER: A SURFACE MAP FOR EFFICIENCY....
+		List<Range1D> rangesAt = heightMap[index.x * patchDimensions.x + index.z];
+		if( rangesAt[rangesAt.Count - 1].extent() <= index.y)
+			return CoordSurfaceStatus.ABOVE_SURFACE;
+		
+		
+		BlockType btype = blockTypeFromWithinRangeList(rangesAt, index.y);
+		if (btype == BlockType.Air)
+			return CoordSurfaceStatus.BELOW_SURFACE_TRANSLUCENT;
+		
+		return CoordSurfaceStatus.BELOW_SURFACE_SOLID;
+	}
+	
+	public CoordSurfaceStatus worldCoordIsAboveSurface(Coord woco)
+	{
+		Coord relco = NoisePatch.patchRelativeBlockCoordForWorldBlockCoord(woco);
+		return relCoordIsAboveSurface(relco, true);
+	}
+	
+	private CoordSurfaceStatus relCoordIsAboveSurface(Coord index, bool dieOnIndexNotSafe)
+	{
+//		Coord index = NoisePatch.patchRelativeBlockCoordForWorldBlockCoord(woco);
+		
+		if (!index.isIndexSafe(patchDimensions))
+		{
+			if (dieOnIndexNotSafe)
+			{
+				throw new Exception("looking for block above surface. we thought we'd contain this block coord:; " + index.toString());
+				return CoordSurfaceStatus.ABOVE_SURFACE; 
+			}
+//			else 
+//				return m_chunkManager.coordIsAboveSurface(index, this.coord );
+		}
+		
+		if(!generatedBlockAlready)
+			return CoordSurfaceStatus.ABOVE_SURFACE;
+		//CONSIDER: A SURFACE MAP FOR EFFICIENCY....
+		List<Range1D> rangesAt = heightMap[index.x * patchDimensions.x + index.z];
+		if( rangesAt[rangesAt.Count - 1].extent() < index.y)
+			return CoordSurfaceStatus.ABOVE_SURFACE;
+		
+		
+		BlockType btype = blockTypeFromWithinRangeList(rangesAt, index.y);
+		if (btype == BlockType.Air) {
+			return CoordSurfaceStatus.BELOW_SURFACE_TRANSLUCENT;
+		}
+		
+		return CoordSurfaceStatus.BELOW_SURFACE_SOLID;
+	}
+	
+	#endregion
 
 	//FIND NEIGHBORS TOUCHING SIDES
 	public static List<NoiseCoord> nudgeNoiseCoordsAdjacentToChunkCoord(Coord chunkCo) 
@@ -510,6 +578,31 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		return last.extent();
 	}
 	
+	private Range1D lastRangeAtRelativeCoordUnsafe(Coord unsafeCoord)
+	{
+		List<Range1D> ranges = heightMap[unsafeCoord.x * patchDimensions.x + unsafeCoord.z];
+		return lastRange (ranges);
+	}
+	
+	private Range1D lastRange(List<Range1D> ranges)
+	{
+		AssertUtil.Assert(ranges.Count > 0 , "weird no ranges here?: ");
+		if (ranges.Count == 0)
+			return Range1D.theErsatzNullRange();
+		return ranges[ranges.Count -1];
+	}
+	
+	public int highestPointAtPatchRelativeCoord(Coord relCo)
+	{
+		if (relCo.isIndexSafe(patchDimensions))
+		{
+			return lastRangeAtRelativeCoordUnsafe(relCo).extent();
+		}
+		
+		Coord woco = patchWorldCoord() + relCo;
+		return highestPointAtWorldCoord(woco);
+	}
+	
 	public List<Range1D> rangesAtWorldCoord(Coord woco)
 	{
 		Coord unsafeRelCo = unsafePatchRelativeCoordFrom(woco);
@@ -545,15 +638,48 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	{
 		List<Range1D> y_ranges = heightRangesAtCoord(relCo);
 		
+		return blockTypeFromWithinRangeList(y_ranges, relCo.y);
 		// general note: a lot of work if we ever change the struct / data type that holds ranges!
+//		int count = 0;
+//		foreach(Range1D range in y_ranges)
+//		{
+//			RelationToRange relation = range.relationToRange(relCo.y);
+//			if (relation == RelationToRange.WithinRange)
+//			{
+//				//NOT pretending to check the 'range.blockType' thing (which actually doesn't exist right now)
+//				return range.blockType; //  BlockType.Grass;
+//			}
+//			
+//			//MUST ENSURE THAT RANGE LISTS ALWAYS GO FROM LOWEST TO HIGHEST
+//			
+//			//weird effects
+//			//bug when trying to destroy a block that 's part of a structure.
+//			//test turn off
+////			if (relation == RelationToRange.AboveRange) 
+////			{
+////				if (count < y_ranges.Count - 1)
+////				{
+////					RelationToRange relationNextOne = y_ranges[count + 1].relationToRange(relCo.y);
+////					if (relationNextOne == RelationToRange.BelowRange)
+////					{
+////						return BlockType.Air;
+////					}
+////				}
+////			}
+//			++count;
+//		}
+//
+//		return BlockType.Air;
+	}
+	
+	private BlockType blockTypeFromWithinRangeList(List<Range1D> y_ranges, int height) {
 		int count = 0;
 		foreach(Range1D range in y_ranges)
 		{
-			RelationToRange relation = range.relationToRange(relCo.y);
+			RelationToRange relation = range.relationToRange(height);
 			if (relation == RelationToRange.WithinRange)
 			{
-				//NOT pretending to check the 'range.blockType' thing (which actually doesn't exist right now)
-				return range.blockType; //  BlockType.Grass;
+				return range.blockType; 
 			}
 			
 			//MUST ENSURE THAT RANGE LISTS ALWAYS GO FROM LOWEST TO HIGHEST
@@ -918,6 +1044,12 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		int noiseAsWorldHeight = (int)(height_noise * elevationRange + elevationRange + baseElevation);
 
 		Range1D zeroToSurface = new Range1D(0, noiseAsWorldHeight - 1);
+		
+#if FLAT_TOO
+		result.Add(zeroToSurface);
+		return result;
+#endif
+		
 		Range1D topSod = new Range1D(noiseAsWorldHeight - 1, 1, BlockType.Grass);
 
 		// concavity insertion point (which may simply eat away at the height or may create a concavity)
@@ -1147,9 +1279,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 //				Range1D zero_ToSurface_range = new Range1D(0, noiseAsWorldHeight);
 //				heightRanges.Add(zero_ToSurface_range);
 				
-//#if FLAT_TOO
-//#else
 				PTwo patchRelCo = new PTwo(xx, zz);
+#if FLAT_TOO
+#else
 				if (aTreeIsHere(xx, zz, highestLevel, noise_val))
 				{
 					Tree tree = new Tree(patchRelCo, highestLevel, noise_val * 4.23f);
@@ -1158,15 +1290,15 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 					//save trees for neighbs where appro.
 					addTreeForNeighborPatches(tree);
 				}
+#endif
 				// add a structure on the surface maybe
 				// fake test...
-				if (xx == 12 && zz == 12)
+				if (xx == 14 && zz == 14)
 				{
 					Plinth pl = new Plinth(patchRelCo, highestLevel, noise_val + 5f); // silliness
 					structurz.Add(pl);
-//					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
+					//					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
 				}
-//#endif
 				
 				
 				heightMap[xx * patchDimensions.x + zz] = heightRanges;

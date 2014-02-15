@@ -166,9 +166,28 @@ public class MeshBuilder
 		mesh.triangles = mset.geometrySet.indices.ToArray();
 		mesh.uv = mset.uvs.ToArray();
 		mesh.colors32 = mset.color32s.ToArray();
+		
+		//TANGENT TEST
+		mesh.tangents = mset.tangents.ToArray(); // tangentsArrayOfLength(mesh.vertices.Length);
 
 		return mesh;
 	}
+	
+	//TANGENT TEST
+	private Vector4[] tangentsArrayOfLength(int length)
+	{
+		Vector4[] result = new Vector4[length];
+		
+		float testLightLevel = 8f * 8f * 8f * 7f + 8f * 8f * 6f + 8f * 5f + 4f;
+		float testLightLevel2 = 8f * 8f * 8f * 3f + 8f * 8f * 2f + 8f * 1f + 0f;
+		
+		for(int i = 0; i < length ; ++i)
+		{
+			result[i] = new Vector4(testLightLevel,testLightLevel2,testLightLevel,testLightLevel);	
+		}
+		return result;
+	}
+	//END TANGENT TEST
 	
 	private CombineInstance combineInstanceFromMeshSet(MeshSet mset) {
 		Mesh mesh = meshWithMeshSet(mset);
@@ -310,7 +329,7 @@ public class MeshBuilder
 			{
 				FaceAggregator faXminusOne = faceAggregatorAt(co - nudgeCoord, relevantPosDir);// aggregatorArray[relevantComponent - 1];
 				// TODO: make sure this func is really 'add face if not exists.'
-				faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type));
+				faXminusOne.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, test_b.type, this.m_chunk.lightDataProvider ));
 				faXminusOne.getFaceGeometry(relevantComponent - 1);
 				
 				// CONSIDER: TRY REMOVING A FACE AT THIS FACE AGG AS WELL. EVEN THOUGH THERE 'SHOULDN'T' BE ONE.
@@ -338,7 +357,7 @@ public class MeshBuilder
 			{
 				FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
 					
-				faXplusone.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, test_b.type));
+				faXplusone.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, test_b.type, this.m_chunk.lightDataProvider));
 				faXplusone.getFaceGeometry(relevantComponent + 1);
 			}
 		} else {
@@ -394,7 +413,7 @@ public class MeshBuilder
 		} else { 
 			
 			// * neighbor is air, so we need to add a face at our coord
-			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, btype));
+			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir + 1, btype, this.m_chunk.lightDataProvider));
 			faXY.getFaceGeometry(relevantComponent);
 		}
 		
@@ -424,7 +443,7 @@ public class MeshBuilder
 		} else {
 			
 			// * neighbor is air, need to add a face at this coord
-			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, btype));
+			faXY.addFaceAtCoordBlockType(new FaceInfo(co, Block.MAX_LIGHT_LEVEL, relevantPosDir, btype, this.m_chunk.lightDataProvider));
 			faXY.getFaceGeometry(relevantComponent);
 		}
 	}
@@ -470,6 +489,7 @@ public class MeshBuilder
 		List<Vector2> temp_uvs = new List<Vector2>();
 		List<int> temp_triangles = new List<int>();
 		List<Color32> temp_col32s = new List<Color32>();
+		List<Vector4> temp_v4s = new List<Vector4>();
 		
 		FaceAggregator fa;
 		for (int i = 0; i < faceAggs.Length ; ++i)
@@ -497,12 +517,14 @@ public class MeshBuilder
 				temp_triangles.AddRange(gset.indices);
 				temp_uvs.AddRange(mset.uvs);
 				temp_col32s.AddRange(mset.color32s);
+				temp_v4s.AddRange(mset.tangents);
+				
 				
 				fa.baseTriangleIndex = starting_tri_index; // for editing mesh (potentially)
 				starting_tri_index += gset.vertices.Count;
 			}
 		}
-		return new MeshSet(new GeometrySet(temp_triangles, temp_vertices), temp_uvs, temp_col32s);
+		return new MeshSet(new GeometrySet(temp_triangles, temp_vertices), temp_uvs, temp_col32s, temp_v4s);
 	}
 	
 	

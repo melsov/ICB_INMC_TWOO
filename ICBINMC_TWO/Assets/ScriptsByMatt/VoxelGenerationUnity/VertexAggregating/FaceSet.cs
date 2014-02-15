@@ -51,7 +51,9 @@ public class FaceSet
 	private const int SPECIAL_QUAD_LOOKUP_NUMBER = (int)(ChunkManager.CHUNKLENGTH * ChunkManager.CHUNKLENGTH * 805);
 	public static PTwo MAX_DIMENSIONS = new PTwo(4,4);
 	
-	public FaceSet(BlockType _type, Direction _dir, AlignedCoord initialCoord, byte lightLevel)
+	private ILightDataProvider m_lightDataProvider;
+	
+	public FaceSet(BlockType _type, Direction _dir, AlignedCoord initialCoord, byte lightLevel, ILightDataProvider _m_lightDataProvider)
 	{
 		blockType = _type;	
 		blockFaceDirection = _dir;
@@ -67,6 +69,8 @@ public class FaceSet
 		quadTable  = new int [quadTableDimensions.s, quadTableDimensions.t]; 
 		
 		addCoord(initialCoord, lightLevel);
+		
+		m_lightDataProvider = _m_lightDataProvider;
 	}
 	
 	private int quadIndexAtCoord(PTwo coord) {
@@ -868,6 +872,8 @@ public class FaceSet
 		List<Vector2> returnColors = new List<Vector2>();
 		List<Color32> returnCol32s = new List<Color32>();
 		
+		List<Vector4> returnTangents = new List<Vector4>();
+		
 		float half_unit = 0.5f;
 		
 #if LIGHT_BY_RANGE
@@ -876,9 +882,14 @@ public class FaceSet
 		
 #if UNDO_LIGHT_BY_RANGE_TEST
 		byte firstRowTest = (4*4*4) * 3 + (4 * 4) * 2 + (4) * 1; // last square lit?
-		Color32 lightByFacesXRows = new Color32(firstRowTest,255,255,255); // each component sets the possible 4 faces in an x row
+		Color32 lightByFacesXRows = new Color32(firstRowTest,firstRowTest,firstRowTest,firstRowTest); // lightLevelData(verticalHeight); 
 		cornerColors = new Color32[4]{ lightByFacesXRows,lightByFacesXRows,lightByFacesXRows,lightByFacesXRows };
 #endif
+		
+		//TANGENTS HOLD LIGHT LEVEL
+		Vector4 tangentLightValues = lightLevelDataFloat(verticalHeight); 
+		
+		// END TANGENT SETTING...
 
 		int i = 0;
 		for(; i < quads.Count ; ++i)
@@ -912,6 +923,7 @@ public class FaceSet
 			vertsAddedByStrip++;
 			returnUVS.Add(monoUVValue);
 			returnCol32s.Add(cornerColors[0] );
+			returnTangents.Add(tangentLightValues);
 		
 
 			Vector3 llVec = positionVectorForAcrossUpVertical((float) quad.origin.s - half_unit, 
@@ -921,7 +933,7 @@ public class FaceSet
 			vertsAddedByStrip++;
 			returnUVS.Add(monoUVValue);
 			returnCol32s.Add(cornerColors[1]);
-			
+			returnTangents.Add(tangentLightValues);
 		
 
 			Vector3 urVec = positionVectorForAcrossUpVertical((float) quad.extent().s - half_unit, 
@@ -931,6 +943,7 @@ public class FaceSet
 			vertsAddedByStrip++;
 			returnUVS.Add( monoUVValue); 
 			returnCol32s.Add(cornerColors[2]);
+			returnTangents.Add(tangentLightValues);
 			
 
 			Vector3 lrVec = positionVectorForAcrossUpVertical((float)quad.extent().s - half_unit, 
@@ -940,6 +953,7 @@ public class FaceSet
 			vertsAddedByStrip++;
 			returnUVS.Add(monoUVValue);
 			returnCol32s.Add(cornerColors[3]);
+			returnTangents.Add(tangentLightValues);
 			
 			int[] tris;
 			
@@ -958,8 +972,33 @@ public class FaceSet
 		//now maybe just calculate the actual v3 array and the indices....
 		GeometrySet geomset = new GeometrySet(returnTriIndices, returnVecs );
 		
-		return new MeshSet(geomset, returnUVS, returnCol32s);
+		return new MeshSet(geomset, returnUVS, returnCol32s, returnTangents);
 	}
+	
+	// TODO: explore having FaceSets own their meshSets too.
+	// Does this add memory? (since it's all lists? maybe no?)
+	// then they can edit light levels without recalculating geom.
+	// could also have them keep the quads lists
+	// although this would definitely add memory footprint.
+	
+	#region add color data to mesh set
+	
+	private Color32 lightLevelData(float verticalHeight)
+	{
+		AssertUtil.Assert(!faceSetLimits.isErsatzNull(), "we have some problems. face set limits is ersatz null when trying to get light level data");
+		 
+		return m_lightDataProvider.lightDataForQuad(this.faceSetLimits, this.blockFaceDirection, (int)(verticalHeight + .5f));
+	}
+	
+	private Vector4 lightLevelDataFloat(float verticalHeight)
+	{
+		AssertUtil.Assert(!faceSetLimits.isErsatzNull(), "we have some problems. face set limits is ersatz null when trying to get light level data (float version)");
+		
+		return m_lightDataProvider.lightDataForQuadFloat(this.faceSetLimits, this.blockFaceDirection, (int) (verticalHeight + .5f));
+	}
+	
+//	private Color32 colorData
+	#endregion
 	
 	private Vector3 positionVectorForAcrossUpVertical(float across,  float vertical, float up)
 	{
@@ -1076,7 +1115,7 @@ public class FaceSetTest
 	public FaceSetTest()
 	{
 		bug ("BEGIN FACE SET TEST");
-		FaceSet fs = new FaceSet(BlockType.Grass, Direction.ypos, new AlignedCoord(0,0), 3);
+		FaceSet fs = new FaceSet(BlockType.Grass, Direction.ypos, new AlignedCoord(0,0), 3, new LightDataProvider(new Chunk()));
 		
 		Coord[] coords = new Coord[256];
 		for(int i = 0; i < 256 ; ++i)

@@ -104,7 +104,7 @@ public struct AlignedCoord
 //}
 
 [Serializable]
-public struct SimpleRange
+public struct SimpleRange : IEquatable<SimpleRange>
 {
 	public int start, range; // TODO: convert to short?
 	
@@ -119,6 +119,11 @@ public struct SimpleRange
 	
 	public static SimpleRange SimpleRangeWithStartAndExtent(int start_, int extent_) {
 		return new SimpleRange(start_, extent_ - start_);	
+	}
+	
+	public bool Equals(SimpleRange other)
+	{
+		return this.start == other.start && this.range == other.range;
 	}
 	
 	public int extent() {
@@ -170,6 +175,10 @@ public struct SimpleRange
 		return new SimpleRange(copyMe.start, copyMe.range);	
 	}
 	// set funcs.
+	
+	public int midPoint() {
+		return (int)(((start + extent() )/2f) + .5f);	
+	}
 	
 	public SimpleRange subRangeAboveRange(SimpleRange excluder) {
 		

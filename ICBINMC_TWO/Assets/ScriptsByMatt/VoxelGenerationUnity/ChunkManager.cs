@@ -57,6 +57,10 @@ public class ChunkManager : MonoBehaviour
 
 //	public Chunk prefabChunk;
 	public Transform prefabMeshHolder;
+	
+	public DebugLinesMonoBAssistant debugLines;
+	public static DebugLinesMonoBAssistant debugLinesAssistant;
+
 
 	private ChunkMap chunkMap;
 
@@ -142,7 +146,9 @@ public class ChunkManager : MonoBehaviour
 		setupThesePatches = new List<NoisePatch> ();
 
 	}
-
+	
+	#region ask a chunkmanager
+	
 	public Block blockAtChunkCoordOffset(Coord cc, Coord offset)
 	{
 		Coord index = new Coord ((int)(cc.x * CHUNKLENGTH + offset.x),
@@ -236,6 +242,46 @@ public class ChunkManager : MonoBehaviour
 		return blocks.heightsListAtWorldCoord(index); //   np.heightsListAtChunkCoordOffset(cc, offset);
 	}
 	
+	public CoordSurfaceStatus coordIsAboveSurface(Coord cc, Coord offset) // Coord noiseCoordOffset, NoiseCoord nCo)
+	{
+		Coord index = new Coord ((int)(cc.x * CHUNKLENGTH + offset.x),
+									(int) (cc.y * CHUNKHEIGHT + offset.y),
+									(int) (cc.z * CHUNKLENGTH + offset.z));
+
+		if (index.y < 0 || index.y > WORLD_HEIGHT_BLOCKS - 1) {  
+			throw new Exception("index out of range.");
+			return CoordSurfaceStatus.ABOVE_SURFACE;
+		} 
+
+		if (!blocks.noisePatchExistsAtWorldCoord(index) )
+		{
+			throw new Exception("noisePatch doesn't exist...");
+			return CoordSurfaceStatus.ABOVE_SURFACE;
+		}
+
+		return blocks.worldCoordIsAboveSurface(index); //   np.heightsListAtChunkCoordOffset(cc, offset);
+	}
+	
+//	
+//	public CoordSurfaceStatus coordIsAboveSurface(Coord noiseCoordOffset, NoiseCoord nCo)
+//	{
+//		Coord index = worldCoordForNoiseCoord(nCo) + noiseCoordOffset;
+//
+//		if (index.y < 0 || index.y > WORLD_HEIGHT_BLOCKS - 1) {  
+//			throw new Exception("index out of range.");
+//			return CoordSurfaceStatus.ABOVE_SURFACE;
+//		} 
+//
+//		if (!blocks.noisePatchExistsAtWorldCoord(index) )
+//		{
+//			throw new Exception("noisePatch doesn't exist...");
+//			return CoordSurfaceStatus.ABOVE_SURFACE;
+//		}
+//
+//		return blocks.worldCoordIsAboveSurface(index); //   np.heightsListAtChunkCoordOffset(cc, offset);
+//	}
+	
+	#endregion
 	
 	void makeChunksFromOnMainThread(ChunkCoord start, ChunkCoord range)
 	{
@@ -1735,6 +1781,8 @@ public class ChunkManager : MonoBehaviour
 	// Use this for initialization
 	void Start () 
 	{
+		debugLinesAssistant = (DebugLinesMonoBAssistant) debugLines;
+		
 		if (TestRunner.DontRunGame() )
 			return;
 
@@ -1953,14 +2001,14 @@ public class ChunkManager : MonoBehaviour
 //		#endif
 		//**want
 		
-		DebugLinesUtil.drawDebugCubesForAllCreatedNoisePatches(currentTargetedForCreationNoiseCo, blocks.noisePatches);
+//		DebugLinesUtil.drawDebugCubesForAllCreatedNoisePatches(currentTargetedForCreationNoiseCo, blocks.noisePatches);
 //		DebugLinesUtil.drawDebugCubesForNoisePatchesList(setupThesePatches, Color.yellow, 6);
-		DebugLinesUtil.drawDebugCubesForNoisePatchesList(checkDoneForThesePatches, Color.magenta, 2);
-		DebugLinesUtil.drawDebugCubesForNoiseCoordList(bugNoiseCoordsThatDidntExist, Color.red, 1);
+//		DebugLinesUtil.drawDebugCubesForNoisePatchesList(checkDoneForThesePatches, Color.magenta, 2);
+//		DebugLinesUtil.drawDebugCubesForNoiseCoordList(bugNoiseCoordsThatDidntExist, Color.red, 1);
 //		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));
 		
 //		DebugLinesUtil.drawDebugCubesForAllUncreatedChunks(createTheseVeryCloseAndInFrontChunks);
-		DebugLinesUtil.drawDebugCubesForChunkCoordList(bugCoordsThatWaitedForAdjacentNPatches, new Color(.1f,.7f,.4f,1f), new Coord(-2,0,2));
+//		DebugLinesUtil.drawDebugCubesForChunkCoordList(bugCoordsThatWaitedForAdjacentNPatches, new Color(.1f,.7f,.4f,1f), new Coord(-2,0,2));
 //		DebugLinesUtil.drawDebugCubesForChunksOnDestroyList(destroyTheseChunks);
 //		DebugLinesUtil.drawDebugCubesForChunksOnCheckASyncList(checkTheseAsyncChunksDoneCalculating);
 //		DebugLinesUtil.drawDebugCubesForChunkList(activeChunks, new Color(.9f,.4f,.4f,1.0f), new Coord(1,0,4));

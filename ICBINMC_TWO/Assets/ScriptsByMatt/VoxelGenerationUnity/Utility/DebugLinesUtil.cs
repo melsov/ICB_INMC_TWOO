@@ -2,6 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 
+public struct CoordLine
+{
+	public Coord start;
+	public Coord end;
+	
+}
+
 public static class DebugLinesUtil
 {
 	
@@ -163,10 +170,16 @@ public static class DebugLinesUtil
 		drawDebugCube(start, chunkCoRange.range * length);
 	}
 	
+	public static void DrawUnitCubeAt(Coord woco)
+	{
+		drawDebugCube(woco, new Coord(1), Color.magenta);	
+	}
+	
 	static void drawDebugCube(Coord start, Coord dims)
 	{
 		drawDebugCube(start, dims, Color.white);
 	}
+	
 	
 	static void drawDebugCube(Coord start, Coord dims, Color col)
 	{
@@ -187,6 +200,8 @@ public static class DebugLinesUtil
 		
 		//diag on top
 		debugLine(new Coord (start.x, outer.y, start.z), outer);
+		
+		debugLine(start, outer, Color.blue);  // across 
 	}
 	
 	static void drawDebugBlock(Coord start, Coord dims)
@@ -207,14 +222,14 @@ public static class DebugLinesUtil
 		debugLineV (new Vector3 (startV.x, outerV.y, startV.z), new Vector3 (outerV.x , outerV.y, startV.z));
 	}
 	
-	static void debugLine(Coord aa, Coord bb)
+	public static void debugLine(Coord aa, Coord bb)
 	{
 		UnityEngine.Debug.DrawLine (aa.toVector3(), bb.toVector3());
 	}
 	
-	static void debugLine(Coord aa, Coord bb, Color color)
+	public static void debugLine(Coord aa, Coord bb, Color color)
 	{
-		UnityEngine.Debug.DrawLine (aa.toVector3(), bb.toVector3(), color);
+		UnityEngine.Debug.DrawLine (aa.toVector3() - new Vector3(.5f, .5f, .5f), bb.toVector3() - new Vector3(.5f, .5f, .5f), color);
 	}
 
 	static void debugLineV(Vector3 aa, Vector3 bb)

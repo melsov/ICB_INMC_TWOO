@@ -42,6 +42,11 @@
         #define HALF_FACE_SET_MAX_LENGTH 2.0
         #define BITS_PER_LIGHT_LEVEL 2.0
         
+        #define NUM_LIGHT_LEVELS 8.0
+        #define NUM_LIGHT_LEVELS_PLUS_ONE 9.0
+        
+        #define LIGHT_LEVEL_VERTEX_MULTIPLIER 1.0
+        
         #define CORNER_LIGHT_MULTIPLIER (255.0/16.0)
         
         uniform sampler2D _BlockTex;
@@ -53,6 +58,7 @@
             float3 normal : NORMAL;
             half2 texcoord : TEXCOORD0;
 			float4 color32 : COLOR;
+			float4 tangent : TANGENT;
         };
 
         struct v2f {
@@ -70,9 +76,9 @@
                 
         // GET A COMPONENT IN FLOAT4 BASED ON THE XCOORD % MAX_LENGTH
         // I.E. EACH COMPONENT APPLIES TO ONE OF THE FOUR ROWS
-        float getIndex(float4 overhang, float xco) 
+        inline float getIndex(float4 overhang, float xco) 
         {
-        	xco = fmod(xco, FACE_SET_MAX_LENGTH); 
+//        	xco = fmod(xco, FACE_SET_MAX_LENGTH);  // assume already modded
         	if (xco < 1.0) { 
 				return overhang.x;
 			} 
@@ -136,17 +142,21 @@
 			}
 			else if ( v.normal.z < -NORMAL_THRESHOLD)
 			{
-//				vy = -(v.vertex.y + .5);
 				vy = (v.vertex.y + .5);
-				vx *= -1;
+				
+				//TEST NO FLIP TO NEG
+//				vx *= -1;
+
 				light_level += neg_shadow_nudge;
 //				worldy = worldpos.y;
 //				pposy = _PlayerLoc.y;
 			}
 			else if (v.normal.x > NORMAL_THRESHOLD) 
 			{
-//				vx = -(v.vertex.y + .5);
-				vx  = -(v.vertex.z + .5);
+
+
+//				vx  = -(v.vertex.z + .5);
+				vx  = (v.vertex.z + .5); // TEST NO FLIP TO NEG!!
 				vy = (v.vertex.y + .5);
 				light_level += pos_shadow_nudge;
 //				worldx = worldpos.y;
@@ -161,11 +171,12 @@
 //				worldx = worldpos.y;
 //				pposx = _PlayerLoc.y;
 			}
-			else if (v.normal.y < -NORMAL_THRESHOLD)
-			{
-				vx *= -1;
+//			else if (v.normal.y < -NORMAL_THRESHOLD)
+//			{
+			// TEST. NO FLIP TO NEG
+//				vx *= -1; 
 				
-			} 
+//			} 
 			else // ypositive
 			{
 				light_level = .75 + .25 * day_level;
@@ -189,7 +200,7 @@
 
 			float index = v.texcoord.x * (TOTAL_TILES);
 			float blocky = floor(index/TILES_PER_DIM);
-			half2 tile_o = half2(index - blocky * TILES_PER_DIM, blocky) * 0.25;
+			half2 tile_o = half2(index - blocky * TILES_PER_DIM , blocky) * 0.25;
 			o.color.xy = tile_o; // store in color for now
 			
 //			//			TEST //TEST
@@ -215,7 +226,9 @@
 #ifdef LIGHT_BY_RANGE
 			o.overhangLightLevel = v.color32.r > 0.0 ? v.color32.r * CORNER_LIGHT_MULTIPLIER + 0.1 : 0.0;
 #else			
-			o.overhangLightLevel = v.color32 * 255.0 + float4(.5); // float2(1.0 * 65535.0 + .5, v.texcoord1.y * 65535.0 + .5); // v.texcoord1.xy * 4.5 * 65535.0 + .5; // float2( 65535.5, 65535.5); //
+//			o.overhangLightLevel = v.color32 * 255.0 + float4(.5); // float2(1.0 * 65535.0 + .5, v.texcoord1.y * 65535.0 + .5); // v.texcoord1.xy * 4.5 * 65535.0 + .5; // float2( 65535.5, 65535.5); //
+// TEST TANGENT
+			o.overhangLightLevel = v.tangent * LIGHT_LEVEL_VERTEX_MULTIPLIER + float4(.5); 
 #endif
 			//END CAVE/OVERHANG LIGHT
 			
@@ -244,7 +257,9 @@
 			fixed4 foolcompiler = tex2D(_BlockTex, i.uv);
         	return fixed4(i.color); // * tex2D(_BlockTex, i.uv);
 #endif
-			half2 scaled_uv = frac(i.uv.xy) * .25; 
+			
+//			half2 scaled_uv = frac(i.uv.xy) * .25; 
+			half2 scaled_uv = (i.uv.xy - floor(i.uv.xy)) * .25; 
 			half2 offset =  i.color.xy; // + half2(.03);
 			
 			//TEST
@@ -267,8 +282,12 @@
 			//65536; // = 2 ^ 16
 			// GENERAL NOTE: 4967295.0 % 2 > 0.
 			// 4294967295.0 % 2 is not > 0!!
+
+			// CONSIDER: (adopted) DO WE NEED ABS()?
+			// IS THERE ANOTHER WAY TO GET THE TEXTURES ALIGNED WITHOUT
+			// FLIPPING THE NORMALS IN THE VERT SHADER?
 			
-			half2 model_rel_twoD = floor(abs(i.uv.xy));
+			half2 model_rel_twoD = fmod( floor(i.uv.xy), FACE_SET_MAX_LENGTH);
 			float index = getIndex(i.overhangLightLevel, model_rel_twoD.x); // 0; // (fmod(floor(model_rel_twoD.x), FACE_SET_MAX_LENGTH) > 1.0) ? ll_two : local_light_index; 
 			
 //			float facemodx = fmod(floor(model_rel_twoD.x), HALF_FACE_SET_MAX_LENGTH);
@@ -282,10 +301,19 @@
 //			fixed local_light =   (light_one + light_two) / 1.5;
 
 			//ALT POW 4 version
-			float facemodz = fmod(floor(model_rel_twoD.y), FACE_SET_MAX_LENGTH); 
-			float power_lookup = floor(index / pow(4.0, facemodz)); 
-			half light_one = fmod( power_lookup , 4.0  );
-			fixed local_light = (light_one + 2.0) / 5.0; // LOWEST IS NOT ZERO //   light_one / 3.0;
+//			float facemodz = fmod(floor(model_rel_twoD.y), FACE_SET_MAX_LENGTH); 
+			float power_lookup = floor(index / pow(NUM_LIGHT_LEVELS, model_rel_twoD.y)); 
+			half light_one = fmod( power_lookup , NUM_LIGHT_LEVELS  );
+			
+
+//			if (light_one < 1.0) 
+//				return fixed4(1.0, 1.0,0.0,1.0) * i.color.z; //test
+//			if (light_one < 2.0) 
+//				return fixed4(0.0, 1.0,0.0,1.0) * i.color.z; //test	
+			
+			fixed local_light = (light_one + 2.0) / NUM_LIGHT_LEVELS_PLUS_ONE; // LOWEST IS NOT ZERO //   light_one / 3.0;
+			
+			
 			
 	        return tex2D(_BlockTex, scaled_uv) * i.color.z * local_light; // color z == light level
 

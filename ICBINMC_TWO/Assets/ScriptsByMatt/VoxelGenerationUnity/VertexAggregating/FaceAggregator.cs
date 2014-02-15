@@ -107,7 +107,7 @@ public class FaceAggregator
 		}
 		
 		// ok we need a new face set...
-		newFaceSetAtCoord(alco, type, dir, faceInfo.lightLevel);
+		newFaceSetAtCoord(alco, type, dir, faceInfo.lightLevel, faceInfo.lightDataProvider);
 	}
 	
 	#region add ranges of faces
@@ -116,17 +116,19 @@ public class FaceAggregator
 	{
 		faceInfo.range.assertNotNull("Ersatz null range for face info in face agg. add fa range");
 		
-		Range1D faRange = faceInfo.range;
 		int acrossI = acrossIndexFromCoord(faceInfo.coord);
 		
 		if (acrossI > 0)
-			addToFaceSetsAt(acrossI - 1, faRange, faceInfo.direction);
+			addToFaceSetsAt(acrossI - 1, faceInfo);
 		else 
-			addNewFaceSetsWith(acrossI, faRange, faceInfo.direction);
+			addNewFaceSetsWith(acrossI, faceInfo);
 	}
 	
-	private void addToFaceSetsAt(int nextToRangeIndex, Range1D addRange, Direction dir)
+	private void addToFaceSetsAt(int nextToRangeIndex, FaceInfo finfo )
 	{
+		Range1D addRange = finfo.range;
+		Direction dir = finfo.direction;
+		
 		AssertUtil.Assert(nextToRangeIndex < this.faceSetTableHalfDims.s - 1 , "need next to range to be in our table minus one column");
 		
 		foreach(int faceSetIndex in faceSetsAtAcrossIndexFlushWithRange(nextToRangeIndex, addRange, dir))
@@ -143,30 +145,35 @@ public class FaceAggregator
 				Range1D unusedRangeBelow = addRange.subRangeBelowRange(usedRange);
 				if (!unusedRangeBelow.isErsatzNull())
 				{
-					addNewFaceSetsWith(nextToRangeIndex + 1, addRange, dir);
+//					addNewFaceSetsWith(nextToRangeIndex + 1, addRange, dir);
+					addNewFaceSetsWith(nextToRangeIndex + 1, finfo);
 				}
 				
 				Range1D unusedAbove = addRange.subRangeAboveRange(usedRange);
 				if (!unusedAbove.isErsatzNull())
 				{
-					addToFaceSetsAt(nextToRangeIndex, unusedAbove, dir);
+					finfo.range  = unusedAbove;
+//					addToFaceSetsAt(nextToRangeIndex, unusedAbove, dir);
+					addToFaceSetsAt(nextToRangeIndex, finfo);
 				}
 				return;
 			}
 		}
 		
-		addNewFaceSetsWith(nextToRangeIndex + 1, addRange, dir);
+		addNewFaceSetsWith(nextToRangeIndex + 1, finfo);
 		
 	}
 	
-	private void addNewFaceSetsWith(int acrossI, Range1D addRange, Direction dir)
+	private void addNewFaceSetsWith(int acrossI, FaceInfo finfo )
 	{
+		Range1D addRange = finfo.range;
+		Direction dir = finfo.direction;
 		AlignedCoord startAlco = new AlignedCoord(acrossI, addRange.start);
 		
 		int fsIndex = indexOfFaceSetAtCoord(startAlco, dir);
 		
 		if (!indexRepresentsAnOccupiedCoord(fsIndex))
-			newFaceSetAtCoord(startAlco, addRange.blockType, dir, addRange.bottom_light_level);
+			newFaceSetAtCoord(startAlco, addRange.blockType, dir, addRange.bottom_light_level, finfo.lightDataProvider);
 		
 		FaceSet justAddedFS = faceSetAt(startAlco, dir);
 		
@@ -184,7 +191,8 @@ public class FaceAggregator
 		{
 			if (unusedRangeAbove.range > 0)
 			{
-				addNewFaceSetsWith(acrossI, unusedRangeAbove, dir);
+				finfo.range = unusedRangeAbove;
+				addNewFaceSetsWith(acrossI, finfo);
 			}
 		}
 	}
@@ -334,7 +342,7 @@ public class FaceAggregator
 		return index > -1 && index < faceSets.Count;
 	}
 	
-	private void newFaceSetAtCoord(AlignedCoord coord, BlockType type, Direction dir, byte lightLevel)
+	private void newFaceSetAtCoord(AlignedCoord coord, BlockType type, Direction dir, byte lightLevel, ILightDataProvider lightDataProvider)
 	{
 		//TODO: figure out what we should really to in this case.
 		// maybe some kind of look up table re: which block type wins?
@@ -353,7 +361,7 @@ public class FaceAggregator
 //		b.bug("adding a new face set at coord: " + coord.toString() );
 
 		int faceSetsCount = faceSets.Count;
-		FaceSet fs = new FaceSet(type, dir, coord, lightLevel);
+		FaceSet fs = new FaceSet(type, dir, coord, lightLevel, lightDataProvider);
 		faceSets.Add (fs);
 		
 		int nudge_lookup = ((int) dir % 2 == 0) ? 0 : 1; // pos dirs are 0, 2 and 4
@@ -513,6 +521,7 @@ public class FaceAggregator
 		List<Vector2> resUVs = new List<Vector2>();
 //		List<Vector2> resColors = new List<Vector2>();
 		List<Color32> resCol32s = new List<Color32>();
+		List<Vector4> resV4s = new List<Vector4>();
 		
 		GeometrySet geomset; // = new GeometrySet();
 		MeshSet mset;
@@ -535,9 +544,10 @@ public class FaceAggregator
 			
 			resUVs.AddRange(mset.uvs);
 			resCol32s.AddRange(mset.color32s);
+			resV4s.AddRange(mset.tangents);
 		}
 
-		MeshSet ret_mset = new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs, resCol32s);
+		MeshSet ret_mset = new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs, resCol32s, resV4s);
 		this.meshSet = ret_mset;
 		return ret_mset;
 	}
@@ -672,6 +682,7 @@ public class FaceAggregator
 public class FaceAggregatorTest
 {
 	public Coord[] testCoords;
+	public LightDataProvider lightDataProviderFake = new LightDataProvider(new Chunk());
 	public FaceAggregator fa;
 	
 	private static Coord[] excludedCoords = new Coord[]{
@@ -731,7 +742,9 @@ public class FaceAggregatorTest
 		for(int i = 0; i < coordDims1; ++i)
 		{
 			int varyRangeBy = i % 2 == 0 ? 2 : 1;
-			FaceInfo faceinfo = new FaceInfo(new Coord(i, 4, 0), new Range1D(0, rangeRange - varyRangeBy ), Direction.ypos);
+			LightDataProvider lightDP = new LightDataProvider(new Chunk());
+			
+			FaceInfo faceinfo = new FaceInfo(new Coord(i, 4, 0), new Range1D(0, rangeRange - varyRangeBy ), Direction.ypos, lightDP);
 			fa.addFaceInfoRange(faceinfo);
 		}
 	}
@@ -777,7 +790,7 @@ public class FaceAggregatorTest
 			} //dont remove for now
 			
 			if (include) {
-				FaceInfo faceinfo = new FaceInfo(co, Block.MAX_LIGHT_LEVEL, Direction.ypos , BlockType.Grass);
+				FaceInfo faceinfo = new FaceInfo(co, Block.MAX_LIGHT_LEVEL, Direction.ypos , BlockType.Grass, lightDataProviderFake);
 				fa.addFaceAtCoordBlockType(faceinfo);	
 			}
 

@@ -366,6 +366,18 @@ public class BlockCollection
 		return np.heightsListAtWorldCoord(woco);
 			
 	}
+	
+	public CoordSurfaceStatus worldCoordIsAboveSurface(Coord woco) {
+		NoisePatch np = noisePatchAtWorldCoord(woco);
+		
+		if (np == null) {
+			throw new Exception("trying to get a heights list for which we don't have a noise patch");	
+			return CoordSurfaceStatus.ABOVE_SURFACE;
+		}
+		
+		return np.worldCoordIsAboveSurface(woco);
+			
+	}
 
 //	public Block specialGetBlockForTesting(Coord woco) 
 //	{

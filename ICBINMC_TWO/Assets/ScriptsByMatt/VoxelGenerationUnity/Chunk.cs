@@ -59,18 +59,21 @@ public struct FaceInfo
 	public Coord coord;
 	public Direction direction;
 	public BlockType blockType;
+	public ILightDataProvider lightDataProvider;
 	
 	public Range1D range; // new (oh no!)
 	
-	public FaceInfo(Coord _coord, byte _lightlev, Direction _dir, BlockType block_type) {
+	public FaceInfo(Coord _coord, byte _lightlev, Direction _dir, BlockType block_type, ILightDataProvider _lightDataProvider) {
 		coord = _coord; lightLevel = _lightlev;	direction = _dir; blockType = block_type;
 		range = Range1D.theErsatzNullRange();
+		lightDataProvider = _lightDataProvider;
 	}
 	
-	public FaceInfo(Coord _coord, Range1D _range, Direction _dir) {
+	public FaceInfo(Coord _coord, Range1D _range, Direction _dir, ILightDataProvider _lightDataProvider) {
 		coord = _coord; lightLevel = _range.top_light_level; direction = _dir;
 		blockType = _range.blockType; // arg.. duplications...
 		range = _range;
+		lightDataProvider = _lightDataProvider;
 	}
 }
 
@@ -97,9 +100,12 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 	public const float VERTEXSCALE = 1f;
 	public const int TEXTURE_ATLAS_TILES_PER_DIM = 4;
 	
+	public ILightDataProvider lightDataProvider;
+	
 	public Chunk()
 	{
 		meshBuilder = new MeshBuilder(this);
+		lightDataProvider = new LightDataProvider(this);
 	}
 
 	protected override void ThreadFunction()
@@ -108,17 +114,18 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 			makeMeshAltThread (CHUNKLENGTH, CHUNKHEIGHT);
 	}
 	
-
-	
 	protected override void OnFinished()
 	{
 //		if (calculatedMeshAlready)
 //			applyMesh ();
 	}
 	
-	public void resetCalculatedAlready() {
+	public void resetCalculatedAlready() 
+	{
 		this.hasStarted = false;
-		this.IsDone = false; // TODO: resolve these to one var!!
+		this.IsDone = false; 
+		
+		// TODO: (done? see calcMeshAlready property) resolve these to one var!!
 //		this.calculatedMeshAlready = false;	
 	}
 	
@@ -392,7 +399,7 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 	{
 		//TODO: make 'addRange func.s in FaceSet and FAgg
 		//TODO: make sure that all ranges are of one block type.
-		FaceInfo finfo = new FaceInfo(Coord.coordZero() , 3, dir, type);
+		FaceInfo finfo = new FaceInfo(Coord.coordZero() , 3, dir, type, this.lightDataProvider);
 
 		foreach(Range1D range in ranges)
 		{
@@ -498,7 +505,7 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 								b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
 								if (b != null) 
 								{
-									addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type));
+									addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type, this.lightDataProvider));
 								}
 							}
 						}
@@ -510,7 +517,7 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 						if (!aSolidRangeAboveIsFlushWithRangeAtIndex(heights, j))
 						{
 							if (b != null)
-								addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.ypos, b.type));
+								addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.ypos, b.type, this.lightDataProvider));
 						}
 						
 						//XPOS

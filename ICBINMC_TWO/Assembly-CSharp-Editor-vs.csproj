@@ -47,6 +47,7 @@
      <Compile Include="Assets\ScriptsByMatt\Editor\TetraEditor.cs" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\SkyBox.shader" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockTilingArrayTex.shader" />
+     <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockTilingAtlas_BKUP_W_OLD_CODE.shader" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\FORK_flashlight_BlockTilingAtlas.shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.LESSER.txt" />

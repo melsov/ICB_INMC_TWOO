@@ -86,6 +86,8 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\CoordStructs.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\FrustumChecker.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\LibNoiseNetHandler.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Lighting\Window.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Lighting\WindowMap.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoiseHandler.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoisePatch.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\ObjectMaps\CurtainTable.cs" />
@@ -134,11 +136,16 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structs.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structures\StructureBase.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\AssertUtil.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\CoordUtil.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\DebugLinesMonoBAssistant.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\DebugLinesUtil.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\DirectionUtil.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\HemiSphereData.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\RangeUtils.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\Utils.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceAggregator.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\FaceSet.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\ILightDataProvider.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\LightLevelTable.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\VertexAggregating\MeshBuilder.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\linnoise-net\src\Builder\IBuilderFilter.cs" />
@@ -233,6 +240,7 @@
      <Compile Include="Assets\ThreadedJob\ThreadedJob.cs" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\SkyBox.shader" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockTilingArrayTex.shader" />
+     <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockTilingAtlas_BKUP_W_OLD_CODE.shader" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\FORK_flashlight_BlockTilingAtlas.shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Resources\LibNoise.Unity\COPYING.LESSER.txt" />

@@ -27,22 +27,36 @@ public struct MeshSet
 	public List<Vector2> uvs;
 	public List<Vector2> colors;
 	public List<Color32> color32s;
+	public List<Vector4> tangents;
 	
 	public int deltaVertexCount;
 	
-	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Vector2> _colors, List<Color32> _color32s) {
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Vector2> _colors, List<Color32> _color32s, List<Vector4> _tangents) {
 		this.geometrySet = gs; this.uvs = _uvs;	
 		deltaVertexCount = 0;
 		color32s = _color32s;
 		colors = _colors;
+		tangents = _tangents;
+	}
+	
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Color32> _color32s, List<Vector4> _tangents) {
+		this = new MeshSet(gs, _uvs, new List<Vector2>(), _color32s, _tangents);
+	}
+	
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Vector2> _colors, List<Color32> _color32s) {
+		this = new MeshSet(gs, _uvs, _colors, _color32s, new List<Vector4>());
 	}
 	
 	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Vector2> _colors) {
-		this = new MeshSet(gs, _uvs, _colors, new List<Color32>() );
+		this = new MeshSet(gs, _uvs, _colors, new List<Color32>(), new List<Vector4>() );
 	}
 	
 	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Color32> _color32s) {
-		this = new MeshSet(gs, _uvs, new List<Vector2>() , _color32s);
+		this = new MeshSet(gs, _uvs, new List<Vector2>() , _color32s, new List<Vector4>());
+	}
+	
+	public MeshSet(GeometrySet gs, List<Vector2> _uvs, List<Vector4> _tangents) {
+		this = new MeshSet(gs, _uvs, new List<Vector2>() , new List<Color32>(), _tangents);
 	}
 	
 	public MeshSet(GeometrySet gs, List<Vector2> _uvs) {
@@ -53,6 +67,7 @@ public struct MeshSet
 		List<Vector3> vs = new List<Vector3>();
 		List<int> tris = new List<int>();
 		List<Vector2> uvs = new List<Vector2>();
+		List<Vector4> tangs = new List<Vector4>();
 		return new MeshSet(new GeometrySet(tris, vs), uvs);
 	}
 	
@@ -65,6 +80,7 @@ public struct MeshSet
 		this.uvs.Clear();
 		this.colors.Clear();
 		this.color32s.Clear();
+		this.tangents.Clear();
 	}
 }
 //
