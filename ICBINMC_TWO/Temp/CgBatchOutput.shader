@@ -356,62 +356,71 @@ void main ()
   mediump float light_one_3;
   mediump vec2 offset_4;
   mediump vec2 scaled_uv_5;
-  highp vec2 tmpvar_6;
-  tmpvar_6 = xlv_COLOR.xy;
-  offset_4 = tmpvar_6;
-  scaled_uv_5 = (((xlv_TEXCOORD0 - floor(xlv_TEXCOORD0)) * 0.25) + offset_4);
-  mediump vec2 tmpvar_7;
-  tmpvar_7 = (floor(xlv_TEXCOORD0) / vec2(4.0, 4.0));
+  mediump vec2 tmpvar_6;
+  tmpvar_6 = floor(xlv_TEXCOORD0);
+  highp vec2 tmpvar_7;
+  tmpvar_7 = xlv_COLOR.xy;
+  offset_4 = tmpvar_7;
+  scaled_uv_5 = (((xlv_TEXCOORD0 - tmpvar_6) * 0.25) + offset_4);
   mediump vec2 tmpvar_8;
-  tmpvar_8 = (fract(abs(tmpvar_7)) * vec2(4.0, 4.0));
-  mediump float tmpvar_9;
-  if ((tmpvar_7.x >= 0.0)) {
-    tmpvar_9 = tmpvar_8.x;
-  } else {
-    tmpvar_9 = -(tmpvar_8.x);
-  };
+  tmpvar_8 = (tmpvar_6 / vec2(4.0, 4.0));
+  mediump vec2 tmpvar_9;
+  tmpvar_9 = (fract(abs(tmpvar_8)) * vec2(4.0, 4.0));
   mediump float tmpvar_10;
-  if ((tmpvar_7.y >= 0.0)) {
-    tmpvar_10 = tmpvar_8.y;
+  if ((tmpvar_8.x >= 0.0)) {
+    tmpvar_10 = tmpvar_9.x;
   } else {
-    tmpvar_10 = -(tmpvar_8.y);
+    tmpvar_10 = -(tmpvar_9.x);
   };
-  mediump vec2 tmpvar_11;
-  tmpvar_11.x = tmpvar_9;
-  tmpvar_11.y = tmpvar_10;
-  highp float xco_12;
-  xco_12 = tmpvar_11.x;
-  highp float tmpvar_13;
-  if ((xco_12 < 1.0)) {
-    tmpvar_13 = xlv_.x;
+  mediump float tmpvar_11;
+  if ((tmpvar_8.y >= 0.0)) {
+    tmpvar_11 = tmpvar_9.y;
   } else {
-    if ((xco_12 < 2.0)) {
-      tmpvar_13 = xlv_.y;
+    tmpvar_11 = -(tmpvar_9.y);
+  };
+  mediump vec2 tmpvar_12;
+  tmpvar_12.x = tmpvar_10;
+  tmpvar_12.y = tmpvar_11;
+  highp float xco_13;
+  xco_13 = tmpvar_12.x;
+  highp float tmpvar_14;
+  if ((xco_13 < 1.0)) {
+    tmpvar_14 = xlv_.x;
+  } else {
+    if ((xco_13 < 2.0)) {
+      tmpvar_14 = xlv_.y;
     } else {
-      if ((xco_12 < 3.0)) {
-        tmpvar_13 = xlv_.z;
+      if ((xco_13 < 3.0)) {
+        tmpvar_14 = xlv_.z;
       } else {
-        tmpvar_13 = xlv_.w;
+        tmpvar_14 = xlv_.w;
       };
     };
   };
-  mediump float tmpvar_14;
-  tmpvar_14 = pow (8.0, tmpvar_10);
-  highp float tmpvar_15;
-  tmpvar_15 = (floor((tmpvar_13 / tmpvar_14)) / 8.0);
+  mediump float tmpvar_15;
+  tmpvar_15 = pow (8.0, tmpvar_11);
   highp float tmpvar_16;
-  tmpvar_16 = (fract(abs(tmpvar_15)) * 8.0);
+  tmpvar_16 = (floor((tmpvar_14 / tmpvar_15)) / 8.0);
   highp float tmpvar_17;
-  if ((tmpvar_15 >= 0.0)) {
-    tmpvar_17 = tmpvar_16;
+  tmpvar_17 = (fract(abs(tmpvar_16)) * 8.0);
+  highp float tmpvar_18;
+  if ((tmpvar_16 >= 0.0)) {
+    tmpvar_18 = tmpvar_17;
   } else {
-    tmpvar_17 = -(tmpvar_16);
+    tmpvar_18 = -(tmpvar_17);
   };
-  light_one_3 = tmpvar_17;
-  mediump float tmpvar_18;
-  tmpvar_18 = ((light_one_3 + 2.0) / 9.0);
-  local_light_2 = tmpvar_18;
-  tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
+  light_one_3 = tmpvar_18;
+  if ((light_one_3 < 1.0)) {
+    mediump vec4 tmpvar_19;
+    tmpvar_19.xzw = vec3(1.0, 0.0, 1.0);
+    tmpvar_19.y = (tmpvar_11 / 4.0);
+    tmpvar_1 = (tmpvar_19 * xlv_COLOR.z);
+  } else {
+    mediump float tmpvar_20;
+    tmpvar_20 = ((light_one_3 + 2.0) / 9.0);
+    local_light_2 = tmpvar_20;
+    tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
+  };
   gl_FragData[0] = tmpvar_1;
 }
 
@@ -531,62 +540,71 @@ void main ()
   mediump float light_one_3;
   mediump vec2 offset_4;
   mediump vec2 scaled_uv_5;
-  highp vec2 tmpvar_6;
-  tmpvar_6 = xlv_COLOR.xy;
-  offset_4 = tmpvar_6;
-  scaled_uv_5 = (((xlv_TEXCOORD0 - floor(xlv_TEXCOORD0)) * 0.25) + offset_4);
-  mediump vec2 tmpvar_7;
-  tmpvar_7 = (floor(xlv_TEXCOORD0) / vec2(4.0, 4.0));
+  mediump vec2 tmpvar_6;
+  tmpvar_6 = floor(xlv_TEXCOORD0);
+  highp vec2 tmpvar_7;
+  tmpvar_7 = xlv_COLOR.xy;
+  offset_4 = tmpvar_7;
+  scaled_uv_5 = (((xlv_TEXCOORD0 - tmpvar_6) * 0.25) + offset_4);
   mediump vec2 tmpvar_8;
-  tmpvar_8 = (fract(abs(tmpvar_7)) * vec2(4.0, 4.0));
-  mediump float tmpvar_9;
-  if ((tmpvar_7.x >= 0.0)) {
-    tmpvar_9 = tmpvar_8.x;
-  } else {
-    tmpvar_9 = -(tmpvar_8.x);
-  };
+  tmpvar_8 = (tmpvar_6 / vec2(4.0, 4.0));
+  mediump vec2 tmpvar_9;
+  tmpvar_9 = (fract(abs(tmpvar_8)) * vec2(4.0, 4.0));
   mediump float tmpvar_10;
-  if ((tmpvar_7.y >= 0.0)) {
-    tmpvar_10 = tmpvar_8.y;
+  if ((tmpvar_8.x >= 0.0)) {
+    tmpvar_10 = tmpvar_9.x;
   } else {
-    tmpvar_10 = -(tmpvar_8.y);
+    tmpvar_10 = -(tmpvar_9.x);
   };
-  mediump vec2 tmpvar_11;
-  tmpvar_11.x = tmpvar_9;
-  tmpvar_11.y = tmpvar_10;
-  highp float xco_12;
-  xco_12 = tmpvar_11.x;
-  highp float tmpvar_13;
-  if ((xco_12 < 1.0)) {
-    tmpvar_13 = xlv_.x;
+  mediump float tmpvar_11;
+  if ((tmpvar_8.y >= 0.0)) {
+    tmpvar_11 = tmpvar_9.y;
   } else {
-    if ((xco_12 < 2.0)) {
-      tmpvar_13 = xlv_.y;
+    tmpvar_11 = -(tmpvar_9.y);
+  };
+  mediump vec2 tmpvar_12;
+  tmpvar_12.x = tmpvar_10;
+  tmpvar_12.y = tmpvar_11;
+  highp float xco_13;
+  xco_13 = tmpvar_12.x;
+  highp float tmpvar_14;
+  if ((xco_13 < 1.0)) {
+    tmpvar_14 = xlv_.x;
+  } else {
+    if ((xco_13 < 2.0)) {
+      tmpvar_14 = xlv_.y;
     } else {
-      if ((xco_12 < 3.0)) {
-        tmpvar_13 = xlv_.z;
+      if ((xco_13 < 3.0)) {
+        tmpvar_14 = xlv_.z;
       } else {
-        tmpvar_13 = xlv_.w;
+        tmpvar_14 = xlv_.w;
       };
     };
   };
-  mediump float tmpvar_14;
-  tmpvar_14 = pow (8.0, tmpvar_10);
-  highp float tmpvar_15;
-  tmpvar_15 = (floor((tmpvar_13 / tmpvar_14)) / 8.0);
+  mediump float tmpvar_15;
+  tmpvar_15 = pow (8.0, tmpvar_11);
   highp float tmpvar_16;
-  tmpvar_16 = (fract(abs(tmpvar_15)) * 8.0);
+  tmpvar_16 = (floor((tmpvar_14 / tmpvar_15)) / 8.0);
   highp float tmpvar_17;
-  if ((tmpvar_15 >= 0.0)) {
-    tmpvar_17 = tmpvar_16;
+  tmpvar_17 = (fract(abs(tmpvar_16)) * 8.0);
+  highp float tmpvar_18;
+  if ((tmpvar_16 >= 0.0)) {
+    tmpvar_18 = tmpvar_17;
   } else {
-    tmpvar_17 = -(tmpvar_16);
+    tmpvar_18 = -(tmpvar_17);
   };
-  light_one_3 = tmpvar_17;
-  mediump float tmpvar_18;
-  tmpvar_18 = ((light_one_3 + 2.0) / 9.0);
-  local_light_2 = tmpvar_18;
-  tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
+  light_one_3 = tmpvar_18;
+  if ((light_one_3 < 1.0)) {
+    mediump vec4 tmpvar_19;
+    tmpvar_19.xzw = vec3(1.0, 0.0, 1.0);
+    tmpvar_19.y = (tmpvar_11 / 4.0);
+    tmpvar_1 = (tmpvar_19 * xlv_COLOR.z);
+  } else {
+    mediump float tmpvar_20;
+    tmpvar_20 = ((light_one_3 + 2.0) / 9.0);
+    local_light_2 = tmpvar_20;
+    tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
+  };
   gl_FragData[0] = tmpvar_1;
 }
 
@@ -1159,16 +1177,21 @@ highp float getIndex( in highp vec4 overhang, in highp float xco ) {
 }
 #line 392
 lowp vec4 frag( in v2f i ) {
-    mediump vec2 scaled_uv = ((i.uv.xy - floor(i.uv.xy)) * 0.25);
-    mediump vec2 offset = i.color.xy;
+    mediump vec2 chunkCoord = floor(i.uv.xy);
+    mediump vec2 scaled_uv = ((i.uv.xy - chunkCoord) * 0.25);
     #line 396
+    mediump vec2 offset = i.color.xy;
     scaled_uv = (scaled_uv + offset);
-    mediump vec2 model_rel_twoD = xll_mod_vf2_vf2( floor(i.uv.xy), vec2( 4.0));
+    mediump vec2 model_rel_twoD = xll_mod_vf2_vf2( chunkCoord, vec2( 4.0));
     highp float index = getIndex( i.overhangLightLevel, model_rel_twoD.x);
-    highp float power_lookup = floor((index / pow( 8.0, model_rel_twoD.y)));
     #line 400
+    highp float power_lookup = floor((index / pow( 8.0, model_rel_twoD.y)));
     mediump float light_one = xll_mod_f_f( power_lookup, 8.0);
+    if ((light_one < 1.0)){
+        return (vec4( 1.0, ((1.0 * model_rel_twoD.y) / 4.0), 0.0, 1.0) * i.color.z);
+    }
     lowp float local_light = ((light_one + 2.0) / 9.0);
+    #line 404
     return ((texture( _BlockTex, scaled_uv) * i.color.z) * local_light);
 }
 in highp vec4 xlv_COLOR;
@@ -1192,57 +1215,65 @@ void main() {
 }
 Program "fp" {
 // Fragment combos: 1
-//   opengl - ALU: 36 to 36, TEX: 1 to 1
-//   d3d9 - ALU: 42 to 42, TEX: 1 to 1
+//   opengl - ALU: 43 to 43, TEX: 1 to 1
+//   d3d9 - ALU: 50 to 50, TEX: 1 to 1
 SubProgram "opengl " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D
 "!!ARBfp1.0
-# 36 ALU, 1 TEX
-PARAM c[3] = { { 0.25, 0.125, 0.11111111, 4 },
-		{ 1, 0, 2, 3 },
+# 43 ALU, 1 TEX
+PARAM c[3] = { { 1, 0, 0.25, 0.125 },
+		{ 0.11111111, 4, 2, 3 },
 		{ 8 } };
 TEMP R0;
 TEMP R1;
 TEMP R2;
-FLR R1.xy, fragment.texcoord[0];
-ADD R0.xy, fragment.texcoord[0], -R1;
-MUL R1.zw, R1.xyxy, c[0].x;
-MAD R0.xy, R0, c[0].x, fragment.color.primary;
-ABS R1.zw, R1;
-FRC R1.zw, R1;
-MUL R1.zw, R1, c[0].w;
-CMP R1.xy, R1, -R1.zwzw, R1.zwzw;
-ADD R2.y, R1.x, -c[1].x;
-SLT R1.z, R1.x, c[1];
-CMP R2.z, R2.y, c[1].y, c[1].x;
-MUL R1.w, R2.z, R1.z;
-CMP R1.z, -R1.w, c[1].y, R2;
-CMP R2.x, R2.y, fragment.texcoord[1], R2;
-POW R1.y, c[2].x, R1.y;
-MUL R2.z, R2, R1;
-SLT R1.x, R1, c[1].w;
-MUL R1.x, R2.z, R1;
-CMP R1.z, -R1.x, c[1].y, R1;
-CMP R1.w, -R1, fragment.texcoord[1].y, R2.x;
-RCP R1.y, R1.y;
-MUL R1.z, R2, R1;
-CMP R1.x, -R1, fragment.texcoord[1].z, R1.w;
-CMP R1.x, -R1.z, fragment.texcoord[1].w, R1;
-MUL R1.x, R1, R1.y;
-FLR R1.x, R1;
-MUL R1.y, R1.x, c[0];
-ABS R1.y, R1;
-FRC R1.y, R1;
-MUL R1.y, R1, c[2].x;
-CMP R1.x, R1, -R1.y, R1.y;
-ADD R1.x, R1, c[1].z;
-MUL R1.x, R1, c[0].z;
+TEMP R3;
+FLR R2.xy, fragment.texcoord[0];
+ADD R0.xy, -R2, fragment.texcoord[0];
+MUL R2.zw, R2.xyxy, c[0].z;
+MAD R0.xy, R0, c[0].z, fragment.color.primary;
+ABS R2.zw, R2;
+FRC R2.zw, R2;
+MUL R2.zw, R2, c[1].y;
+CMP R2.xy, R2, -R2.zwzw, R2.zwzw;
+ADD R3.x, R2, -c[0];
+CMP R3.y, R3.x, c[0], c[0].x;
+SLT R2.z, R2.x, c[1];
+MUL R2.w, R3.y, R2.z;
+CMP R2.z, -R2.w, c[0].y, R3.y;
+CMP R3.x, R3, fragment.texcoord[1], R1;
+CMP R2.w, -R2, fragment.texcoord[1].y, R3.x;
+POW R3.x, c[2].x, R2.y;
+MUL R3.y, R3, R2.z;
+SLT R2.x, R2, c[1].w;
+MUL R2.x, R3.y, R2;
+CMP R2.z, -R2.x, c[0].y, R2;
+CMP R2.x, -R2, fragment.texcoord[1].z, R2.w;
+MUL R2.z, R3.y, R2;
+RCP R2.w, R3.x;
+CMP R2.x, -R2.z, fragment.texcoord[1].w, R2;
+MUL R2.x, R2, R2.w;
+FLR R2.x, R2;
+MUL R2.z, R2.x, c[0].w;
+ABS R2.z, R2;
+FRC R2.z, R2;
+MUL R2.z, R2, c[2].x;
+CMP R3.x, R2, -R2.z, R2.z;
+ADD R3.y, R3.x, -c[0].x;
+MOV R2.xzw, c[0].xyyx;
+MUL R2.y, R2, c[0].z;
+MUL R2, fragment.color.primary.z, R2;
+CMP R1, R3.y, R2, R1;
+ADD R2.y, R3.x, c[1].z;
+CMP R2.x, R3.y, c[0].y, c[0];
+MUL R2.y, R2, c[1].x;
 TEX R0, R0, texture[0], 2D;
 MUL R0, R0, fragment.color.primary.z;
-MUL result.color, R0, R1.x;
+MUL R0, R0, R2.y;
+CMP result.color, -R2.x, R0, R1;
 END
-# 36 instructions, 3 R-regs
+# 43 instructions, 4 R-regs
 "
 }
 
@@ -1250,7 +1281,7 @@ SubProgram "d3d9 " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D
 "ps_2_0
-; 42 ALU, 1 TEX
+; 50 ALU, 1 TEX
 dcl_2d s0
 def c0, 0.25000000, 4.00000000, -1.00000000, -2.00000000
 def c1, 1.00000000, 0.00000000, -3.00000000, 8.00000000
@@ -1268,36 +1299,44 @@ mul_pp r3.xy, r3, c0.y
 cmp_pp r1.xy, r1, r3, -r3
 add r4.x, r1, c0.z
 add r3.x, r1, c0.w
-add r1.x, r1, c1.z
 cmp_pp r5.x, r4, c1, c1.y
 cmp r3.x, r3, c1.y, c1
 mul_pp r3.x, r5, r3
 cmp_pp r6.x, -r3, r5, c1.y
-cmp r0.x, r4, r0, t1
+cmp r4.x, r4, r0, t1
+add r1.x, r1, c1.z
 mul_pp r5.x, r5, r6
 cmp r1.x, r1, c1.y, c1
 mul_pp r1.x, r5, r1
 cmp_pp r6.x, -r1, r6, c1.y
 mul_pp r5.x, r5, r6
+cmp r3.x, -r3, r4, t1.y
+cmp r1.x, -r1, r3, t1.z
 pow_pp r6.x, c1.w, r1.y
-cmp r0.x, -r3, r0, t1.y
-cmp r0.x, -r1, r0, t1.z
-mov_pp r3.x, r6.x
-rcp r1.x, r3.x
-cmp r0.x, -r5, r0, t1.w
-mul r0.x, r0, r1
-frc r1.x, r0
-add r0.x, r0, -r1
-mul r1.x, r0, c2
-abs r1.x, r1
-frc r1.x, r1
-mul r1.x, r1, c1.w
-cmp r0.x, r0, r1, -r1
-add_pp r0.x, r0, c2.y
-mul_pp r0.x, r0, c2.z
+cmp r1.x, -r5, r1, t1.w
+mov_pp r4.x, r6.x
+rcp r3.x, r4.x
+mul r1.x, r1, r3
+frc r3.x, r1
+add r1.x, r1, -r3
+mul r3.x, r1, c2
+abs r3.x, r3
+frc r3.x, r3
+mul r3.x, r3, c1.w
+cmp r1.x, r1, r3, -r3
+add_pp r3.x, r1, c0.z
+add_pp r1.x, r1, c2.y
+mul_pp r5.y, r1, c0.x
+cmp_pp r4.x, r3, c1, c1.y
+mul_pp r1.x, r1, c2.z
+mov r5.z, c1.y
+mov r5.xw, c1.x
+mul r5, r5, v0.z
+cmp_pp r0, r3.x, r0, r5
 texld r2, r2, s0
-mul r1, r2, v0.z
-mul r0, r1, r0.x
+mul r2, v0.z, r2
+mul r1, r2, r1.x
+cmp_pp r0, -r4.x, r0, r1
 mov_pp oC0, r0
 "
 }
@@ -1312,92 +1351,6 @@ Keywords { }
 "!!GLES"
 }
 
-SubProgram "flash " {
-Keywords { }
-SetTexture 0 [_BlockTex] 2D
-"agal_ps
-c0 0.25 4.0 -1.0 -2.0
-c1 1.0 0.0 -3.0 8.0
-c2 0.125 2.0 0.111111 0.0
-[bc]
-aiaaaaaaabaaadacaaaaaaoeaeaaaaaaaaaaaaaaaaaaaaaa frc r1.xy, v0
-adaaaaaaacaaadacabaaaafeacaaaaaaaaaaaaaaabaaaaaa mul r2.xy, r1.xyyy, c0.x
-abaaaaaaacaaadacacaaaafeacaaaaaaahaaaaoeaeaaaaaa add r2.xy, r2.xyyy, v7
-acaaaaaaabaaadacaaaaaaoeaeaaaaaaabaaaafeacaaaaaa sub r1.xy, v0, r1.xyyy
-adaaaaaaadaaadacabaaaafeacaaaaaaaaaaaaaaabaaaaaa mul r3.xy, r1.xyyy, c0.x
-beaaaaaaadaaadacadaaaafeacaaaaaaaaaaaaaaaaaaaaaa abs r3.xy, r3.xyyy
-aiaaaaaaadaaadacadaaaafeacaaaaaaaaaaaaaaaaaaaaaa frc r3.xy, r3.xyyy
-adaaaaaaadaaadacadaaaafeacaaaaaaaaaaaaffabaaaaaa mul r3.xy, r3.xyyy, c0.y
-bfaaaaaaaaaaadacadaaaafeacaaaaaaaaaaaaaaaaaaaaaa neg r0.xy, r3.xyyy
-ckaaaaaaadaaamacabaaaafeacaaaaaaacaaaappabaaaaaa slt r3.zw, r1.xyyy, c2.w
-acaaaaaaaeaaadacaaaaaafeacaaaaaaadaaaafeacaaaaaa sub r4.xy, r0.xyyy, r3.xyyy
-adaaaaaaabaaadacaeaaaafeacaaaaaaadaaaapoacaaaaaa mul r1.xy, r4.xyyy, r3.zwww
-abaaaaaaabaaadacabaaaafeacaaaaaaadaaaafeacaaaaaa add r1.xy, r1.xyyy, r3.xyyy
-abaaaaaaaeaaabacabaaaaaaacaaaaaaaaaaaakkabaaaaaa add r4.x, r1.x, c0.z
-abaaaaaaadaaabacabaaaaaaacaaaaaaaaaaaappabaaaaaa add r3.x, r1.x, c0.w
-abaaaaaaabaaabacabaaaaaaacaaaaaaabaaaakkabaaaaaa add r1.x, r1.x, c1.z
-cjaaaaaaaeaaaeacaeaaaaaaacaaaaaaacaaaappabaaaaaa sge r4.z, r4.x, c2.w
-adaaaaaaafaaabacaaaaaakkabaaaaaaaeaaaakkacaaaaaa mul r5.x, c0.z, r4.z
-abaaaaaaafaaabacafaaaaaaacaaaaaaabaaaaoeabaaaaaa add r5.x, r5.x, c1
-ckaaaaaaadaaabacadaaaaaaacaaaaaaacaaaappabaaaaaa slt r3.x, r3.x, c2.w
-adaaaaaaadaaabacafaaaaaaacaaaaaaadaaaaaaacaaaaaa mul r3.x, r5.x, r3.x
-bfaaaaaaafaaacacadaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r5.y, r3.x
-ckaaaaaaafaaacacafaaaaffacaaaaaaacaaaappabaaaaaa slt r5.y, r5.y, c2.w
-acaaaaaaagaaabacabaaaaffabaaaaaaafaaaaaaacaaaaaa sub r6.x, c1.y, r5.x
-adaaaaaaagaaabacagaaaaaaacaaaaaaafaaaaffacaaaaaa mul r6.x, r6.x, r5.y
-abaaaaaaagaaabacagaaaaaaacaaaaaaafaaaaaaacaaaaaa add r6.x, r6.x, r5.x
-ckaaaaaaaeaaabacaeaaaaaaacaaaaaaacaaaappabaaaaaa slt r4.x, r4.x, c2.w
-acaaaaaaagaaacacabaaaaoeaeaaaaaaaaaaaaaaacaaaaaa sub r6.y, v1, r0.x
-adaaaaaaagaaacacagaaaaffacaaaaaaaeaaaaaaacaaaaaa mul r6.y, r6.y, r4.x
-abaaaaaaaaaaabacagaaaaffacaaaaaaaaaaaaaaacaaaaaa add r0.x, r6.y, r0.x
-adaaaaaaafaaabacafaaaaaaacaaaaaaagaaaaaaacaaaaaa mul r5.x, r5.x, r6.x
-ckaaaaaaabaaabacabaaaaaaacaaaaaaacaaaappabaaaaaa slt r1.x, r1.x, c2.w
-adaaaaaaabaaabacafaaaaaaacaaaaaaabaaaaaaacaaaaaa mul r1.x, r5.x, r1.x
-bfaaaaaaaeaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r4.x, r1.x
-ckaaaaaaaeaaabacaeaaaaaaacaaaaaaacaaaappabaaaaaa slt r4.x, r4.x, c2.w
-acaaaaaaahaaacacabaaaaffabaaaaaaagaaaaaaacaaaaaa sub r7.y, c1.y, r6.x
-adaaaaaaahaaacacahaaaaffacaaaaaaaeaaaaaaacaaaaaa mul r7.y, r7.y, r4.x
-abaaaaaaagaaabacahaaaaffacaaaaaaagaaaaaaacaaaaaa add r6.x, r7.y, r6.x
-adaaaaaaafaaabacafaaaaaaacaaaaaaagaaaaaaacaaaaaa mul r5.x, r5.x, r6.x
-alaaaaaaagaaapacabaaaappabaaaaaaabaaaaffacaaaaaa pow r6, c1.w, r1.y
-bfaaaaaaahaaacacadaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.y, r3.x
-ckaaaaaaahaaacacahaaaaffacaaaaaaacaaaappabaaaaaa slt r7.y, r7.y, c2.w
-acaaaaaaahaaabacabaaaaffaeaaaaaaaaaaaaaaacaaaaaa sub r7.x, v1.y, r0.x
-adaaaaaaahaaabacahaaaaaaacaaaaaaahaaaaffacaaaaaa mul r7.x, r7.x, r7.y
-abaaaaaaaaaaabacahaaaaaaacaaaaaaaaaaaaaaacaaaaaa add r0.x, r7.x, r0.x
-bfaaaaaaahaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.x, r1.x
-ckaaaaaaahaaabacahaaaaaaacaaaaaaacaaaappabaaaaaa slt r7.x, r7.x, c2.w
-acaaaaaaaeaaabacabaaaakkaeaaaaaaaaaaaaaaacaaaaaa sub r4.x, v1.z, r0.x
-adaaaaaaaeaaabacaeaaaaaaacaaaaaaahaaaaaaacaaaaaa mul r4.x, r4.x, r7.x
-abaaaaaaaaaaabacaeaaaaaaacaaaaaaaaaaaaaaacaaaaaa add r0.x, r4.x, r0.x
-aaaaaaaaadaaabacagaaaaaaacaaaaaaaaaaaaaaaaaaaaaa mov r3.x, r6.x
-afaaaaaaabaaabacadaaaaaaacaaaaaaaaaaaaaaaaaaaaaa rcp r1.x, r3.x
-bfaaaaaaahaaabacafaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.x, r5.x
-ckaaaaaaahaaabacahaaaaaaacaaaaaaacaaaappabaaaaaa slt r7.x, r7.x, c2.w
-acaaaaaaadaaabacabaaaappaeaaaaaaaaaaaaaaacaaaaaa sub r3.x, v1.w, r0.x
-adaaaaaaadaaabacadaaaaaaacaaaaaaahaaaaaaacaaaaaa mul r3.x, r3.x, r7.x
-abaaaaaaaaaaabacadaaaaaaacaaaaaaaaaaaaaaacaaaaaa add r0.x, r3.x, r0.x
-adaaaaaaaaaaabacaaaaaaaaacaaaaaaabaaaaaaacaaaaaa mul r0.x, r0.x, r1.x
-aiaaaaaaabaaabacaaaaaaaaacaaaaaaaaaaaaaaaaaaaaaa frc r1.x, r0.x
-acaaaaaaaaaaabacaaaaaaaaacaaaaaaabaaaaaaacaaaaaa sub r0.x, r0.x, r1.x
-adaaaaaaabaaabacaaaaaaaaacaaaaaaacaaaaoeabaaaaaa mul r1.x, r0.x, c2
-beaaaaaaabaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa abs r1.x, r1.x
-aiaaaaaaabaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa frc r1.x, r1.x
-adaaaaaaabaaabacabaaaaaaacaaaaaaabaaaappabaaaaaa mul r1.x, r1.x, c1.w
-bfaaaaaaahaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.x, r1.x
-ckaaaaaaadaaabacaaaaaaaaacaaaaaaacaaaappabaaaaaa slt r3.x, r0.x, c2.w
-acaaaaaaahaaabacahaaaaaaacaaaaaaabaaaaaaacaaaaaa sub r7.x, r7.x, r1.x
-adaaaaaaaaaaabacahaaaaaaacaaaaaaadaaaaaaacaaaaaa mul r0.x, r7.x, r3.x
-abaaaaaaaaaaabacaaaaaaaaacaaaaaaabaaaaaaacaaaaaa add r0.x, r0.x, r1.x
-abaaaaaaaaaaabacaaaaaaaaacaaaaaaacaaaaffabaaaaaa add r0.x, r0.x, c2.y
-adaaaaaaaaaaabacaaaaaaaaacaaaaaaacaaaakkabaaaaaa mul r0.x, r0.x, c2.z
-ciaaaaaaacaaapacacaaaafeacaaaaaaaaaaaaaaafaababb tex r2, r2.xyyy, s0 <2d wrap linear point>
-adaaaaaaabaaapacacaaaaoeacaaaaaaahaaaakkaeaaaaaa mul r1, r2, v7.z
-adaaaaaaaaaaapacabaaaaoeacaaaaaaaaaaaaaaacaaaaaa mul r0, r1, r0.x
-aaaaaaaaaaaaapadaaaaaaoeacaaaaaaaaaaaaaaaaaaaaaa mov o0, r0
-"
-}
-
 SubProgram "gles3 " {
 Keywords { }
 "!!GLES3"
@@ -1405,7 +1358,7 @@ Keywords { }
 
 }
 
-#LINE 323
+#LINE 326
 
     }
     

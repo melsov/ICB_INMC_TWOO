@@ -902,6 +902,14 @@ public struct NoiseCoord : IEquatable<NoiseCoord>
 		x = xx;
 		z = zz;
 	}
+	
+	public NoiseCoord(int aa)  {
+		this = new NoiseCoord(aa,aa);	
+	}
+	
+	public static NoiseCoord NoiseCoordZer() {
+		return new NoiseCoord(0);	
+	}
 
 	public NoiseCoord(Coord cc) {
 		x = cc.x;
@@ -919,6 +927,8 @@ public struct NoiseCoord : IEquatable<NoiseCoord>
 	public static NoiseCoord NoiseCoordWithPTwo(PTwo ptwo) {
 		return new NoiseCoord(ptwo.s, ptwo.t);	
 	}
+	
+	
 
 	public string toString() {
 		return "Noise Coord :) x: " + x + " z: " + z;
@@ -930,6 +940,10 @@ public struct NoiseCoord : IEquatable<NoiseCoord>
 
 	public static bool Equal(NoiseCoord aa, NoiseCoord bb) {
 		return (aa.x == bb.x) && (aa.z == bb.z);
+	}
+	
+	public bool isCoordZero() {
+		return NoiseCoord.Equal(this, new NoiseCoord(0,0));	
 	}
 
 	public static NoiseCoord operator + (NoiseCoord aa, NoiseCoord bb) {

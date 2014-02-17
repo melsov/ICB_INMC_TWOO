@@ -91,10 +91,66 @@ public class WindowMap
 		m_noisePatch = _npatch;
 	}
 	
-	public void discontinuityAt(SimpleRange disRange, int x, int z)
+	#region query
+	
+	// TODO: add direction ... so that we know which way to look for windows...
+	public float ligtValueAtPatchRelativeCoord(Coord relCo, Direction faceDirection)
 	{
-		discontinuityAt(disRange, x, z, SurroundingSurfaceValues.MakeNew());
+//		relCo.x = Mathf.Clamp(relCo.x, 0, NoisePatch.patchDimensions.x - 1); //shouldn't need...
+		
+		AssertUtil.Assert(relCo.x < windows.Length && relCo.x >= 0 , "relco was out of bounds: " + relCo.x);
+		List<Window> wins = windows[relCo.x];
+		
+		if (wins == null || wins.Count == 0)
+			return 0f;
+		
+		Window closestWindow = windowClosestToYZInDirection(wins, relCo.y, relCo.z, faceDirection);
+		
+		if (closestWindow != null)
+		{
+			return closestWindow.lightValueForYZPoint(new PTwo(relCo.y, relCo.z));	
+		}
+		
+
+		return 0f;
+		
 	}
+	
+	private Window windowClosestToYZInDirection(List<Window> winList, int y, int z, Direction faceDirection)
+	{
+		// NOTE: wish we could know secondary directions to avoid...
+		// particularly whether to avoid up in this case...
+		if (winList == null || winList.Count == 0)
+			return null;
+		
+		int pickIndex = -1;
+		int abs_shortest_y_dist = 258;
+		
+		for(int i = 0; i < winList.Count; ++i)
+		{
+			Window win = winList[i];
+			if (win.spanContainsZ(z)) {
+				int abs_y_dist = Mathf.Abs(win.shortestDifferenceWith(y,z));
+				if (abs_y_dist < abs_shortest_y_dist)
+				{
+					abs_shortest_y_dist = abs_y_dist;
+					pickIndex = i;
+				}
+			}
+		}
+		
+		if (pickIndex != -1)
+			return winList[pickIndex];
+		
+		return null;	
+	}
+	
+	#endregion
+//	
+//	public void discontinuityAt(SimpleRange disRange, int x, int z)
+//	{
+//		discontinuityAt(disRange, x, z, SurroundingSurfaceValues.MakeNew());
+//	}
 	
 	public void discontinuityAt(SimpleRange disRange, int x, int z, SurroundingSurfaceValues surroundingSurfaceHeights)
 	{
@@ -107,15 +163,20 @@ public class WindowMap
 		}
 		
 		// new window
-		Window win = new Window(this, disRange, x, z);
+		Window win = new Window(this, disRange, x, z); //TODO: add surrounding surf to constructor
 		addWindowAt(win, x, z);
-		ChunkManager.debugLinesAssistant.addWindowToDraw(win);
+		
+		//DEBUG
+//		if (m_noisePatch.coord.isCoordZero() && x == 0)
+//		{
+//			ChunkManager.debugLinesAssistant.addWindowToDraw(win);
+//		}
 	}
 	
-	public void updateWindowsWithHeightRanges(List<Range1D> heightRanges, int x, int z)
-	{
-		//TODO
-	}
+//	public void updateWindowsWithHeightRanges(List<Range1D> heightRanges, int x, int z)
+//	{
+//		//TODO
+//	}
 	
 	private List<Window> windowsListAt(int x)
 	{
@@ -225,7 +286,254 @@ public class WindowMap
 	
 	#endregion
 	
+	#region talk to other windows
+	
+	/*
+	 * 'introduce' (share data with) windows from neighbor noise patches
+	 * 
+	 */ 
+	
+	public void introduceFlushWindowsWithWindowInNeighborDirection(WindowMap other, NeighborDirection ndir)
+	{
+		Direction dir = NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir);
+		
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		if (axis == Axis.X)
+		{
+			introduceFlushWithWindowMapInNeighborDirectionX(other, ndir);
+			return;
+		}
+		
+		introduceFlushWithWindowMapInNeighborDirectionZ(other, ndir);
+	}
+	
+	/*
+	 * X AXIS NEIGHBOR INTRODUCTIONS
+	 * 
+	 */ 
+	private void introduceFlushWithWindowMapInNeighborDirectionX(WindowMap other, NeighborDirection ndir)
+	{
+		Direction dir = NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir);
+		Direction oppDir = NeighborDirectionUtils.DirecionFourForNeighborDirection(NeighborDirectionUtils.oppositeNeighborDirection(ndir));
+		
+		//want windows along a z on a given x val (0 or max)
+		List<Window>[] thisWinListArrayAtEdge = this.windowsTouchingEdgeOfNoisePatchNeighborInDirection( dir);
+		List<Window>[] winListArrayAtAnEdgeOfOther = other.windowsTouchingEdgeOfNoisePatchNeighborInDirection(oppDir);	
+		
+		if (thisWinListArrayAtEdge.Length == 0 || winListArrayAtAnEdgeOfOther.Length == 0)
+		{
+			AssertUtil.Assert(false, "??? 0 length arrays");
+			return;
+		}
+		
+		AssertUtil.Assert(thisWinListArrayAtEdge.Length == 1 && winListArrayAtAnEdgeOfOther.Length == 1, "Confusing. dealing with x edge right? length was: " + thisWinListArrayAtEdge.Length);
+		
+		foreach(Window win in thisWinListArrayAtEdge[0])
+		{
+//			win.testSetAllValuesTo(4f);
+			//TEST
+			win.setMaxLight();
+//			win.updateWithAdjacentWindowsReturnAddedLightRating(winListArrayAtAnEdgeOfOther[0]);	
+		}
+		
+		
+		foreach(Window othersWin in winListArrayAtAnEdgeOfOther[0])
+		{
+//			othersWin.testSetAllValuesTo(4f);
+			othersWin.setMaxLight(); //TEST
+			
+//			othersWin.updateWithAdjacentWindowsReturnAddedLightRating(thisWinListArrayAtEdge[0]);
+		}
+			
+	}
+	/*
+	 * Z introductions
+	 * 
+	 * */
+	private void introduceFlushWithWindowMapInNeighborDirectionZ(WindowMap other, NeighborDirection ndir)
+	{
+
+		Direction dir = NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir);
+		Direction oppDir = NeighborDirectionUtils.DirecionFourForNeighborDirection(NeighborDirectionUtils.oppositeNeighborDirection(ndir));
+		
+		//want windows flush with a given z value (0 or max)
+		List<Window>[] thisWinListArrayAtEdge = this.windowsTouchingEdgeOfNoisePatchNeighborInDirection(dir);
+		List<Window>[] winListArrayAtAnEdgeOfOther = other.windowsTouchingEdgeOfNoisePatchNeighborInDirection(oppDir);	
+		
+		AssertUtil.Assert(thisWinListArrayAtEdge.Length == winListArrayAtAnEdgeOfOther.Length, "confusing. and not what we expected. lists should be the same length");
+		
+		bool wantExtentForThis = DirectionUtil.IsPosDirection(dir);
+		
+//		this.testSetAllMaxLight(); //TEST
+//		other.testSetAllMaxLight();
+//		
+//		return;
+		
+		for(int i = 0 ; i < thisWinListArrayAtEdge.Length ; ++i)
+		{
+			List<Window> wins = thisWinListArrayAtEdge[i];
+			foreach(Window win in wins)
+			{
+				//TEST
+//				win.testSetMaxLight(null);
+				win.updateWithWindowsFlushWithAnEdge(winListArrayAtAnEdgeOfOther[i], wantExtentForThis); 	
+			}
+		}
+		
+		for(int i = 0 ; i < winListArrayAtAnEdgeOfOther.Length ; ++i)
+		{
+			List<Window> wins = winListArrayAtAnEdgeOfOther[i];
+			foreach(Window win in wins)
+			{
+				//TEST
+//				win.testSetMaxLight(null);
+				win.updateWithWindowsFlushWithAnEdge(thisWinListArrayAtEdge[i], !wantExtentForThis); 
+			}
+		}
+	}
+	
+	private void testSetAllMaxLight()
+	{
+		foreach(List<Window> wins in windows)
+		{
+			if (wins == null)
+				continue;
+			foreach(Window win in wins)
+			{
+				win.setMaxLight();	
+			}
+		}
+	}
+	
+	#endregion
+	
+	#region update with edge surface heights
+	
+	public void updateWindowsFlushWithEdgeInNeighborDirection(byte[] surfaceHeightsAtEdge, NeighborDirection ndir)
+	{
+		// ndir is neighb's relation to us 
+		// so want the windows on the opposite edge
+		Direction dir = NeighborDirectionUtils.DirecionFourForNeighborDirection(NeighborDirectionUtils.oppositeNeighborDirection(ndir));
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		
+		if (axis == Axis.X)
+		{
+			updateWindowsAlongXEdge(surfaceHeightsAtEdge, DirectionUtil.IsPosDirection(dir));
+			return;	
+		}
+		
+		updateWindowsAlongZEdge(surfaceHeightsAtEdge, DirectionUtil.IsPosDirection(dir));
+	}
+	
+	private void updateWindowsAlongXEdge(byte[] surfaceHeightsAtEdge, bool wantMaxXWindows)
+	{
+		for(int i = 0 ; i < NoisePatch.patchDimensions.x ; ++i)
+		{
+			List<Window> winsFlushWith = windowsFlushWithEdgeAtX(i, wantMaxXWindows);
+			foreach(Window win in winsFlushWith)
+			{
+				if (win.allValuesMaxed)
+					break;
+				
+				win.addLightLevelsWithAdjacentSurfaceHeightSpanOffset(surfaceHeightsAtEdge[i], wantMaxXWindows ? win.spanRange : 0);
+			}
+		}
+	}
+	
+	private List<Window> windowsFlushWithEdgeAtX(int x_index, bool wantMaxXEdge)
+	{
+		List<Window> result = new List<Window>();
+		List<Window> atXWins = windows[x_index];
+		
+		if (atXWins == null || atXWins.Count < 1)
+			return result;
+		
+		if (wantMaxXEdge) {
+			
+			for(int i = atXWins.Count - 1; i >= 0 ; --i)
+			{
+				Window win = atXWins[i];
+				if (win.zExtent == NoisePatch.patchDimensions.z) {
+					result.Add(win);	
+				} else {
+					break;
+				}
+			}
+			
+			return result;	
+		}
+
+		for(int i = 0 ; i < atXWins.Count ; i++)
+		{
+			Window win = atXWins[i];
+			if (0 == win.spanStart) {
+				result.Add(win);	
+			} else {
+				break;
+			}
+		}
+		return result;
+	}
+	
+	private void updateWindowsAlongZEdge(byte[] surfaceHeightsAtEdge, bool wantMaxZWindows)
+	{
+		int index = wantMaxZWindows ? windows.Length - 1 : 0;
+		if (windows[index] == null)
+			return;
+		
+		List<Window> winList = windows[index];
+		
+		for(int i = 0 ; i < winList.Count ; ++i)
+		{
+			Window win = winList[i];
+			for (int j = win.spanStart ; j < win.zExtent ; ++j)
+			{
+				if(win.allValuesMaxed)
+					break;
+				
+				win.addLightLevelsWithAdjacentSurfaceHeightSpanOffset(surfaceHeightsAtEdge[j], win.spanStart - j);
+			}
+		}
+		
+		if (winList != null)
+			windows[index] = winList;
+	}
+	
+	#endregion
+	
 	#region find windows adjacent to
+	
+	private List<Window>[] windowsTouchingEdgeOfNoisePatchNeighborInDirection(Direction dir)
+	{
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		
+		if (axis == Axis.X)
+		{
+			return windowsWithEdgeFlushToXEdge(DirectionUtil.IsPosDirection(dir));	
+		}
+		
+		return windowsWithEdgeFlushToZEdge(DirectionUtil.IsPosDirection(dir));
+	}
+	
+	private List<Window>[] windowsWithEdgeFlushToZEdge(bool wantZMaxEdge)
+	{
+		List<Window>[] result = new List<Window>[64];
+		
+		for(int i = 0; i < result.Length; ++i)
+		{
+			result[i] = windowsFlushWithEdgeAtX(i, wantZMaxEdge);	
+		}
+		return result;
+	}
+	
+	private List<Window>[] windowsWithEdgeFlushToXEdge(bool wantXMaxEdge)
+	{
+		if (wantXMaxEdge) {
+			return new List<Window>[] {windows[windows.Length - 1]};	
+		}
+		
+		return new List<Window>[] {windows[0]};
+	}
 	
 	private Window incorporateDiscontinuityAt(SimpleRange disRange, int x, int z)
 	{

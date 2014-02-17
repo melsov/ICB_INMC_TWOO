@@ -33,7 +33,6 @@ using System;
 
 public class FaceSet  
 {
-
 	public BlockType blockType;
 	public Direction blockFaceDirection;
 	
@@ -86,7 +85,6 @@ public class FaceSet
 		} catch(IndexOutOfRangeException e) {
 			throw new Exception("an index was out of range when trying to add a coord to table. the coord: " +coord.toString() + " table dims: " + 	quadTable.GetLength(0) +  " 2nd length: " + quadTable.GetLength(1) + "\n the quad: " + qq.quad.toString());
 		}
-		
 		
 		quads.Add(qq);
 		
@@ -208,7 +206,6 @@ public class FaceSet
 			}
 		}
 		return strips;
-		
 	}
 	
 	public int vertexCount() {
@@ -845,7 +842,7 @@ public class FaceSet
 		
 	}
 	
-	public MeshSet CalculateGeometry(float verticalHeight) //need param y height...
+	public MeshSet CalculateGeometry(float normalHeight) //need param y height...
 	{
 		optimizeStrips();
 		
@@ -859,7 +856,8 @@ public class FaceSet
 		
 		bool isZFace = (blockFaceDirection >= Direction.zpos); // must flip tri indices if z face!!
 		
-		verticalHeight += (faceIsOnPosSide ? 0.5f : -0.5f);
+		float origNormalHeight = normalHeight;
+		normalHeight += (faceIsOnPosSide ? 0.5f : -0.5f);
 		
 		float uvIndex = Chunk.uvIndexForBlockTypeDirection(this.blockType, this.blockFaceDirection);
 		
@@ -887,7 +885,7 @@ public class FaceSet
 #endif
 		
 		//TANGENTS HOLD LIGHT LEVEL
-		Vector4 tangentLightValues = lightLevelDataFloat(verticalHeight); 
+		Vector4 tangentLightValues = lightLevelDataFloat(origNormalHeight); 
 		
 		// END TANGENT SETTING...
 
@@ -917,7 +915,7 @@ public class FaceSet
 			int curLRindex = curULindex + 3;
 			
 			Vector3 ulVec = positionVectorForAcrossUpVertical((float)quad.origin.s - half_unit, 
-				verticalHeight, 
+				normalHeight, 
 				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(ulVec);
 			vertsAddedByStrip++;
@@ -927,7 +925,7 @@ public class FaceSet
 		
 
 			Vector3 llVec = positionVectorForAcrossUpVertical((float) quad.origin.s - half_unit, 
-				verticalHeight, 
+				normalHeight, 
 				(float)quad.extent().t  - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(llVec);
 			vertsAddedByStrip++;
@@ -937,7 +935,7 @@ public class FaceSet
 		
 
 			Vector3 urVec = positionVectorForAcrossUpVertical((float) quad.extent().s - half_unit, 
-				verticalHeight, 
+				normalHeight, 
 				(float)quad.origin.t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(urVec);
 			vertsAddedByStrip++;
@@ -947,7 +945,7 @@ public class FaceSet
 			
 
 			Vector3 lrVec = positionVectorForAcrossUpVertical((float)quad.extent().s - half_unit, 
-				verticalHeight, 
+				normalHeight, 
 				(float)quad.extent().t - half_unit) * Chunk.VERTEXSCALE;
 			returnVecs.Add(lrVec);
 			vertsAddedByStrip++;
@@ -983,18 +981,18 @@ public class FaceSet
 	
 	#region add color data to mesh set
 	
-	private Color32 lightLevelData(float verticalHeight)
+	private Color32 lightLevelData(float normalHeight)
 	{
 		AssertUtil.Assert(!faceSetLimits.isErsatzNull(), "we have some problems. face set limits is ersatz null when trying to get light level data");
 		 
-		return m_lightDataProvider.lightDataForQuad(this.faceSetLimits, this.blockFaceDirection, (int)(verticalHeight + .5f));
+		return m_lightDataProvider.lightDataForQuad(this.faceSetLimits, this.blockFaceDirection, (int)(normalHeight + .5f));
 	}
 	
-	private Vector4 lightLevelDataFloat(float verticalHeight)
+	private Vector4 lightLevelDataFloat(float origNormalHeight)
 	{
 		AssertUtil.Assert(!faceSetLimits.isErsatzNull(), "we have some problems. face set limits is ersatz null when trying to get light level data (float version)");
 		
-		return m_lightDataProvider.lightDataForQuadFloat(this.faceSetLimits, this.blockFaceDirection, (int) (verticalHeight + .5f));
+		return m_lightDataProvider.lightDataForQuadFloat(this.faceSetLimits, this.blockFaceDirection, (int) origNormalHeight);
 	}
 	
 //	private Color32 colorData

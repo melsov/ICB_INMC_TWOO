@@ -38,7 +38,7 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 	// Update is called once per frame
 	void Update () 
 	{
-//		drawUnitCubes();
+		drawUnitCubes();
 //		drawTestLines();
 		drawWindows();
 	}

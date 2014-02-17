@@ -25,6 +25,23 @@ public static class DirectionUtil
 		return new Coord(ptwo.s, ptwo.t, normalOffset);
 	}
 	
+	public static Direction XIfZZifXKeepSign(Direction dir) {
+		Axis axis = AxisForDirection(dir);
+		Direction result = Direction.zpos;
+		
+		if (axis == Axis.Z)
+			result = Direction.xpos;
+		
+		if (!IsPosDirection(dir)) {
+			return OppositeDirection(result);	
+		}
+		return result;
+	}
+	
+	public static Direction OppositeDirection(Direction dir) {
+		return (Direction) ((int) dir + ((int) dir % 2 == 0 ? 1 : -1));
+	}
+	
 	public static Axis AxisForDirection(Direction dir)
 	{
 		if (dir <= Direction.xneg)

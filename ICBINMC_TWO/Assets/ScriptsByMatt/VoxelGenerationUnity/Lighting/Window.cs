@@ -133,8 +133,32 @@ public struct TrapLight
 			this.lowerPos >= Window.LIGHT_LEVEL_MAX;	
 	}
 	
+	public void setAllValuesToMax()
+	{
+		this.upperNeg = Window.LIGHT_LEVEL_MAX;
+		this.lowerNeg = Window.LIGHT_LEVEL_MAX;  
+		this.upperPos = Window.LIGHT_LEVEL_MAX;  
+		this.lowerPos = Window.LIGHT_LEVEL_MAX;
+	}
+	
+	public void setAllValuesTo(float _val)
+	{
+		this.upperNeg = _val;
+		this.lowerNeg = _val;
+		this.upperPos = _val;
+		this.lowerPos = _val;
+	}
+	
 	public float average() {
 		return (upperNeg + lowerNeg + upperPos + lowerPos)/4f;	
+	}
+	
+	public float averageNeg() {
+		return (upperNeg + lowerNeg)/2f;
+	}
+	
+	public float averagePos() {
+		return (upperPos + lowerPos)/2f;	
 	}
 }
 
@@ -153,6 +177,8 @@ public class LightLevelTrapezoid
 	public Trapezoid trapezoid;
 	public TrapLight trapLight;
 	
+	private byte[] zLightLevels = new byte[NoisePatch.patchDimensions.z];
+	
 	private List<Coord> surfaceAdjacenyStarts = new List<Coord>();
 	
 	public LightLevelTrapezoid(TrapLight _trapLight, Trapezoid _trap)
@@ -167,9 +193,33 @@ public class LightLevelTrapezoid
 		}
 	}
 	
+	public float averageLightNeg {
+		get {
+			return trapLight.averageNeg();
+		}
+	}
+	
+	public float averageLightPos {
+		get {
+			return trapLight.averagePos();
+		}
+	}
+	
 	public LightPoint midPoint {
 		get {
 			return new LightPoint(trapezoid.midPoint(), trapLight.average());	
+		}
+	}
+	
+	public LightPoint midPointNeg {
+		get {
+			return new LightPoint(trapezoid.midPoint(), trapLight.averageNeg());	
+		}
+	}
+	
+	public LightPoint midPointPos {
+		get {
+			return new LightPoint(trapezoid.midPoint(), trapLight.averagePos());	
 		}
 	}
 	
@@ -238,8 +288,7 @@ public class LightLevelTrapezoid
 	
 	private float incrementedLightValue(float oldValue, float addToOldValue)
 	{
-		float newValue = oldValue + addToOldValue;
-		return Mathf.Clamp(newValue, 0f, Window.LIGHT_LEVEL_MAX + 1f);
+		return Mathf.Clamp(oldValue + addToOldValue, 0f, Window.LIGHT_LEVEL_MAX - 3f);
 	}
 	
 	private float lightAddedWithSurfaceSpanOffset(int spanOffset)
@@ -255,7 +304,8 @@ public class LightLevelTrapezoid
 	
 	private float lightAddedWithDistance(int distance, float sourceLightValue)
 	{
-		distance = distance < 0 ? 0 : distance;
+		if(distance <= 0)
+			return 1f;
 		float travel =  1f - (float)distance/Window.LIGHT_TRAVEL_MAX_DISTANCE;
 		travel = Mathf.Clamp(travel, 0f, 1f);
 		return sourceLightValue * travel;
@@ -263,18 +313,19 @@ public class LightLevelTrapezoid
 	
 	#region update with light point
 	
-	public void updateWithXAdjacentMidPoint(LightPoint midPoint)
+	public void updateWithXAdjacentPoint(LightPoint lightPoint)
 	{
-		midPoint.lightValue -= Window.UNIT_FALL_OFF;
-		midPoint.lightValue = midPoint.lightValue < 0f ? 0f : midPoint.lightValue;
+		lightPoint.lightValue -= Window.UNIT_FALL_OFF;
+		lightPoint.lightValue = lightPoint.lightValue < 0f ? 0f : lightPoint.lightValue;
 		
 		float[] currentValues = trapLight.clockWiseValues();
 		PTwo[] currentPoints = trapezoid.clockwisePoints();
 		for (int i = 0; i < 4 ; ++i)
 		{
-			float addedLight = lightValueAtFromPoint(currentPoints[i], midPoint);
+			float addedLight = lightValueAtFromPoint(currentPoints[i], lightPoint);
 			float newValue = incrementedLightValue(currentValues[i], addedLight);
 			trapLight.setValueWithClockwiseIndex(newValue, i);
+//			trapLight.setValueWithClockwiseIndex(Window.LIGHT_LEVEL_MAX, i); // TEST
 		}
 	}
 	
@@ -298,6 +349,8 @@ public class LightLevelTrapezoid
 		float startLerp = Mathf.Lerp(trapLight.lowerNeg, trapLight.upperNeg, (heightOffSetStart/(float)trapezoid.startRange.range));
 		float endLerp = Mathf.Lerp(trapLight.lowerPos, trapLight.upperPos, (heightOffSetEnd/(float)trapezoid.endRange.range));
 		
+		
+//		return Window.LIGHT_LEVEL_MAX/12f;
 		return Mathf.Lerp(startLerp, endLerp, spanOffset/(float) trapezoid.span.range);
 		
 	}
@@ -327,8 +380,8 @@ public class Window : IEquatable<Window>
 	
 	public const float LIGHT_LEVEL_MAX = 24f;
 	public const float LIGHT_TRAVEL_MAX_DISTANCE = 16;
-	public const float UNIT_FALL_OFF = 1f;
-	private const int WINDOW_HEIGHTS_MINIMUN_OVERLAP = 3;
+	public const float UNIT_FALL_OFF = 6f;
+	private const int WINDOW_HEIGHTS_MINIMUN_OVERLAP = 1;
 	
 	public Coord patchRelativeOrigin {
 		get {
@@ -349,16 +402,28 @@ public class Window : IEquatable<Window>
 		}
 	}
 	
+	public bool allValuesMaxed {
+		get {
+			return this.lightLevelTrapezoid.trapLight.allValuesMaxed();	
+		}
+	}
+	
 	public PTwo patchRelativeOriginPTwo {
 		get {
 			return new PTwo(xLevel, this.lightLevelTrapezoid.trapezoid.span.start );	
 		}
 	}
 	
-	private int start{
+	public int spanStart{
 		get {
 			return this.lightLevelTrapezoid.trapezoid.span.start;	
 		} 
+	}
+	
+	public int spanRange{
+		get {
+			return this.lightLevelTrapezoid.trapezoid.span.range;
+		}
 	}
 	
 	public int zExtent
@@ -391,6 +456,24 @@ public class Window : IEquatable<Window>
 	{
 		get {
 			return this.lightLevelTrapezoid.midPoint;
+		}
+	}
+	
+	public float[] clockwiseLightValues
+	{
+		get {
+			return this.lightLevelTrapezoid.trapLight.clockWiseValues();		
+		}
+	}
+	
+	public void setIndexLightValue(float val, int index)
+	{
+		this.lightLevelTrapezoid.trapLight.setValueWithClockwiseIndex(val, index);
+	}
+	
+	public TrapLight trapLight {
+		get {
+			return this.lightLevelTrapezoid.trapLight;		
 		}
 	}
 	
@@ -430,7 +513,7 @@ public class Window : IEquatable<Window>
 			int surfaceHeight = m_windowMap.surfaceHeightAt(surrounding.s, surrounding.t);	
 
 			if (windowHeightAtOffsetGreaterThanHeight(spanOffset, surfaceHeight))
-				this.lightLevelTrapezoid.addLightLevelsWithAdjacentSurfaceHeightSpanOffset(surfaceHeight, spanOffset);
+				this.addLightLevelsWithAdjacentSurfaceHeightSpanOffset(surfaceHeight, spanOffset);
 			// else...
 		}
 	}
@@ -443,8 +526,13 @@ public class Window : IEquatable<Window>
 			int surfaceHeight = surroundingSurfaceValues.valueForDirection(dir);
 			
 			if (windowHeightAtOffsetGreaterThanHeight(spanOffset, surfaceHeight))
-				this.lightLevelTrapezoid.addLightLevelsWithAdjacentSurfaceHeightSpanOffset(surfaceHeight, spanOffset);
+				this.addLightLevelsWithAdjacentSurfaceHeightSpanOffset(surfaceHeight, spanOffset);
 		}
+	}
+	
+	public void addLightLevelsWithAdjacentSurfaceHeightSpanOffset(int surfaceHeight, int spanOffset)
+	{
+		this.lightLevelTrapezoid.addLightLevelsWithAdjacentSurfaceHeightSpanOffset(surfaceHeight, spanOffset);	
 	}
 	
 	private bool windowHeightAtOffsetGreaterThanHeight(int spanOffset, int height) {
@@ -462,6 +550,16 @@ public class Window : IEquatable<Window>
 	
 	#region update light levels
 	
+	public void testSetAllValuesTo(float _value)
+	{
+		this.lightLevelTrapezoid.trapLight.setAllValuesTo(_value);	
+	}
+	
+	public void setMaxLight()
+	{
+		this.lightLevelTrapezoid.trapLight.setAllValuesToMax();		
+	}
+	
 	// part of non recursive approach
 	public int updateWithAdjacentWindowsReturnAddedLightRating(List<Window> windows)
 	{
@@ -475,6 +573,29 @@ public class Window : IEquatable<Window>
 		float averageLightAfter = this.lightLevelTrapezoid.averageLight;
 		
 		return (int)(averageLightAfter - averageLightBefore);
+	}
+	
+	public void updateWithWindowsFlushWithAnEdge(List<Window> otherWindows, bool flushWithExtent)
+	{
+		//cheapo
+		//indices setup outside-inside (to be averaged :)
+		int[] otherIndices = flushWithExtent ? new int[] {2,3} : new int[] {0,1};
+		int[] indices = flushWithExtent ? new int[] {0,1} : new int[] {2,3};
+		
+		float[] otherClockwiseLightVals;
+		float[] clockwiseValues = this.clockwiseLightValues;
+		
+		foreach(Window other in otherWindows)
+		{
+			otherClockwiseLightVals = other.clockwiseLightValues;
+			
+			int count = 0;
+			foreach(int index in otherIndices)
+			{
+				this.setIndexLightValue((otherClockwiseLightVals[index] + clockwiseLightValues[count])/2f, index);
+				count++;
+			}
+		}
 	}
 	
 	//TODO: nice if we could return the name of the point or 'no point'
@@ -501,8 +622,10 @@ public class Window : IEquatable<Window>
 	
 	private void updateWithAdjacentWindow(Window adjacentWindow)
 	{
-		if (overlapExistsWithWindow(adjacentWindow)) {
-			lightLevelTrapezoid.updateWithXAdjacentMidPoint(adjacentWindow.midPointLight);
+		if (overlapExistsWithWindow(adjacentWindow)) { //TEST
+//			lightLevelTrapezoid.updateWithXAdjacentPoint(adjacentWindow.midPointLight);
+			lightLevelTrapezoid.updateWithXAdjacentPoint(adjacentWindow.lightLevelTrapezoid.midPointNeg);
+			lightLevelTrapezoid.updateWithXAdjacentPoint(adjacentWindow.lightLevelTrapezoid.midPointPos);
 		}
 	}
 	
@@ -515,8 +638,30 @@ public class Window : IEquatable<Window>
 	
 	public bool zLevelIsAdjacentToStart(int z)
 	{
-		return z == this.start - 1;
+		return z == this.spanStart - 1;
 	}
+	
+	public bool spanContainsZ(int z)
+	{
+		return this.lightLevelTrapezoid.trapezoid.span.contains(z);	
+	}
+	
+	public int shortestDifferenceWith(int y, int z)
+	{
+		// slightly cheapo
+		SimpleRange compareRange = this.startRange;
+		if (z > this.spanStart + this.spanRange/2)
+			compareRange = this.endRange;
+		
+		if (compareRange.contains(y))
+			return 0;
+		
+		if (y > compareRange.start)
+			return compareRange.extent() - y;
+		
+		return compareRange.start - y;
+	}
+
 	
 	#region adding to windows
 	

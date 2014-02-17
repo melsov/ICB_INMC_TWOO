@@ -192,7 +192,14 @@ public static class DebugLinesUtil
 		
 		float light  = win.midPointLight.lightValue/Window.LIGHT_LEVEL_MAX;		
 		
-		DebugBox(origin, upperNeg, lowerPos, upperPos, new Color(light, .5f, .5f, 1f), new Color(light, .5f, .5f, 1f) );
+		Color winColor = new Color(light, .5f, .5f, 1f);
+		if (win.xCoord == 0)
+			winColor = new Color(1f, 0f, 0f, 1f);
+		else if (win.xCoord == 1)
+			winColor = new Color(0f, 0f, 1f, 1f);
+			
+		
+		DebugBox(origin, upperNeg, lowerPos, upperPos, winColor , new Color(light, .5f, .5f, 1f) );
 	}
 	
 	public static void DebugBox(Coord ll, Coord ul, Coord lr, Coord ur, Color _col, Color auxCol)

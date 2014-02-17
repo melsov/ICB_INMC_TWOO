@@ -258,8 +258,9 @@
         	return fixed4(i.color); // * tex2D(_BlockTex, i.uv);
 #endif
 			
-//			half2 scaled_uv = frac(i.uv.xy) * .25; 
-			half2 scaled_uv = (i.uv.xy - floor(i.uv.xy)) * .25; 
+//			half2 scaled_uv = frac(i.uv.xy) * .25;
+			half2 chunkCoord = floor(i.uv.xy); 
+			half2 scaled_uv = (i.uv.xy - chunkCoord) * .25; 
 			half2 offset =  i.color.xy; // + half2(.03);
 			
 			//TEST
@@ -287,7 +288,7 @@
 			// IS THERE ANOTHER WAY TO GET THE TEXTURES ALIGNED WITHOUT
 			// FLIPPING THE NORMALS IN THE VERT SHADER?
 			
-			half2 model_rel_twoD = fmod( floor(i.uv.xy), FACE_SET_MAX_LENGTH);
+			half2 model_rel_twoD = fmod(chunkCoord, FACE_SET_MAX_LENGTH);
 			float index = getIndex(i.overhangLightLevel, model_rel_twoD.x); // 0; // (fmod(floor(model_rel_twoD.x), FACE_SET_MAX_LENGTH) > 1.0) ? ll_two : local_light_index; 
 			
 //			float facemodx = fmod(floor(model_rel_twoD.x), HALF_FACE_SET_MAX_LENGTH);
@@ -308,8 +309,10 @@
 
 //			if (light_one < 1.0) 
 //				return fixed4(1.0, 1.0,0.0,1.0) * i.color.z; //test
-//			if (light_one < 2.0) 
-//				return fixed4(0.0, 1.0,0.0,1.0) * i.color.z; //test	
+			if (light_one < 1.0) 
+				return fixed4(1.0, 1.0 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,0.0,1.0) * i.color.z; //test	
+//			if (light_one < 6.0) 
+//				return fixed4(0.0, 1.0 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,1.0,1.0) * i.color.z; //test		
 			
 			fixed local_light = (light_one + 2.0) / NUM_LIGHT_LEVELS_PLUS_ONE; // LOWEST IS NOT ZERO //   light_one / 3.0;
 			

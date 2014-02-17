@@ -131,6 +131,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	private List<StructureBase> structures = new List<StructureBase>();
 	private DataForNeighbors dataForNeighbors = DataForNeighbors.MakeNew();
 	
+	private NeighborBooleansFour exchangedTerrainDataAlready;
+	
 	private List<Coord> patchRelativeChCosToRebuild = new List<Coord>();
 	
 #if LIGHT_HACK
@@ -302,7 +304,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		if (!this.IsDone || this.hasStarted)
 			return false;
 		
-		Coord patchRelCo = patchRelativeChunkCoordForChunkCoord(chunkCoord);
+		Coord patchRelCo = CoordUtil.PatchRelativeChunkCoordForChunkCoord(chunkCoord);
 		
 		if (patchRelCo.x == PATCHDIMENSIONSCHUNKS.x - 1) {
 			// XPOS needed
@@ -348,9 +350,15 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		
 #if TURN_OFF_STRUCTURES
 #else	
-		getStructuresFromNeighbors();
-		dropOffStructuresForNeighbors();
+		getDataFromNeighbors();
+		dropOffDataForNeighbors();
 #endif
+		
+		if (tradeDataWithFourNeighbors())
+			m_windowMap.calculateLight();
+		
+		
+		
 //		m_chunkManager.noisePatchFinishedSetup (this);
 		
 //		throw new Exception("NOISE PATCH ON FINISHED WAS CALLED??"); // this func is not called (understandably)
@@ -368,45 +376,23 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		return new CoRange (start, range);
 	}
 
-
-	private static Coord patchRelativeChunkCoordForChunkCoord(Coord chunkCo) 
-	{
-		// pos chunk coords are 'array index friendly' in their current state, because they start at 0,0,0 .
-		// not so neg chunk coords.
-		// neg chunk coords start at -1 (globally) so we have to shift them by pos one (-1 becomes 0)
-		// and then flip the array index that they then indicate (0 is the 4th elem in patch at -1,1. so 0 -> (chunkDim - 1 - 0) -> 3
-		// put another way: chunk co (-1,0,0) is at patch Rel Co (3, 0, 0) (for a 4x4 patch whose x,z lower left corner == the xz ll
-		// corner of chunk at co (-4,0,0) )
-
-		// use booleanNeg func. as a mask to massage neg chunk coords
-		Coord boolNeg = chunkCo.booleanNegative ();
-		chunkCo = chunkCo + boolNeg; // e.g. x at -7 (+1) becomes -6
-		chunkCo = chunkCo % PATCHDIMENSIONSCHUNKS; //  CHUNKDIMENSION; (NOTE: SWAPPED OUT CHDIMS FOR NEW TALL CHUNKS) // x becomes -2
-
-		// - 2 (plus chunkDim) becomes 2 (minus boolNeg) becomes 1 
-		// then take a mod again because positive chunk dims will have gone out of bounds
-		// then multiply by chunklength (blocks per chunk is a dimension) to get the rel block coord of the chunk (i.e. 
-		// the coord of its 'lower left bottom' block -- i.e. block at the chunk's 0,0,0 coord).
-		return ((chunkCo + PATCHDIMENSIONSCHUNKS - boolNeg ) % PATCHDIMENSIONSCHUNKS); //massage negative coords
-	}
-
 	private static Coord patchRelativeBlockCoordForChunkCoord(Coord chunkCo) 
 	{
-		return patchRelativeChunkCoordForChunkCoord(chunkCo) * CHUNKLENGTH; //massage negative coords
+		return CoordUtil.PatchRelativeChunkCoordForChunkCoord(chunkCo) * CHUNKLENGTH; //massage negative coords
 	}
-
-	private static Coord patchRelativeBlockCoordForWorldBlockCoord(Coord woco) 
-	{
-		// this function parallels the patchRelBlockCoord function above
-
-		// example woco = (-1,0,0)
-		Coord boolNeg = woco.booleanNegative ();
-		woco = woco + boolNeg; // x at -1 becomes 0
-		woco = woco % patchDimensions; //  BLOCKSPERPATCHLENGTH; // 0 -> 0
-
-		// 0 -> (BPPL = 64) 64 -> (minus booleanNeg) 63 (mod again to put pos coords back where they belong)
-		return ((woco + patchDimensions - boolNeg)) % patchDimensions; // BLOCKSPERPATCHLENGTH;
-	}
+//
+//	private static Coord patchRelativeBlockCoordForWorldBlockCoord(Coord woco) 
+//	{
+//		// this function parallels the patchRelBlockCoord function above
+//
+//		// example woco = (-1,0,0)
+//		Coord boolNeg = woco.booleanNegative ();
+//		woco = woco + boolNeg; // x at -1 becomes 0
+//		woco = woco % patchDimensions; //  BLOCKSPERPATCHLENGTH; // 0 -> 0
+//
+//		// 0 -> (BPPL = 64) 64 -> (minus booleanNeg) 63 (mod again to put pos coords back where they belong)
+//		return ((woco + patchDimensions - boolNeg)) % patchDimensions; // BLOCKSPERPATCHLENGTH;
+//	}
 
 
 //	//really make private.. public for testing // OLD
@@ -473,7 +459,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	public List<Range1D> heightsListAtWorldCoord(Coord woco)
 	{
-		Coord index = NoisePatch.patchRelativeBlockCoordForWorldBlockCoord(woco);
+		Coord index = CoordUtil.PatchRelativeBlockCoordForWorldBlockCoord(woco);
 		
 		if (!generatedBlockAlready)
 			return null;
@@ -482,22 +468,25 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	}
 	
 	// TODO: re-consolidate funcs.
-	
 	public CoordSurfaceStatus coordIsAboveSurface(Coord chunkCo, Coord offset)
 	{
 		Coord index = NoisePatch.patchRelativeBlockCoordForChunkCoord(chunkCo) + offset;
-//		return relCoordIsAboveSurface(index, false);
-		
-		
+		return patchRelativeCoordIsAboveSurface(index);
+	}
+	
+	// TODO: re-consolidate duplicate funcs.
+	public CoordSurfaceStatus patchRelativeCoordIsAboveSurface(Coord index)
+	{
 		if (!index.isIndexSafe(patchDimensions))
 		{
-			return m_chunkManager.coordIsAboveSurface(chunkCo, offset);
+			return m_chunkManager.coordIsAboveSurface(this.coord, index);
 		}
 		
 		if(!generatedBlockAlready) {
 			throw new Exception("weird. didn't gen block yet?");
 			return CoordSurfaceStatus.ABOVE_SURFACE;
 		}
+		
 		//CONSIDER: A SURFACE MAP FOR EFFICIENCY....
 		List<Range1D> rangesAt = heightMap[index.x * patchDimensions.x + index.z];
 		if( rangesAt[rangesAt.Count - 1].extent() <= index.y)
@@ -513,13 +502,13 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	public CoordSurfaceStatus worldCoordIsAboveSurface(Coord woco)
 	{
-		Coord relco = NoisePatch.patchRelativeBlockCoordForWorldBlockCoord(woco);
+		Coord relco = CoordUtil.PatchRelativeBlockCoordForWorldBlockCoord(woco);
 		return relCoordIsAboveSurface(relco, true);
 	}
 	
 	private CoordSurfaceStatus relCoordIsAboveSurface(Coord index, bool dieOnIndexNotSafe)
 	{
-//		Coord index = NoisePatch.patchRelativeBlockCoordForWorldBlockCoord(woco);
+//		Coord index = CoordUtil.PatchRelativeBlockCoordForWorldBlockCoord(woco);
 		
 		if (!index.isIndexSafe(patchDimensions))
 		{
@@ -533,12 +522,15 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		}
 		
 		if(!generatedBlockAlready)
+		{
+//			throw new Exception("we didn't gen blocks yet (and trying to get above surfce coord...; " + index.toString());
+			// this does happen...a little...
 			return CoordSurfaceStatus.ABOVE_SURFACE;
+		}
 		//CONSIDER: A SURFACE MAP FOR EFFICIENCY....
 		List<Range1D> rangesAt = heightMap[index.x * patchDimensions.x + index.z];
-		if( rangesAt[rangesAt.Count - 1].extent() < index.y)
+		if( rangesAt[rangesAt.Count - 1].extent() <= index.y)
 			return CoordSurfaceStatus.ABOVE_SURFACE;
-		
 		
 		BlockType btype = blockTypeFromWithinRangeList(rangesAt, index.y);
 		if (btype == BlockType.Air) {
@@ -548,13 +540,24 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		return CoordSurfaceStatus.BELOW_SURFACE_SOLID;
 	}
 	
+	public float lightValueAtPatchRelativeCoord(Coord relCo, Direction dir)
+	{
+
+		if (!relCo.isIndexSafe(patchDimensions) )
+		{
+			return m_chunkManager.ligtValueAtPatchRelativeCoordNoiseCoord(relCo, this.coord, dir);
+		}
+		
+		return m_windowMap.ligtValueAtPatchRelativeCoord(relCo, dir);	
+	}
+	
 	#endregion
 
 	//FIND NEIGHBORS TOUCHING SIDES
 	public static List<NoiseCoord> nudgeNoiseCoordsAdjacentToChunkCoord(Coord chunkCo) 
 	{
 		List<NoiseCoord> noiseCoords = new List<NoiseCoord> ();
-		Coord relCo = NoisePatch.patchRelativeChunkCoordForChunkCoord (chunkCo);
+		Coord relCo = CoordUtil.PatchRelativeChunkCoordForChunkCoord (chunkCo);
 
 		if (relCo.x == PATCHDIMENSIONSCHUNKS.x - 1)
 			noiseCoords.Add (new NoiseCoord (1, 0));
@@ -628,7 +631,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	public Block blockAtWorldBlockCoord(Coord woco)
 	{
-		Coord relCo = patchRelativeBlockCoordForWorldBlockCoord (woco);
+		Coord relCo = CoordUtil.PatchRelativeBlockCoordForWorldBlockCoord (woco);
 		
 		return blockAtRelativeCoord(relCo);
 	}
@@ -716,7 +719,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 	public void setBlockAtWorldCoord(Block bb, Coord woco) 
 	{
-		Coord relCo = patchRelativeBlockCoordForWorldBlockCoord (woco);
+		Coord relCo = CoordUtil.PatchRelativeBlockCoordForWorldBlockCoord (woco);
 //		blocks [relCo.x, relCo.y, relCo.z] = bb;
 
 		//save any set block
@@ -986,7 +989,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	private static bool aTreeIsHere(int xx, int zz, int surfaceHeight, float noise_val) {
 		
 		// TODO turn the test 90 degrees.
-		if ((xx == patchDimensions.x - 1) && zz % 8 == 0) return true; //TEST
+		if ((xx == patchDimensions.x - 1) && (zz == 1 || zz == 8 || zz == 24 )) return true; //TEST
 		return false;//TEST
 		//********* END TEST
 		
@@ -1234,9 +1237,13 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 				//DEBUGGING NPATCH BORDERS
 				if (xx == 0 || zz == 0)
 				{
-					Range1D topRange = heightRanges[heightRanges.Count - 1];
-					topRange.blockType = BlockType.Sand;
-					heightRanges[heightRanges.Count - 1] = topRange;
+					
+//					Range1D topRange = heightRanges[heightRanges.Count - 1];
+//					if (this.coord.isCoordZero())
+//						ChunkManager.debugLinesAssistant.addUnitCubeAt(new Coord(xx, topRange.extent(), zz));
+					
+//					topRange.blockType = BlockType.Sand;
+//					heightRanges[heightRanges.Count - 1] = topRange;
 				}
 				
 
@@ -1442,57 +1449,78 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		} // end for xx
 		
+		populateWindowMap(); 
+		
+		
 #if TURN_OFF_STRUCTURES
 #else
 		//add stucturs
 		addStructuresToHeightMap(structurz); 
 		//any structures for me from neighbors?
-		getStructuresFromNeighbors(); 
+		getDataFromNeighbors(); 
 		//TURN ON STRUCTURES really means shared structures
 		//are there any neighbors who generated already and need structures?
-		dropOffStructuresForNeighbors(); 
+		dropOffDataForNeighbors(); 
 #endif
 		
+		tradeDataWithFourNeighbors();
 		
-//		#if TERRAIN_TEST
-//		textureSlice = GetTexture ();
-//		#endif
-		
-		populateWindowMap();
 		m_windowMap.calculateLight();
+		
+		//TEST
+//		m_chunkManager.assertNoChunksActiveInNoiseCoord(this.coord);
+		
 
 		generatedBlockAlready = true;
 	}
+	
+	#endregion
+	
+	#region populate window map
 	
 	private void populateWindowMap()
 	{
 		int xx = 0;
 		int zz = 0;
-		int j = 0;
-		List<Range1D> heightRanges = new List<Range1D>();
-		Range1D aboveRange;
-		Range1D belowRange;
-//		SurroundingSurfaceValues surroundingSurfaceHeights = SurroundingSurfaceValues.MakeNew();
+//		int j = 0;
+//		List<Range1D> heightRanges = new List<Range1D>();
+//		Range1D aboveRange;
+//		Range1D belowRange;
 
 		for (; xx < patchDimensions.x ; xx++ ) 
 		{
 			zz = 0;
 			for (; zz < patchDimensions.z; zz++ ) 
 			{
-				heightRanges = heightMap[xx * patchDimensions.x + zz];
-				j = 1;
-				for(; j < heightRanges.Count; ++j)
-				{
-					aboveRange = heightRanges[j];
-					belowRange = heightRanges[j - 1];
-					int gap = aboveRange.start - belowRange.extent();
-					if (gap > 0)
-					{
-						m_windowMap.discontinuityAt(new SimpleRange(belowRange.extent(), gap), 
-							xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
-					}
-				}
+//				heightRanges = heightMap[xx * patchDimensions.x + zz];
+				addDiscontinuityToWindowMapWithRanges(heightMap[xx * patchDimensions.x + zz], xx, zz);
+//				j = 1;
+//				for(; j < heightRanges.Count; ++j)
+//				{
+//					addDiscontinuityToWindowMap(heightRanges[j], heightRanges[j - 1], xx, zz);
+//				}
 			}
+		}
+	}
+	
+	private void addDiscontinuityToWindowMapWithRanges(List<Range1D> heightRanges, int xx, int zz)
+	{
+		int j = 1;
+		for(; j < heightRanges.Count; ++j)
+		{
+			addDiscontinuityToWindowMap(heightRanges[j], heightRanges[j - 1], xx, zz);
+		}
+	}
+	
+	private void addDiscontinuityToWindowMap(Range1D aboveRange, Range1D belowRange, int xx, int zz)
+	{
+//		aboveRange = heightRanges[j];
+//		belowRange = heightRanges[j - 1];
+		int gap = aboveRange.start - belowRange.extent();
+		if (gap > 0)
+		{
+			m_windowMap.discontinuityAt(new SimpleRange(belowRange.extent(), gap), 
+				xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
 		}
 	}
 	
@@ -1502,15 +1530,19 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		foreach(Direction dir in DirectionUtil.TheDirectionsXZ())
 		{
-			int height = highestPointAtPatchRelativeCoord(relCo + DirectionUtil.NudgeCoordForDirection(dir));	
+			int height = highestPointAtPatchRelativeCoord(relCo + DirectionUtil.NudgeCoordForDirection(dir));
 			if (height > 0)
 			{
-				result.setValueForDirection(height, dir);	
+				result.setValueForDirection(height, dir);
 			}
 		}
 		
 		return result;
 	}
+	
+	#endregion
+	
+	#region structures and data trading
 	
 	private void takeStructuresAfterIGeneratedBlocksAlready (List<StructureBase> strs)
 	{
@@ -1571,7 +1603,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 #endif
 		NoisePatch neighborPatch = null;
 		// X POS NEIGHBOR
-		NoiseCoord nco = NeighborDirectionUtils.nudgeCoordFromNeighborDirection(ndir) + this.coord; // new NoiseCoord(this.coord.x + 1, this.coord.z);
+		NoiseCoord nco = NeighborDirectionUtils.nudgeCoordFromNeighborDirection(ndir) + this.coord; 
 		if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
 		{
 			neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
@@ -1585,24 +1617,139 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	//TODO: noisepatches only ready when their neighbors have setup (their structures) (i.e. given them there structures...)
 	
-	private void dropOffStructuresForNeighbors() // if the neighbor was build before we were
+	private void dropOffDataForNeighbors() // if the neighbor was build before we were
 	{
 		foreach(NeighborDirection ndir in NeighborDirectionUtils.neighborDirections()) {
 			dropOffStructureForNeighborAt(ndir);	
 		}
 	}
 	
-	private void getStructuresFromNeighbors()
+	private bool tradeDataWithFourNeighbors()
+	{
+		// 1) adjust any windows of mine that are flush with the edge for this neighbor
+		// i.e. tell those windows what the real surface height is at their edge.
+		// 2) if the real surface height was greater than our window's extent...
+		//    ask the neighbor... in case of an x neighbor
+		// 		for one kind of 'flush window' (edge flush)
+		//    in the case of a z neighbor
+		//    	for another kind (face flush :)
+		
+		// want wrapper funcs for this exchange, to ensure that we only do it once per (mutual) build per neighbor
+		// we will want to reuse some of the funcs. when changes to the map occur
+		
+		// since we need both neighbors to be ready for any exchange, don't do any of this inside 'getDataFromNeighbors'
+		// its a misnomer
+		// new func. 'tradeDataWithNeighbors'	
+		
+		bool exchangeHappend = false;
+		foreach(NeighborDirection ndir in NeighborDirectionUtils.neighborDirectionsFour()) 
+		{
+			NoiseCoord nco = this.coord + NeighborDirectionUtils.nudgeCoordFromNeighborDirection(ndir);
+			if (this.m_chunkManager.blocks.noisePatchExistsAtNoiseCoord(nco)) 
+			{
+				NoisePatch neighborPatch = this.m_chunkManager.blocks.noisePatches[nco];
+				if (neighborPatch.IsDone && !neighborPatch.hasStarted)
+				{
+					if (!exchangedTerrainDataAlready.booleanForDirection(ndir))
+					{
+						exchangeHappend = true;
+						// exchange the data ....
+						this.getSurfaceHeightDataFromNeighborInDirection(neighborPatch, ndir);
+						neighborPatch.getSurfaceHeightDataFromNeighborInDirection(this, NeighborDirectionUtils.oppositeNeighborDirection(ndir));
+						
+						introduceAdjacentWindowsWithNeighborInDirection(neighborPatch, ndir);
+						
+						exchangedTerrainDataAlready.setBooleanForDirection(ndir, true);
+						neighborPatch.finishTradingTerrainDataWithNeighborFromDirection(ndir);
+						
+						//TEST
+						m_chunkManager.updateAllActiveChunksInNoiseCoord(neighborPatch.coord);
+						m_chunkManager.updateAllActiveChunksInNoiseCoord(this.coord);
+					}
+				}
+			}
+		}
+		return exchangeHappend;
+	}
+	
+	private void finishTradingTerrainDataWithNeighborFromDirection(NeighborDirection fromDirection)
+	{
+		//I just got an update an presumably won't be prompted to recalc light later...
+		m_windowMap.calculateLight();
+		NeighborDirection opposite = NeighborDirectionUtils.oppositeNeighborDirection(fromDirection);
+		exchangedTerrainDataAlready.setBooleanForDirection(opposite, true);
+	}
+	
+	private void getSurfaceHeightDataFromNeighborInDirection(NoisePatch neighborPatch, NeighborDirection ndir)
+	{
+		byte[] edgeHeights = neighborPatch.giveFlushSurfaceHeightDataForNeighborFromDirection(ndir);
+		
+		// ... pass data to windowMap and tell it which edge...
+		m_windowMap.updateWindowsFlushWithEdgeInNeighborDirection(edgeHeights, ndir);
+	}
+	
+	private void introduceAdjacentWindowsWithNeighborInDirection(NoisePatch neighborPatch, NeighborDirection ndir)
+	{
+		this.m_windowMap.introduceFlushWindowsWithWindowInNeighborDirection(neighborPatch.windowMap, ndir);	
+	}
+	
+	private byte[] giveFlushSurfaceHeightDataForNeighborFromDirection(NeighborDirection fromNDir)
+	{
+		return surfaceHeightsAtEdgeInDirection(NeighborDirectionUtils.oppositeNeighborDirection(fromNDir));
+	}
+	
+	private byte[] surfaceHeightsAtEdgeInDirection(NeighborDirection ndir)
+	{
+		Direction dir = NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir);
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		int x_start = 0;
+		int x_end = 1;
+		int z_start = 0;
+		int z_end = patchDimensions.z;
+		
+		
+		bool isXAxis = true;
+		
+		if (axis == Axis.X)
+		{
+			if (DirectionUtil.IsPosDirection(dir))
+			{
+				x_start = patchDimensions.x - 1;
+				x_end = patchDimensions.x;
+			}
+		} else if (axis == Axis.Z) {
+			x_end = patchDimensions.x;
+			isXAxis = false;
+			if (DirectionUtil.IsPosDirection(dir))
+			{
+				z_start = patchDimensions.z - 1;
+				z_end = patchDimensions.z;
+			} else {
+				z_start = 0;
+				z_end = 1;
+			}
+		}
+		
+		byte[] result = new byte[(int)(CHUNKDIMENSION * ChunkManager.CHUNKLENGTH) ];
+		
+		for(int i = x_start; i < x_end; ++i)
+		{
+			for (int j = z_start ; j < z_end; ++j)
+			{
+				result[isXAxis ? j : i] = surfaceMap[i,j];
+			}
+		}
+		
+		return result;
+	}
+	
+	private void getDataFromNeighbors()
 	{
 #if TURN_OFF_STRUCTURES
 		return;
-#else
 #endif
-		NoisePatch neighborPatch = null;
-		List<StructureBase> strs = null;
-		NoiseCoord nco = new NoiseCoord(this.coord.x - 1, this.coord.z);
-		
-		foreach(NeighborDirection ndir in NeighborDirectionUtils.neighborDirections()) {
+		foreach(NeighborDirection ndir in NeighborDirectionUtils.neighborDirections()) 
+		{
 			addStructuresFromNeighborInDirection(ndir);
 		}
 	}
@@ -1766,11 +1913,17 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 						
 					}
 					
-					heightMap[ lookup.s * patchDimensions.x + lookup.t] = range_l;
+//					heightMap[ lookup.s * patchDimensions.x + lookup.t] = range_l; 
+					// update window map here...
+					addDiscontinuityToWindowMapWithRanges(range_l, lookup.s, lookup.t);
 				}
 			}
 		}
 	}
+	
+	#endregion
+	
+	#region woodlands
 
 	private static bool caveIsHere(float cave_noise_val,int yy, int surfaceNudge) {
 		float yLevel = yy - surfaceNudge;
@@ -1971,10 +2124,40 @@ public struct NeighborBooleans
 	}
 }
 
+public struct NeighborBooleansFour
+{
+	public bool xpos, zpos, xneg, zneg;
+	
+	public bool booleanForDirection(NeighborDirection ndir) {
+		if (ndir == NeighborDirection.XPOS)
+			return xpos;
+		if (ndir == NeighborDirection.ZPOS)
+			return zpos;
+		if (ndir == NeighborDirection.XNEG)
+			return xneg;
+		if (ndir == NeighborDirection.ZNEG)
+			return zneg;
+		else
+			throw new Exception("this is neighbor booleans four. you asked for direction: " + ndir);
+		return false;
+	}
+	
+	public void setBooleanForDirection(NeighborDirection ndir, bool _boo) {
+		if (ndir == NeighborDirection.XPOS)
+			 xpos = _boo;
+		else if (ndir == NeighborDirection.ZPOS)
+			zpos = _boo;
+		else if (ndir == NeighborDirection.XNEG)
+			xneg = _boo;
+		else if (ndir == NeighborDirection.ZNEG)
+			zneg = _boo;
+		else
+			throw new Exception("this is neighbor booleans four. you asked for direction: " + ndir);
+	}
+}
+
 public struct StructuresForNeighbors
 {
-//	List<StructureBase> forXNeg;
-//	List<StructureBase> forZNeg;
 	public List<StructureBase> forXPos;
 	public List<StructureBase> forZPos;
 	public List<StructureBase> forXZPos;
@@ -2108,16 +2291,22 @@ public static class NeighborDirectionUtils
 		return new NoiseCoord(-1, 1);
 	}
 	
-	public static IEnumerable neighborDirectionsOLD() {
-//		yield return NeighborDirection.XPOS;
-//		yield return NeighborDirection.ZPOS;
-//		yield return NeighborDirection.XZPOS;
-//		yield return NeighborDirection.XNEG;
-//		yield return NeighborDirection.ZNEG;
-//		yield return NeighborDirection.XZNEG;
-		yield return null;
+	public static Direction DirecionFourForNeighborDirection(NeighborDirection neighborDir)
+	{
+		if (neighborDir	== NeighborDirection.XNEG)
+			return Direction.xneg;
+		if (neighborDir	== NeighborDirection.XPOS)
+			return Direction.xpos;
+		
+		if (neighborDir	== NeighborDirection.ZNEG)
+			return Direction.zneg;
+		if (neighborDir	== NeighborDirection.ZPOS)
+			return Direction.zpos;
+		
+		throw new Exception("this doesn't work for non-four dirs" + neighborDir);
+		return Direction.xneg;
 	}
-	
+
 	public static NeighborDirection[] neighborDirections() {
 		return new NeighborDirection[] {
 			NeighborDirection.XPOS,
@@ -2128,6 +2317,15 @@ public static class NeighborDirectionUtils
 			NeighborDirection.ZNEG,
 			NeighborDirection.XZNEG,
 			NeighborDirection.XNEGZPOS
+		};
+	}
+	
+		public static NeighborDirection[] neighborDirectionsFour() {
+		return new NeighborDirection[] {
+			NeighborDirection.XPOS,
+			NeighborDirection.ZPOS,
+			NeighborDirection.XNEG,
+			NeighborDirection.ZNEG,
 		};
 	}
 	

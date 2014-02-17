@@ -201,7 +201,7 @@ public class ChunkManager : MonoBehaviour
 		
 		if (!blocks.noisePatchExistsAtWorldCoord(woco) )
 		{
-			bug ("(Rs at woco): trying to get a block from woco coord: " + woco.toString() + "\n for which we don't have a noise patch coord at woco: ");
+//			bug ("(Rs at woco): trying to get a block from woco coord: " + woco.toString() + "\n for which we don't have a noise patch coord at woco: ");
 			return null;
 		}
 		
@@ -242,16 +242,31 @@ public class ChunkManager : MonoBehaviour
 		return blocks.heightsListAtWorldCoord(index); //   np.heightsListAtChunkCoordOffset(cc, offset);
 	}
 	
-	public CoordSurfaceStatus coordIsAboveSurface(Coord cc, Coord offset) // Coord noiseCoordOffset, NoiseCoord nCo)
+	public CoordSurfaceStatus coordIsAboveSurface(NoiseCoord nco, Coord offset) // Coord noiseCoordOffset, NoiseCoord nCo)
 	{
+		Coord woconoco = CoordUtil.WorldCoordFromNoiseCoord(nco);
+		Coord index = woconoco + offset;
+		return coordIsAboveSurface(index);
+	}
+	
+	public CoordSurfaceStatus coordIsAboveSurface(Coord cc, Coord offset) // Coord noiseCoordOffset, NoiseCoord nCo)
+	{	
 		Coord index = new Coord ((int)(cc.x * CHUNKLENGTH + offset.x),
 									(int) (cc.y * CHUNKHEIGHT + offset.y),
 									(int) (cc.z * CHUNKLENGTH + offset.z));
-
-		if (index.y < 0 || index.y > WORLD_HEIGHT_BLOCKS - 1) {  
-			throw new Exception("index out of range.");
+		
+		return coordIsAboveSurface(index);
+	}
+		
+	public CoordSurfaceStatus coordIsAboveSurface(Coord index) // Coord noiseCoordOffset, NoiseCoord nCo)
+	{
+		if (index.y > WORLD_HEIGHT_BLOCKS - 1) {  
 			return CoordSurfaceStatus.ABOVE_SURFACE;
 		} 
+		if (index.y < 0) {  
+			throw new Exception("why below??" + index.toString());
+			return CoordSurfaceStatus.BELOW_SURFACE_SOLID;
+		}
 
 		if (!blocks.noisePatchExistsAtWorldCoord(index) )
 		{
@@ -260,6 +275,27 @@ public class ChunkManager : MonoBehaviour
 		}
 
 		return blocks.worldCoordIsAboveSurface(index); //   np.heightsListAtChunkCoordOffset(cc, offset);
+	}
+	
+	public float ligtValueAtPatchRelativeCoordNoiseCoord(Coord patchRelCo, NoiseCoord nco, Direction dir)
+	{
+		Coord woco = CoordUtil.WorldCoordFromNoiseCoord(nco) + patchRelCo;
+		if (woco.y > WORLD_HEIGHT_BLOCKS - 1) {  
+			return Window.LIGHT_LEVEL_MAX;
+		} 
+		if (woco.y < 0) {  
+//			throw new Exception("why below??" + woco.toString());
+			return 4f;
+		}
+
+		if (!blocks.noisePatchExistsAtWorldCoord(woco) )
+		{
+//			throw new Exception("noisePatch doesn't exist...");
+			return 6f;
+		}
+		
+		return blocks.ligtValueAtWorldCoord(woco, dir);
+		
 	}
 	
 //	
@@ -282,6 +318,8 @@ public class ChunkManager : MonoBehaviour
 //	}
 	
 	#endregion
+	
+	#region make chunks
 	
 	void makeChunksFromOnMainThread(ChunkCoord start, ChunkCoord range)
 	{
@@ -416,12 +454,14 @@ public class ChunkManager : MonoBehaviour
 
 		c.meshHoldingGameObject = gObj; //the chunk gets a reference to the gameObject that it will work with (convenient)
 	}
+	
+	#endregion
 
 
 	public System.Collections.IEnumerable chunksTouchingBlockCoord(Coord blockWorldCoord)
 	{
-		Coord chunkCoord = chunkCoordContainingBlockCoord (blockWorldCoord);
-		Coord chRelCo = chunkRelativeCoord (blockWorldCoord);
+		Coord chunkCoord = CoordUtil.ChunkCoordContainingBlockCoord (blockWorldCoord);
+		Coord chRelCo = CoordUtil.ChunkRelativeCoordForWorldCoord (blockWorldCoord);
 
 		foreach (Coord dirCo in directionCoordsForRelativeEdgeCoords(chRelCo, blockWorldCoord)) {
 			Chunk adjacentChunk = chunkMap.chunkAt (chunkCoord + dirCo);
@@ -458,6 +498,37 @@ public class ChunkManager : MonoBehaviour
 		UnityEngine.Debug.Log (str);
 	}
 	
+	#region degub chunk managing
+	
+	public void assertNoChunksActiveInNoiseCoord(NoiseCoord nco)
+	{
+		List<Coord> chunkCoordsInNoisePatch = CoordUtil.WorldRelativeChunkCoordsWithinNoiseCoord(nco);
+		
+		foreach(Coord chCo in chunkCoordsInNoisePatch)
+		{
+			Chunk chunk = chunkMap.chunkAt(chCo);
+			AssertUtil.Assert( chunk == null || !chunk.isActive , "this chunk shouldn't be ready yet??" + chCo.toString());	
+		}
+	}
+	
+	#endregion
+	
+	public void updateAllActiveChunksInNoiseCoord(NoiseCoord nco)
+	{
+		List<Coord> chunkCoordsInNoisePatch = CoordUtil.WorldRelativeChunkCoordsWithinNoiseCoord(nco);
+		
+		foreach(Coord chCo in chunkCoordsInNoisePatch)
+		{
+			Chunk chunk = chunkMap.chunkAt(chCo);
+			
+			if (chunk != null && !createTheseVeryCloseAndInFrontChunks.Contains(chCo))
+			{
+				createTheseVeryCloseAndInFrontChunks.Insert(0,chCo);
+			}
+//			AssertUtil.Assert( chunk == null || !chunk.isActive , "this chunk shouldn't be ready yet??" + chCo.toString());	
+		}
+	}
+	
 	#region rebuild chunks for NoisePatch structures
 	
 	public void rebuildChunksAtNoiseCoordPatchRelativeChunkCoords(NoiseCoord nco, List<Coord> patchRelChunkCoords)
@@ -467,7 +538,7 @@ public class ChunkManager : MonoBehaviour
 		// TODO: add to a list of chunks to rebuild
 		
 		Coord patchWoco = worldCoordForNoiseCoord(nco);
-		Coord patchWorldChunkCo = chunkCoordContainingBlockCoord(patchWoco);
+		Coord patchWorldChunkCo = CoordUtil.ChunkCoordContainingBlockCoord(patchWoco);
 		foreach(Coord pRelChCo in patchRelChunkCoords)
 		{
 			Coord chunkCoord = pRelChCo + patchWorldChunkCo;
@@ -502,35 +573,6 @@ public class ChunkManager : MonoBehaviour
 
 	#region finding coords and chunks
 
-	Coord chunkCoordContainingBlockCoord(Coord co)
-	{
-//		if (!co.isIndexSafe (m_mapDims_blocks))
-//			return new Coord (9999999999, 0, 999999999); // dictionary of chunks now. check elsewhere for safety
-		// if a coord member is negative, member - CHUNKLENGTH will give us the chunkCoord we want.
-		// E.G. -2, 3, 4 is inside chunkCoord -1, 0, 0. so (-2 - 16, 3, 4) / 16 = (-1,0,0)
-		// (-2, 3, 4) / 16 = 0,0,0 (!not what we want!)
-		
-		Coord chcoAdjustNeg = co.booleanNegative () * Chunk.DIMENSIONSINBLOCKS; // CHUNKLENGTH;
-		return (co + co.booleanNegative() - chcoAdjustNeg)  / Chunk.DIMENSIONSINBLOCKS; //  CHUNKLENGTH;
-	}
-
-	Coord chunkRelativeCoord(Coord worldBlockCoord) {
-//		throw new Exception ("fix this for negs!!!");
-//		return (worldBlockCoord - worldBlockCoord.booleanNegative() * (CHUNKLENGTH) ) % CHUNKLENGTH; //new way doesn't work...
-		return (worldBlockCoord + worldBlockCoord.booleanNegative() ) % Chunk.DIMENSIONSINBLOCKS + worldBlockCoord.booleanNegative() * (Chunk.DIMENSIONSINBLOCKS - 1);
-	}
-
-	Chunk chunkContainingCoord(Coord co)
-	{
-		Coord chunkCo = chunkCoordContainingBlockCoord (co);
-		if (!chunkMap.coIsOnMap (chunkCo))
-			return null;
-//		if (!co.isIndexSafe (m_mapDims_blocks))
-//			return null;
-
-		return chunkMap.chunkAt(chunkCo);
-	}
-
 	Coord playerPosCoord() {
 		return new Coord (playerCameraTransform.position);
 	}
@@ -562,9 +604,9 @@ public class ChunkManager : MonoBehaviour
 	}
 
 	#endregion
-
-	//swiped from 'Noise Handler' (demo.cs)
-	public void OnGUI() {
+	
+	public void OnGUI() 
+	{
 		
 //		int y = 0;
 //		foreach ( string i in System.Enum.GetNames(typeof(NoiseType)) ) {
@@ -606,7 +648,7 @@ public class ChunkManager : MonoBehaviour
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 280, 150, 40), "verCls Cnt:" + createTheseVeryCloseAndInFrontChunks.Count );
 		
 		Coord playerCoord = new Coord (playerCameraTransform.position);
-		Coord chChoord = chunkCoordContainingBlockCoord (playerCoord);
+		Coord chChoord = CoordUtil.ChunkCoordContainingBlockCoord (playerCoord);
 		NoiseCoord npatchCo = noiseCoordContainingChunkCoord (chChoord);
 
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 40, 150, 40), "plyr co: \n" + playerCoord.toString() );
@@ -619,8 +661,6 @@ public class ChunkManager : MonoBehaviour
 		{
 			blocks.saveNoisePatchesToPlayerPrefs ();
 		}
-
-		
 
 //		GUI.Box (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "FPS:" + Time.deltaTime );
 
@@ -701,7 +741,7 @@ public class ChunkManager : MonoBehaviour
 
 		destroyMe.type = BlockType.Air;
 
-		Chunk ch = chunkContainingCoord (blockCoord);
+		Chunk ch = chunkMap.chunkContainingCoord (blockCoord);
 
 		if (ch == null) {
 			bug ("null chunk, nothing to update");
@@ -712,7 +752,7 @@ public class ChunkManager : MonoBehaviour
 		
 		
 #if FAST_BLOCK_REPLACE
-		Coord chunkRelCo = chunkRelativeCoord(blockCoord);
+		Coord chunkRelCo = CoordUtil.ChunkRelativeCoordForWorldCoord(blockCoord);
 		ch.editBlockAtCoord(chunkRelCo, BlockType.Air);
 #else
 		updateChunk (ch);
@@ -721,8 +761,6 @@ public class ChunkManager : MonoBehaviour
 		// also update any chunks touching the destroyed block
 		foreach (Chunk adjCh in chunksTouchingBlockCoord(blockCoord) )
 			updateChunk(adjCh);
-
-
 	}
 
 	public void handlePlaceBlockAt(RaycastHit hit)
@@ -756,18 +794,17 @@ public class ChunkManager : MonoBehaviour
 		
 //		bug ("placing block at coord: " + placingCoord.toString());
 		
-		Chunk ch = chunkContainingCoord (placingCoord);
+		Chunk ch = chunkMap.chunkContainingCoord (placingCoord);
 //		ch.noNeedToRenderFlag = false;
 
 		blocks [placingCoord] = b; // get saved blocks to update.
 		
 #if FAST_BLOCK_REPLACE
-		Coord chunkRelCo = chunkRelativeCoord(placingCoord);
+		Coord chunkRelCo = CoordUtil.ChunkRelativeCoordForWorldCoord(placingCoord);
 		ch.editBlockAtCoord(chunkRelCo, b.type);
 #else
 		updateChunk (ch);
 #endif
-		
 
 	}
 
@@ -869,7 +906,7 @@ public class ChunkManager : MonoBehaviour
 	Coord playerLocatedAtChunkCoord()
 	{
 		Coord pCoo =  new Coord (playerCameraTransform.position);
-		return chunkCoordContainingBlockCoord (pCoo);
+		return CoordUtil.ChunkCoordContainingBlockCoord (pCoo);
 	}
 
 	CoRange nearbyChunkRange(Coord playerChunkCoord)
@@ -1918,7 +1955,7 @@ public class ChunkManager : MonoBehaviour
 	}
 
 	private void finishStartSetup() {
-		Coord spawnPAtChunkCoord  = chunkCoordContainingBlockCoord (spawnPlayerAtCoord);
+		Coord spawnPAtChunkCoord  = CoordUtil.ChunkCoordContainingBlockCoord (spawnPlayerAtCoord);
 
 		//		CoRange nearbyCoRa = corangeFromNoiseCoord (initalNoiseCoord);
 		//		bug ("noise patch based co range: " + nearbyCoRa.toString ());

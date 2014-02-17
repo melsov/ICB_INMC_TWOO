@@ -378,6 +378,18 @@ public class BlockCollection
 		return np.worldCoordIsAboveSurface(woco);
 			
 	}
+	
+	public float ligtValueAtWorldCoord(Coord woco, Direction dir)
+	{
+		NoisePatch np = noisePatchAtWorldCoord(woco);
+		
+		if (np == null) {
+			throw new Exception("trying to get a heights list for which we don't have a noise patch");	
+			return 0f; 
+		}
+		
+		return np.lightValueAtPatchRelativeCoord(CoordUtil.PatchRelativeBlockCoordForWorldBlockCoord(woco), dir);
+	}
 
 //	public Block specialGetBlockForTesting(Coord woco) 
 //	{

@@ -24,6 +24,10 @@ public class LightDataProvider : ILightDataProvider
 	private Chunk m_chunk;
 	private NoisePatch m_noisePatch;
 	
+	public const int NUM_LIGHT_LEVELS = 8;
+	public const int BITS_PER_LIGHT_VALUE = 3;
+	private const float LIGHT_VALUE_CONVERTER = (NUM_LIGHT_LEVELS - 1)/Window.LIGHT_LEVEL_MAX;
+	
 	public Coord chunkCoord {
 		get{
 			return this.m_chunk.chunkCoord;	
@@ -32,9 +36,60 @@ public class LightDataProvider : ILightDataProvider
 	
 	public Vector4 lightDataForQuadFloat(Quad quad, Direction dir, int normalOffset)
 	{
-		float test_light_val = 8f * 8f * 8f * 8f - 1f;
-		return new Vector4(test_light_val,test_light_val,test_light_val,test_light_val);
-//		return new Vector4(1f,1f,1f,1f);
+		
+		if (debugLinesAssistant == null)
+			debugLinesAssistant = ChunkManager.debugLinesAssistant;
+		
+		if (m_noisePatch == null)
+			m_noisePatch = m_chunk.m_noisePatch;
+		
+		AssertUtil.Assert(m_noisePatch != null, "what? noisepatch still null?");
+		
+		Coord chunkRelCoOfOrigin = chunkRelativeCoordFrom(quad, dir, normalOffset) + DirectionUtil.NudgeCoordForDirection(dir);
+
+		// check the nine blocks right in front.
+		// for those that are not solid
+		// check the windows.
+		
+		CoordSurfaceStatus surfaceStatus;
+
+		int[] rows = new int[4];
+
+		for (int i = 0; i < quad.dimensions.s; ++i)
+		{
+			for (int j = 0; j < quad.dimensions.t; ++j)
+			{
+				Coord quadOffset = DirectionUtil.CoordForPTwoAndNormalDirectionWithFaceAggregatorRules(new PTwo(i,j), dir);
+				
+				Coord thePatchRelCo = CoordUtil.PatchRelativeChunkCoordForChunkCoord(this.chunkCoord) * (int) ChunkManager.CHUNKLENGTH + chunkRelCoOfOrigin + quadOffset;
+				surfaceStatus = m_noisePatch.patchRelativeCoordIsAboveSurface(thePatchRelCo);
+
+				int lightValue = NUM_LIGHT_LEVELS - 1;
+				if (surfaceStatus != CoordSurfaceStatus.ABOVE_SURFACE)
+				{
+					lightValue = (int) (m_noisePatch.lightValueAtPatchRelativeCoord(thePatchRelCo, dir) * LIGHT_VALUE_CONVERTER);
+				} 
+				
+				//SET THE VALUES IN THE WAY THAT THE SHADER EXPECTS THEM
+				//EXAMPLE: IF QUAD.ORIGIN.S = 7, I = 0, 
+				//THE SHADER WILL TAKE THE VALUE FROM COMPONENT WITH 'INDEX' 3 (7 % 4 => 3)
+				rows[(quad.origin.s + i) % FaceSet.MAX_DIMENSIONS.s] |= colorValueFloatWith((quad.origin.t + j) 
+					% FaceSet.MAX_DIMENSIONS.t, lightValue);
+			}
+		}
+
+		return new Vector4((float)rows[0],(float)rows[1],(float)rows[2],(float)rows[3]);
+	}
+	
+	private int colorValueFloatWith(int shiftByS, int shaderLightValue) 
+	{
+//		return (int) (shaderLightValue * Mathf.Pow(NUM_LIGHT_LEVELS, shiftByS));
+		return (int) ( shaderLightValue << (shiftByS * BITS_PER_LIGHT_VALUE));
+	}	
+	
+	private static Vector4 maxLightVec4() {
+		float maxVal = (float)(8 * 8 * 8 * 8 - 1);
+		return new Vector4(maxVal,maxVal,maxVal,maxVal);
 	}
 	
 	public Color32 lightDataForQuad(Quad quad, Direction dir, int normalOffset)
@@ -56,6 +111,21 @@ public class LightDataProvider : ILightDataProvider
 		// for those that are not solid
 		// check the windows.
 		
+//		Coord noisePatchRelCo = CoordUtil.PatchRelativeCoordWithChunkCoordOffset(chunkRelCoOfOrigin, new Coord(0));
+		
+		int[] rows = new int[4];
+		
+//		for (int i = 0; i < quad.dimensions.s; ++i)
+//		{
+//			for (int j = 0; j < quad.dimensions.t; ++j)
+//			{
+//				Coord quadOffset = DirectionUtil.CoordForPTwoAndNormalDirectionWithFaceAggregatorRules(new PTwo(i,j), dir);
+//				int  lightValue = (int) ( m_noisePatch.lightValueAtPatchRelativeCoord(noisePatchRelCo + quadOffset) * LIGHT_VALUE_CONVERTER);
+//				
+//			}
+//		}
+		
+		
 //		Coord chunkWoco = CoordUtil.WorldCoordForChunkCoord(this.chunkCoord);
 		
 		CoordSurfaceStatus surfaceStatus = m_noisePatch.coordIsAboveSurface(this.chunkCoord, chunkRelCoOfOrigin);
@@ -70,7 +140,7 @@ public class LightDataProvider : ILightDataProvider
 		return new Color32(0,0,0,0);
 		// ********************************* //
 		
-		int[] rows = new int[4];
+//		int[] rows = new int[4];
 		
 		for (int i = 0; i < quad.dimensions.s; ++i)
 		{
@@ -84,6 +154,7 @@ public class LightDataProvider : ILightDataProvider
 		
 		return new Color32((byte)rows[0],(byte)rows[1],(byte)rows[2],(byte)rows[3]);
 	}
+
 	
 	private int colorValueWith(int shiftByS, byte lightValue) {
 		return(int) (lightValue << (shiftByS * 2));	

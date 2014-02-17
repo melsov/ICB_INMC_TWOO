@@ -29,6 +29,15 @@ public class ChunkMap
 	{
 		chunks = new Dictionary<Coord, Chunk> ();
 	}
+	
+	public Chunk chunkContainingCoord(Coord co)
+	{
+		Coord chunkCo = CoordUtil.ChunkCoordContainingBlockCoord(co);
+		if (!coIsOnMap (chunkCo))
+			return null;
+
+		return chunkAt(chunkCo);
+	}
 
 	public void addChunkAt(Chunk the_chunk, Coord c)
 	{
