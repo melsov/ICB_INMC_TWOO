@@ -894,6 +894,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// MORE WORK HERE...
 		// what if ranges were removed? (or does it all work just like this?)
 		addDiscontinuityToWindowMapWithRanges(heights, relCo.x, relCo.z);
+		
+		updateWindowMapWithNewSurfaceHeight((int) surfaceMap[relCo.x, relCo.z], relCo.x, relCo.z);
 	}
 	
 	#endregion
@@ -1505,6 +1507,15 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 //				}
 			}
 		}
+	}
+	
+	private void updateWindowMapWithNewSurfaceHeight(int newHeight, int xx, int zz)
+	{
+		// window map deal with this...	
+		m_windowMap.updateWindowsWithNewSurfaceHeight(newHeight, xx, zz);
+		
+		//unsubtle
+		m_windowMap.calculateLight();
 	}
 	
 	private void addDiscontinuityToWindowMapWithRanges(List<Range1D> heightRanges, int xx, int zz)

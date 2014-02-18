@@ -152,6 +152,50 @@ public class WindowMap
 //		discontinuityAt(disRange, x, z, SurroundingSurfaceValues.MakeNew());
 //	}
 	
+	public void updateWindowsWithNewSurfaceHeight(int newHeight, int xx, int zz)
+	{
+		// get any windows with edge (start or extent) at z
+		
+		//deal with Z edges.
+		foreach(Window win in windowsFlushWithZatX(xx, zz, false))
+		{
+			// window deal with new height	
+			win.editLightWithTerminatingSurfaceHeightAtPatchRelativeZ(newHeight, zz, false);
+		}
+		
+		foreach(Window win in windowsFlushWithZatX(xx, zz, true))
+		{
+			//deal with it	
+			win.editLightWithTerminatingSurfaceHeightAtPatchRelativeZ(newHeight, zz, true);
+		}
+		
+		if (xx < windows.Length - 1)
+		{
+			List<Window> xplusone = xplusone = windows[xx + 1];
+			if (xplusone != null)
+			{
+				foreach(Window win in xplusone)
+				{
+					win.editLightWithAdjacentNonTerminatingSurfaceHeightAtPatchRelativeZ(newHeight, zz);
+				}
+			}
+		}
+		
+		if (xx > 0)
+		{
+			List<Window> xminusOne = windows[xx - 1];
+			if (xminusOne != null)
+			{
+				foreach(Window win in xminusOne)
+				{
+					win.editLightWithAdjacentNonTerminatingSurfaceHeightAtPatchRelativeZ(newHeight, zz);
+				}
+			}
+		}
+		
+		
+	}
+	
 	public void discontinuityAt(SimpleRange disRange, int x, int z, SurroundingSurfaceValues surroundingSurfaceHeights)
 	{
 		Window tookDiscontinuity = incorporateDiscontinuityAt(disRange, x, z);
@@ -473,6 +517,31 @@ public class WindowMap
 		return result;
 	}
 	
+	private List<Window> windowsFlushWithZatX(int x_index, int zz, bool wantExtent)
+	{
+		List<Window> result = new List<Window>();
+		List<Window> atXWins = windows[x_index];
+		
+		if (atXWins == null || atXWins.Count < 1)
+			return result;
+		
+		foreach(Window win in atXWins)
+		{
+			if (wantExtent)
+			{
+				if (win.zExtent == zz) {
+					result.Add(win);	
+				} 
+			} else {
+				if (win.spanStart - 1 == zz) {
+					result.Add(win);
+				}
+			}
+		}
+		
+		return result;
+	}
+	
 	private void updateWindowsAlongZEdge(byte[] surfaceHeightsAtEdge, bool wantMaxZWindows)
 	{
 		int index = wantMaxZWindows ? windows.Length - 1 : 0;
@@ -532,6 +601,8 @@ public class WindowMap
 		
 		return new List<Window>[] {windows[0]};
 	}
+	
+	//do we need a new func. to edit around a new surface height?
 	
 	private Window incorporateDiscontinuityAt(SimpleRange disRange, int x, int z)
 	{

@@ -86,6 +86,8 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\CoordStructs.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\FrustumChecker.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\LibNoiseNetHandler.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Lighting\LightLevelTrapezoid.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Lighting\LightStructs.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Lighting\Window.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Lighting\WindowMap.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\NoiseHandler.cs" />
