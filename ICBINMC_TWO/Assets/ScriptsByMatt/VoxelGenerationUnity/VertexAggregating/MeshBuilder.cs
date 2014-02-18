@@ -264,6 +264,39 @@ public class MeshBuilder
 		return meshSetXZ;
 	}
 	
+	#region light editing
+	
+	public void updateLightLevelArrays()
+	{
+		updateLightLevelsInMeshSets();
+	}
+	
+	private void updateLightLevelsInMeshSets()
+	{
+		meshSetXY.tangents = getTangentsFromFaceAggregator(faceAggregatorsXY);
+		meshSetXZ.tangents = getTangentsFromFaceAggregator(faceAggregatorsXZ);
+		meshSetZY.tangents = getTangentsFromFaceAggregator(faceAggregatorsZY);	
+	}
+	
+	private List<Vector4> getTangentsFromFaceAggregator(FaceAggregator[] faceAggs) 
+	{
+		List<Vector4> result = new List<Vector4>();
+		FaceAggregator fa;
+		for (int i = 0; i < faceAggs.Length ; ++i)
+		{
+			fa = faceAggs[i];
+			
+			if (fa != null)
+			{	
+				result.AddRange(fa.recalculateLightLevelTangents(i));
+			}
+		}
+		
+		return result;
+	}
+	
+	#endregion
+	
 	#region block editing
 	
 	public MeshSet newMeshSetByRemovingBlockAtCoord(Coord co)

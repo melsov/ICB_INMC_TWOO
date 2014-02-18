@@ -52,6 +52,8 @@ public class FaceSet
 	
 	private ILightDataProvider m_lightDataProvider;
 	
+//	private int tangentLightValuesListLength = 0;
+	
 	public FaceSet(BlockType _type, Direction _dir, AlignedCoord initialCoord, byte lightLevel, ILightDataProvider _m_lightDataProvider)
 	{
 		blockType = _type;	
@@ -970,7 +972,20 @@ public class FaceSet
 		//now maybe just calculate the actual v3 array and the indices....
 		GeometrySet geomset = new GeometrySet(returnTriIndices, returnVecs );
 		
+//		tangentLightValuesListLength = returnTangents.Count;
+		
 		return new MeshSet(geomset, returnUVS, returnCol32s, returnTangents);
+	}
+	
+	public List<Vector4> recalculateTangents(int normalHeight)
+	{
+		Vector4 lightTangent = lightLevelDataFloat(normalHeight);
+		List<Vector4> result = new List<Vector4>();
+		for (int i = 0 ; i < quads.Count * 4 ; ++i)
+		{
+			result.Add(lightTangent);
+		}
+		return result;
 	}
 	
 	// TODO: explore having FaceSets own their meshSets too.

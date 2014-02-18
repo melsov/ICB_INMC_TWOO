@@ -889,7 +889,11 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		}
 		heightMap [relCo.x * patchDimensions.x + relCo.z] = heights;
 		surfaceMap[relCo.x, relCo.z] = (byte) lastRangeAtRelativeCoordUnsafe(relCo).extent(); 
-		// TODO also update windowMap here...
+		// also update windowMap here...
+		
+		// MORE WORK HERE...
+		// what if ranges were removed? (or does it all work just like this?)
+		addDiscontinuityToWindowMapWithRanges(heights, relCo.x, relCo.z);
 	}
 	
 	#endregion

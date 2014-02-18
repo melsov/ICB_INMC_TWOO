@@ -146,6 +146,8 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		//TODO: now that mesh builder actually builds the mesh anyway
 		// get rid of some of this spaghetti-ness.
 		
+		meshBuilder.updateLightLevelArrays();
+		
 		applyMeshToGameObject();
 //		clearMeshLists(); // why not now...
 	}

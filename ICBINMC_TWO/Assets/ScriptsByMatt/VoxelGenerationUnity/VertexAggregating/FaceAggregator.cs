@@ -552,6 +552,22 @@ public class FaceAggregator
 		return ret_mset;
 	}
 	
+	#region get light level tanges
+	
+	public List<Vector4> recalculateLightLevelTangents(int normalHeight)
+	{
+		List<Vector4> result = new List<Vector4>();
+		
+		foreach(FaceSet fs in faceSets)
+		{
+			result.AddRange(fs.recalculateTangents(normalHeight));	
+		}
+		
+		return result;
+	}
+	
+	#endregion
+	
 	#region debugging
 	
 	public void LogFaceSets() {

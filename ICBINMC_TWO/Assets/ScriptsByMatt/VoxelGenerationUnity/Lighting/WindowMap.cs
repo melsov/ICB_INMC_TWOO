@@ -158,19 +158,17 @@ public class WindowMap
 		
 		if (tookDiscontinuity != null)
 		{
-			tookDiscontinuity.addLightWithSurroundingSurfaceValues(surroundingSurfaceHeights, z);
+			tookDiscontinuity.editLightWithSurroundingSurfaceValues(surroundingSurfaceHeights, z);
 			return;
 		}
+		
+		// TODO: edit windows when we edit a range
+		// separate changing the the light values from the rest of the mesh making...carefully...
 		
 		// new window
 		Window win = new Window(this, disRange, x, z); //TODO: add surrounding surf to constructor
 		addWindowAt(win, x, z);
-		
-		//DEBUG
-//		if (m_noisePatch.coord.isCoordZero() && x == 0)
-//		{
-//			ChunkManager.debugLinesAssistant.addWindowToDraw(win);
-//		}
+
 	}
 	
 //	public void updateWindowsWithHeightRanges(List<Range1D> heightRanges, int x, int z)
@@ -557,13 +555,21 @@ public class WindowMap
 			}
 		}
 		
-		foreach (Window aWindow in windowWithStartAdjacentTo(x,z))
+//		foreach (Window aWindow in windowWithStartAdjacentTo(x,z))
+		
+		// a little inefficient! 
+		if (windows[x] == null)
+			return null;
+		
+		foreach(Window aWindow in windows[x])
 		{
 			if (aWindow.incorporateDiscontinuityAt(disRange, z))
 			{
 				return aWindow;
 			}
 		}
+		
+//		foreach (
 		return null;
 	}
 	
