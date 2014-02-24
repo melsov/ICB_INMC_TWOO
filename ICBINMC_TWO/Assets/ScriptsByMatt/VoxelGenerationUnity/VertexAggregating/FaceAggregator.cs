@@ -440,6 +440,8 @@ public class FaceAggregator
 				if (posFaceSet.faceCount == 0) {
 					removeFaceSetAtCoord(alco, direction(true) );	
 				}
+			} else {
+				throw new Exception("why? trying to remove a face set that was null already?");	
 			}
 		}
 		
@@ -453,6 +455,8 @@ public class FaceAggregator
 				if (negFaceSet.faceCount == 0) {
 					removeFaceSetAtCoord(alco, direction(false));	
 				}
+			} else {
+				throw new Exception("why? trying to remove a face set that was null already?");
 			}
 		}
 	}
@@ -563,12 +567,35 @@ public class FaceAggregator
 			result.AddRange(fs.recalculateTangents(normalHeight));	
 		}
 		
+		assertMeshSetElementsNotNull(); //DBG
+		
 		return result;
 	}
 	
 	#endregion
 	
 	#region debugging
+	
+	public void assertMeshSetElementsNotNull() {
+		AssertUtil.Assert(meshSet.geometrySet.vertices != null, "whoops verts null");
+		AssertUtil.Assert(meshSet.geometrySet.indices != null, "whoops verts null");
+	}
+	
+	public string toString() {
+//		bool vertsNull = (meshSet.geometrySet.vertices == null);
+//		if (vertsNull)
+//			throw new Exception("hold the phone. vertices are null");
+		string faceCoords = "FaceSet faceSetLimits: ";
+		foreach(FaceSet fs in faceSets) {
+			faceCoords += "\n" + fs.getFaceSetLimits().toString();	
+		}
+		string result = "FaceAgg: Face normal Axis: " + faceNormal;
+		result += " face set count: " + faceSets.Count;
+		result += faceCoords;
+//		result += " vert count: " + meshSet.geometrySet.vertices.Count;
+				
+		return  result;
+	}
 	
 	public void LogFaceSets() {
 		for (int i=0; i< faceSets.Count; ++i) {

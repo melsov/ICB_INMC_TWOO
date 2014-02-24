@@ -184,11 +184,11 @@ public static class DebugLinesUtil
 	{
 		Coord origin = win.worldRelativeOrigin;
 		Coord upperNeg =origin;
-		upperNeg.y += win.startRange.range;
+		upperNeg.y += win.startHeightRange.range;
 		Coord lowerPos = origin;
 		lowerPos.z += win.zExtent - win.patchRelativeOrigin.z;
 		Coord upperPos = lowerPos;
-		upperPos.y += win.endRange.range;
+		upperPos.y += win.endHeightRange.range;
 		
 		float light  = win.midPointLight.lightValue/Window.LIGHT_LEVEL_MAX;		
 		
@@ -211,6 +211,45 @@ public static class DebugLinesUtil
 //		debugLine(ll, ur, auxCol);
 	}
 	
+	public static void DrawDebugColumn(Column colm)
+	{
+		Coord start = new Coord(colm.xz.s, colm.range.start, colm.xz.t);
+		Coord dims = new Coord(1, colm.range.range, 1);
+		
+//		float red = (float)(colm.handyInteger % 4)/4f;
+//		float green = (float)((colm.handyInteger + 3) % 4)/4f;
+		Color col = new Color(1.0f, 0f, 0.0f, 1.0f); //red
+		
+		switch(colm.handyInteger % 8) {
+		case 0:
+			col = new Color(1.0f, 1f, 0.0f, 1.0f); //yellow
+			break;
+		case 1:
+			col = new Color(0f, 1f, 0f, 1.0f); //green
+			break;
+		case 2:
+			col = new Color(0f, 1f, 1.0f, 1.0f); //cyan
+			break;
+		case 3:
+			col = new Color(0f, 0f, 1.0f, 1.0f); //blue
+			break;
+		case 4:
+			col = new Color(1f, 1f, 1.0f, 1.0f); //white
+			break;
+		case 5:
+			col = new Color(.5f, .2f, .3f, 1.0f); //red brown
+			break;
+		case 6:
+			col = new Color(.5f, .3f, .7f, 1.0f); //blue brown ?
+			break;
+		default:
+			//red
+			break;
+			
+		}
+		
+		drawDebugCube(start, dims, col);
+	}
 	
 	static void drawDebugCube(Coord start, Coord dims, Color col)
 	{
@@ -218,21 +257,28 @@ public static class DebugLinesUtil
 //		Coord start = start; // * length;
 		Coord outer = start + dims; // chunkCoRange.outerLimit () * length;
 
-		//upper box
+		//lower box
 		debugLine (start, new Coord (start.x, start.y, outer.z), col );
 		debugLine (start, new Coord (outer.x , start.y, start.z), col );
 		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (start.x, start.y, outer.z), col );
 		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (outer.x , start.y, start.z), col );
-
+		
+		//upperbox
 		debugLine (outer, new Coord (start.x, outer.y, outer.z), col );
 		debugLine (outer, new Coord (outer.x , outer.y, start.z), col );
 		debugLine (new Coord (start.x, outer.y, start.z), new Coord (start.x, outer.y, outer.z), col );
 		debugLine (new Coord (start.x, outer.y, start.z), new Coord (outer.x , outer.y, start.z), col );
 		
-		//diag on top
-		debugLine(new Coord (start.x, outer.y, start.z), outer);
+		//vertical
+		debugLine(start, new Coord(start.x, outer.y, start.z), col);
+		debugLine(new Coord (start.x, start.y, outer.z),new Coord (start.x, outer.y, outer.z), col);
+		debugLine(new Coord (outer.x , start.y, start.z),new Coord (outer.x , outer.y, start.z), col);
+		debugLine(new Coord(outer.x, start.y, outer.z), outer, col);
 		
-		debugLine(start, outer, Color.blue);  // across 
+		//diag on top
+//		debugLine(new Coord (start.x, outer.y, start.z), outer);
+		
+		debugLine(start, outer, col );  // across 
 	}
 	
 	static void drawDebugBlock(Coord start, Coord dims)

@@ -98,4 +98,5 @@ public static class DirectionUtil
 			new PTwo(0, 1)
 		};
 	}
+
 }

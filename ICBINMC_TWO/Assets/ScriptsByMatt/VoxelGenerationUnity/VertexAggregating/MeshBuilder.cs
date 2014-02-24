@@ -412,17 +412,19 @@ public class MeshBuilder
 	private void addBlockAtCoordAndAxis(Coord co, Axis axis, AlignedCoord alco, Coord nudgeCoord, BlockType btype)
 	{
 
-		Block neighbor_block;
-		neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co - nudgeCoord)); //x_one
+		Block neg_neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co - nudgeCoord)); //x_one
+		Block pos_neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co + nudgeCoord));
 		int relevantComponent = Coord.SumOfComponents (co * nudgeCoord);
 		int relevantUpperLimit = Coord.SumOfComponents (Chunk.DIMENSIONSINBLOCKS * nudgeCoord);
 		
 		Direction relevantPosDir = MeshBuilder.posDirectionForAxis(axis);
 		
-		FaceAggregator faXY = faceAggregatorAt(co, relevantPosDir); // aggregatorArray[relevantComponent];
+		FaceAggregator faXY = null; 
+		if (Block.BlockTypeIsATranslucentType(neg_neighbor_block.type) || Block.BlockTypeIsATranslucentType(pos_neighbor_block.type))
+			faXY = faceAggregatorAt(co, relevantPosDir); // don't allocate if we won't have to...
 		
 		//NEG NEIGHBOR
-		if (neighbor_block.type != BlockType.Air)
+		if (!Block.BlockTypeIsATranslucentType(neg_neighbor_block.type)) // (neg_neighbor_block.type != BlockType.Air)
 		{
 			if (relevantComponent > 0)
 			{
@@ -440,7 +442,6 @@ public class MeshBuilder
 						// else get Face geom...
 						faXminusOne.getFaceGeometry(relevantComponent - 1);
 					}
-
 				}
 			}
 		} else { 
@@ -451,8 +452,8 @@ public class MeshBuilder
 		}
 		
 		// POS NEIGHBOR
-		neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co + nudgeCoord));
-		if (neighbor_block.type != BlockType.Air)
+//		neighbor_block = this.m_chunk.blockAt(new ChunkIndex( co + nudgeCoord));
+		if (!Block.BlockTypeIsATranslucentType(pos_neighbor_block.type)) // (pos_neighbor_block.type != BlockType.Air)
 		{
 			if (relevantComponent < relevantUpperLimit - 1)
 			{
@@ -461,11 +462,11 @@ public class MeshBuilder
 					// * neighbor not air, remove occluded face
 					FaceAggregator faXplusone = faceAggregatorAt(co + nudgeCoord, relevantPosDir); // aggregatorArray[relevantComponent + 1];
 					
-					b.bug("adding a block");
 					faXplusone.removeNegativeSideFaceAtCoord(alco);
 	
 					//check if face agg now empty
 					if (faXplusone.faceSetCount == 0) {
+						
 						removeFaceAggregatorAt(co + nudgeCoord, axis);	
 					} else {
 						// else get Face geom...
@@ -538,7 +539,11 @@ public class MeshBuilder
 				else
 					mset = fa.meshSet;
 				
-				List<int> geomSetIndices = new List<int>(mset.geometrySet.indices); //copy list...
+				AssertUtil.Assert(mset.geometrySet.vertices != null, "huh? how did this get in here? face ag at index: " 
+					+ i + " \n" + fa.toString());
+				
+				List<int> geomSetIndices = new List<int>(mset.geometrySet.indices); //copy list... //getting arg cannot be null here
+				// when adding blocks (perhaps flush with other blocks?) but only sometimes...(only in flat world??)
 				GeometrySet gset = new GeometrySet(geomSetIndices, mset.geometrySet.vertices);
 				
 				temp_vertices.AddRange(gset.vertices);

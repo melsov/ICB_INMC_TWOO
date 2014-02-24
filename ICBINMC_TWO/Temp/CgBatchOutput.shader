@@ -410,15 +410,15 @@ void main ()
     tmpvar_18 = -(tmpvar_17);
   };
   light_one_3 = tmpvar_18;
+  mediump float tmpvar_19;
+  tmpvar_19 = ((light_one_3 + 2.0) / 9.0);
+  local_light_2 = tmpvar_19;
   if ((light_one_3 < 1.0)) {
-    mediump vec4 tmpvar_19;
-    tmpvar_19.xzw = vec3(1.0, 0.0, 1.0);
-    tmpvar_19.y = (tmpvar_11 / 4.0);
-    tmpvar_1 = (tmpvar_19 * xlv_COLOR.z);
+    mediump vec4 tmpvar_20;
+    tmpvar_20.xzw = vec3(1.0, 0.0, 1.0);
+    tmpvar_20.y = (tmpvar_11 / 4.0);
+    tmpvar_1 = (tmpvar_20 * xlv_COLOR.z);
   } else {
-    mediump float tmpvar_20;
-    tmpvar_20 = ((light_one_3 + 2.0) / 9.0);
-    local_light_2 = tmpvar_20;
     tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
   };
   gl_FragData[0] = tmpvar_1;
@@ -594,15 +594,15 @@ void main ()
     tmpvar_18 = -(tmpvar_17);
   };
   light_one_3 = tmpvar_18;
+  mediump float tmpvar_19;
+  tmpvar_19 = ((light_one_3 + 2.0) / 9.0);
+  local_light_2 = tmpvar_19;
   if ((light_one_3 < 1.0)) {
-    mediump vec4 tmpvar_19;
-    tmpvar_19.xzw = vec3(1.0, 0.0, 1.0);
-    tmpvar_19.y = (tmpvar_11 / 4.0);
-    tmpvar_1 = (tmpvar_19 * xlv_COLOR.z);
+    mediump vec4 tmpvar_20;
+    tmpvar_20.xzw = vec3(1.0, 0.0, 1.0);
+    tmpvar_20.y = (tmpvar_11 / 4.0);
+    tmpvar_1 = (tmpvar_20 * xlv_COLOR.z);
   } else {
-    mediump float tmpvar_20;
-    tmpvar_20 = ((light_one_3 + 2.0) / 9.0);
-    local_light_2 = tmpvar_20;
     tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
   };
   gl_FragData[0] = tmpvar_1;
@@ -1187,10 +1187,10 @@ lowp vec4 frag( in v2f i ) {
     #line 400
     highp float power_lookup = floor((index / pow( 8.0, model_rel_twoD.y)));
     mediump float light_one = xll_mod_f_f( power_lookup, 8.0);
+    lowp float local_light = ((light_one + 2.0) / 9.0);
     if ((light_one < 1.0)){
         return (vec4( 1.0, ((1.0 * model_rel_twoD.y) / 4.0), 0.0, 1.0) * i.color.z);
     }
-    lowp float local_light = ((light_one + 2.0) / 9.0);
     #line 404
     return ((texture( _BlockTex, scaled_uv) * i.color.z) * local_light);
 }
@@ -1358,7 +1358,7 @@ Keywords { }
 
 }
 
-#LINE 326
+#LINE 322
 
     }
     

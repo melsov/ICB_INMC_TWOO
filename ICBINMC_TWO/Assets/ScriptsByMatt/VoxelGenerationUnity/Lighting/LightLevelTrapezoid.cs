@@ -1,6 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System;
+
+/*
+ * This class should be renamed. Something like: LightZSlice
+ *
+ */
 
 public class LightLevelTrapezoid
 {
@@ -16,6 +22,7 @@ public class LightLevelTrapezoid
 	{
 		trapLight = _trapLight;
 		trapezoid =_trap;
+		zHeightRanges[_trap.span.start] = _trap.startRange;
 	}
 	
 	public float averageLight {
@@ -55,18 +62,75 @@ public class LightLevelTrapezoid
 	}
 	
 	public SimpleRange heightAt(int zIndex) {
-		return zHeightRanges[zIndex];	
+		try {
+			return zHeightRanges[zIndex];
+		} catch(IndexOutOfRangeException e) {
+			throw new Exception("the array index was out of bounds: " + zIndex);	
+		}
 	}
 	
+	public byte lightLevelAt(int z) {
+		return zLightLevels[z];	
+	}
+	
+	public SimpleRange rangeAtExtent {
+		get {
+			return heightAt(this.trapezoid.span.extentMinusOne());	//caused an ind out of range...
+		}
+	}
+	
+	public SimpleRange rangeAtStart{
+		get {
+			return heightAt(this.trapezoid.span.start);	
+		}
+	}
+	
+	public bool rangeExistsAtExtent {
+		get {
+			return this.rangeAtExtent.range > 0;	
+		}
+	}
+	
+	public bool rangeExistsAtStart {
+		get {
+			return this.rangeAtStart.range > 0;	
+		}
+	}	
+		
+	public bool heightRangeExistsAtZ(int patchRelZ) {
+		return this.zHeightRanges[patchRelZ].range > 0;
+	}
+	
+	public bool isContiguityAtZ(int patchRelZ, bool wantPosDir) {
+		int nudge = (wantPosDir ? 1 : - 1);
+		int adjacentIndex = patchRelZ + nudge;
+		if (adjacentIndex >= zHeightRanges.Length || adjacentIndex < 0)
+			return true;
+		
+		SimpleRange intersection = SimpleRange.IntersectingRange(heightAt(patchRelZ), heightAt(adjacentIndex));
+		
+		return intersection.range > 0;
+	}
 		
 	#region add dis ranges
 	
-	public void addDiscontinuityRangeBeyondEndAtZExtent(SimpleRange newDisRange, int newZExtent)
+//	public void addDiscontinuityRangeBeyondEndAtZExtent(SimpleRange newDisRange, int newZExtent)
+	public void incorporateStartFlushWithExtentOther(LightLevelTrapezoid other)
 	{
-		this.zHeightRanges[newZExtent] = newDisRange;
+		AssertUtil.Assert(this.trapezoid.span.extent() == other.trapezoid.span.start, 
+			"adding ranges from other but not getting other.start == this.extent: " +
+			"other start: " + other.trapezoid.span.start + "\nthis extent: " + this.trapezoid.span.extent());
 		
-		this.trapezoid.endRange = SimpleRange.Average(this.trapezoid.endRange, newDisRange);
+		SimpleRange otherSpan = other.trapezoid.span;
+		int newZExtent = otherSpan.extent();
+		
+		copyHeightAndLightFromOther(other);
+//		this.zHeightRanges[newZExtent] = newDisRange;
+		
+		this.trapezoid.endRange = other.trapezoid.endRange; // CONSIDER: whether we need trapezoid end height dims at all at this point // SimpleRange.Average(this.trapezoid.endRange, newDisRange);
 		this.trapezoid.span.range = newZExtent - this.trapezoid.span.start;
+		
+		assertSpanDebug("adding ranges from other");
 	}
 	
 	public void addDiscontinuityRangeAtEnd(SimpleRange newDisRange)
@@ -76,6 +140,19 @@ public class LightLevelTrapezoid
 		
 		this.trapezoid.endRange = SimpleRange.Average(this.trapezoid.endRange, newDisRange);
 		this.trapezoid.span.range++;
+		
+		assertSpanDebug();
+	}
+	
+	public void assertSpanDebug() {
+		assertSpanDebug("");
+	}
+	
+	public void assertSpanDebug(string message) {
+		AssertUtil.Assert(trapezoid.span.start >= 0, message + "uh oh. span is less than zero: " + trapezoid.span.start);
+		AssertUtil.Assert(trapezoid.span.extent() <= NoisePatch.patchDimensions.z, message + "uh oh. span went beyond npatch z: " + trapezoid.span.extent());	
+		AssertUtil.Assert(trapezoid.span.start <= NoisePatch.patchDimensions.z, message + "uh oh even weirded. span is greater: " + trapezoid.span.start);
+		AssertUtil.Assert(trapezoid.span.extent() > 0, message + "uh oh weirder. extent is less? z: " + trapezoid.span.extent());	
 	}
 	
 	public void addDiscontinuityRangeAtStart(SimpleRange newDisRange)
@@ -86,12 +163,119 @@ public class LightLevelTrapezoid
 		this.trapezoid.endRange = SimpleRange.Average(this.trapezoid.startRange, newDisRange);
 		this.trapezoid.span.range++;
 		this.trapezoid.span.start--;
+		
+		assertSpanDebug();
+	}
+	
+	public SimpleRange considerLightValuesFromOther(LightLevelTrapezoid other, bool subtract, SimpleRange withinRange, float influenceFactor)
+	{
+		int minInfluenceIndex = 258;
+		int maxInfluenceIndex = 0;
+		
+		if (!SimpleRange.RangesIntersect(trapezoid.span, withinRange))
+			return new SimpleRange(0,0);
+		
+		byte influenceFromOther = (byte)(Window.LIGHT_LEVEL_MAX * influenceFactor - Window.UNIT_FALL_OFF_BYTE);
+		
+		withinRange = SimpleRange.IntersectingRange(withinRange, new SimpleRange(0, NoisePatch.patchDimensions.z)); // safer...
+		if (withinRange.isErsatzNull())
+			return new SimpleRange(0,0);
+		
+		for(int i = withinRange.start; i < withinRange.extent(); ++i) 
+		{
+			byte myCurrentLightLevel = zLightLevels[i];
+			byte othersLightLevel = other.zLightLevels[i];
+
+			if (myCurrentLightLevel == Window.LIGHT_LEVEL_MAX_BYTE)
+				continue;
+			
+			byte influenceAmount = 0;
+
+			if (myCurrentLightLevel <= influenceFromOther) {
+				minInfluenceIndex = Mathf.Min(minInfluenceIndex, i);
+				maxInfluenceIndex = Mathf.Max(maxInfluenceIndex, i + 1);
+				if (!subtract)
+					influenceAmount = (byte)(other.zLightLevels[i] - Window.UNIT_FALL_OFF_BYTE);
+			} else {
+				//cheap0
+				influenceAmount = (byte)(myCurrentLightLevel + ( influenceFromOther / 2 * (subtract? -1 : 1) ));
+			}
+			zLightLevels[i] = influenceAmount;
+
+		}
+		
+		if (maxInfluenceIndex == 0)
+			return new SimpleRange(0,0);
+		
+		return SimpleRange.SimpleRangeWithStartAndExtent(minInfluenceIndex, maxInfluenceIndex);
+	}
+	
+	private void copyHeightAndLightFromOther(LightLevelTrapezoid other)
+	{
+		for(int i = other.trapezoid.span.start; i < other.trapezoid.span.extent() ; ++i)
+		{
+			this.zHeightRanges[i] = other.zHeightRanges[i] ;
+			this.zLightLevels[i] = other.zLightLevels[i];
+		}
+	}
+	
+	public void copyHeightAndLightValuesFromTo(ref LightLevelTrapezoid other, int zStartCopy, int zCopyExtent)
+	{
+		for(int i = zStartCopy; i < zCopyExtent ; ++i)
+		{
+			other.zHeightRanges[i] = this.zHeightRanges[i];
+			other.zLightLevels[i] = this.zLightLevels[i];
+		}
+	}
+	
+	public void nullifyHeightAndLightValuesFromTo(int zStartCopy, int zCopyExtent)
+	{
+		for(int i = zStartCopy; i < zCopyExtent ; ++i)
+		{
+			this.zHeightRanges[i] = new SimpleRange(0,0);
+			this.zLightLevels[i] = 0;
+		}
+	}
+	
+	public void shortenSpanByOneFromExtent() // removeDiscontinuityRangeAtExtent()
+	{
+//		resetAt(this.trapezoid.span.extentMinusOne());
+		this.trapezoid.span.range--;	
+		
+		assertSpanDebug();
+	}
+	
+	public void shortenSpanByOneFromStart()
+	{
+//		resetAt(this.trapezoid.span.start);
+		
+		this.trapezoid.span.start++;
+		this.trapezoid.span.range--;
+		
+		assertSpanDebug();
 	}
 	
 	public void updateDiscontinuityAtPatchRelativeZ(SimpleRange disRange, int patchRelZ)
 	{
 		this.zHeightRanges[patchRelZ] = disRange;	
 	}
+	
+	public void resetAt(int patchRelZ)
+	{
+		//is this a useful way to clear?
+		this.zHeightRanges[patchRelZ] = new SimpleRange(0,0);
+		this.zLightLevels[patchRelZ] = 0;
+	}
+	
+	public void resetAllLightsAndHeights()
+	{
+		for(int i = 0; i < zHeightRanges.Length; ++i)
+		{
+			this.zHeightRanges[i] = new SimpleRange(0,0);
+			this.zLightLevels[i] = 0;
+		}
+	}
+
 	
 	#endregion
 	
@@ -191,6 +375,7 @@ public class LightLevelTrapezoid
 				updateAddedZLightLevels(Window.LIGHT_LEVEL_MAX_BYTE, --i);	
 			}
 		}
+		assertSpanDebug();
 	}
 	
 //	public void removeLightLevelsBySubtractingAdjacentSurface(SurroundingSurfaceValues surroundingSurfaceValues, int patchRelz)
@@ -283,6 +468,24 @@ public class LightLevelTrapezoid
 	
 	#region update with light point
 	
+	public void addMingleLightWithAdjacentTrapezoid(LightLevelTrapezoid other)
+	{
+		for(int i = this.trapezoid.span.start; i < this.trapezoid.span.extent(); ++i)
+		{
+			SimpleRange otherHeightRange = other.heightAt(i);
+			SimpleRange heightRange = this.heightAt(i);
+			
+			SimpleRange intersection = SimpleRange.IntersectingRange(otherHeightRange, heightRange);
+			if (intersection.range > 0)
+			{
+				if(other.zLightLevels[i] > this.zLightLevels[i]) 
+					this.zLightLevels[i] = (byte)Mathf.Max((int)this.zLightLevels[i], (other.zLightLevels[i] - Window.UNIT_FALL_OFF_BYTE));
+				else if (other.zLightLevels[i] < this.zLightLevels[i]) 
+					other.zLightLevels[i] = (byte)Mathf.Max((int) other.zLightLevels[i], (this.zLightLevels[i] - Window.UNIT_FALL_OFF_BYTE));
+			}
+		}
+	}
+	
 	public void updateWithXAdjacentPoint(LightPoint lightPoint)
 	{
 		lightPoint.lightValue -= Window.UNIT_FALL_OFF;
@@ -312,6 +515,7 @@ public class LightLevelTrapezoid
 	
 	public float lightValueForPointClosestToPatchRelativeYZ(PTwo patchRelYZPoint)
 	{
+//		return Window.LIGHT_LEVEL_MAX * .5f; //TEST 
 		return Mathf.Clamp( (float) zLightLevels[patchRelYZPoint.t], 0, Window.LIGHT_LEVEL_MAX);
 		
 		int spanOffset = Mathf.Clamp(patchRelYZPoint.t - trapezoid.span.start, 0, trapezoid.span.range);
@@ -320,7 +524,6 @@ public class LightLevelTrapezoid
 		
 		float startLerp = Mathf.Lerp(trapLight.lowerNeg, trapLight.upperNeg, (heightOffSetStart/(float)trapezoid.startRange.range));
 		float endLerp = Mathf.Lerp(trapLight.lowerPos, trapLight.upperPos, (heightOffSetEnd/(float)trapezoid.endRange.range));
-		
 		
 //		return Window.LIGHT_LEVEL_MAX/12f;
 		return Mathf.Lerp(startLerp, endLerp, spanOffset/(float) trapezoid.span.range);

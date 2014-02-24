@@ -355,7 +355,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 #endif
 		
 		if (tradeDataWithFourNeighbors())
-			m_windowMap.calculateLight();
+			m_windowMap.calculateLightAdd();
 		
 		
 		
@@ -892,8 +892,14 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// also update windowMap here...
 		
 		// MORE WORK HERE...
-		// what if ranges were removed? (or does it all work just like this?)
-		addDiscontinuityToWindowMapWithRanges(heights, relCo.x, relCo.z);
+		// what if ranges were removed? 
+		
+		//TODO: in some case, don't need to adjust window map (only one range and it wasn't changed e.g.)
+		
+		//HERE  WE WANT TO UPDATE
+		updateDiscontinuityInWindowMapWithRanges(heights, relCo.x, relCo.z);
+//		addDiscontinuityToWindowMapWithRanges(heights, relCo.x, relCo.z);
+		
 		
 		updateWindowMapWithNewSurfaceHeight((int) surfaceMap[relCo.x, relCo.z], relCo.x, relCo.z);
 	}
@@ -1323,7 +1329,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 #endif
 				// add a structure on the surface maybe
 				// fake test...
-				if (xx == 14 && zz == 14)
+				if (xx == 5 && zz == 4)
 				{
 					Plinth pl = new Plinth(patchRelCo, highestLevel, noise_val + 5f); // silliness
 					structurz.Add(pl);
@@ -1471,7 +1477,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		
 		tradeDataWithFourNeighbors();
 		
-		m_windowMap.calculateLight();
+		m_windowMap.calculateLightAdd();
 		
 		//TEST
 //		m_chunkManager.assertNoChunksActiveInNoiseCoord(this.coord);
@@ -1488,56 +1494,62 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	{
 		int xx = 0;
 		int zz = 0;
-//		int j = 0;
-//		List<Range1D> heightRanges = new List<Range1D>();
-//		Range1D aboveRange;
-//		Range1D belowRange;
 
 		for (; xx < patchDimensions.x ; xx++ ) 
 		{
-			zz = 0;
-			for (; zz < patchDimensions.z; zz++ ) 
+			for (zz = 0; zz < patchDimensions.z; zz++ ) 
 			{
-//				heightRanges = heightMap[xx * patchDimensions.x + zz];
 				addDiscontinuityToWindowMapWithRanges(heightMap[xx * patchDimensions.x + zz], xx, zz);
-//				j = 1;
-//				for(; j < heightRanges.Count; ++j)
-//				{
-//					addDiscontinuityToWindowMap(heightRanges[j], heightRanges[j - 1], xx, zz);
-//				}
 			}
 		}
 	}
 	
+	// * obviated ??
 	private void updateWindowMapWithNewSurfaceHeight(int newHeight, int xx, int zz)
 	{
+		// clear windows at this x,z
+		
 		// window map deal with this...	
 		m_windowMap.updateWindowsWithNewSurfaceHeight(newHeight, xx, zz);
 		
 		//unsubtle
-		m_windowMap.calculateLight();
+		//TODO: make window map update light by itself when upWithNewSurface is called.
+//		m_windowMap.calculateLightAdd();  //CONSIDER: window map itself takes care of calculating light?
+		// NO. because sometimes we want to do a lot of updates and then calc. all
+		// but here, window should recalc on its own. its just a one block update--we don't anticipate automatically doing more right now.
+		
 	}
 	
+	
+	//* UPDATE (DON'T ADD TO) WINDOW MAP
+	private void updateDiscontinuityInWindowMapWithRanges(List<Range1D> heightRanges, int xx, int zz)
+	{
+		m_windowMap.updateWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
+	}
+	
+	// TODO: give this func. to window map
+	// that way, it will be easier for it to
+	// check for windows whose dimensions were
+	// changed. window could be split or shaved at either end.
+	
+	//* ADD TO (DON'T UPDATE) WINDOW MAP
 	private void addDiscontinuityToWindowMapWithRanges(List<Range1D> heightRanges, int xx, int zz)
 	{
-		int j = 1;
-		for(; j < heightRanges.Count; ++j)
-		{
-			addDiscontinuityToWindowMap(heightRanges[j], heightRanges[j - 1], xx, zz);
-		}
+		m_windowMap.addDiscontinuityToWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx,0,zz)));
 	}
+
 	
-	private void addDiscontinuityToWindowMap(Range1D aboveRange, Range1D belowRange, int xx, int zz)
-	{
-//		aboveRange = heightRanges[j];
-//		belowRange = heightRanges[j - 1];
-		int gap = aboveRange.start - belowRange.extent();
-		if (gap > 0)
-		{
-			m_windowMap.discontinuityAt(new SimpleRange(belowRange.extent(), gap), 
-				xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
-		}
-	}
+//	private void addDiscontinuityToWindowMap(Range1D aboveRange, Range1D belowRange, int xx, int zz)
+//	{
+////		aboveRange = heightRanges[j];
+////		belowRange = heightRanges[j - 1];
+////		int gap = aboveRange.start - belowRange.extent();
+////		if (gap > 0)
+////		{
+////			m_windowMap.discontinuityAt(new SimpleRange(belowRange.extent(), gap), 
+////				xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
+////		}
+//	}
 	
 	private SurroundingSurfaceValues valuesSurrounding(Coord relCo)
 	{
@@ -1690,7 +1702,11 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	private void finishTradingTerrainDataWithNeighborFromDirection(NeighborDirection fromDirection)
 	{
 		//I just got an update an presumably won't be prompted to recalc light later...
-		m_windowMap.calculateLight();
+		//CONSIDER: this is not bad, but it would be nice to be able to only recalc
+		// light for windows that changed.
+		// e.g. any windows that are flush with this edge, presumably...
+		// also, any windows flush with those windows (which can happen within nPatch we think)
+		m_windowMap.calculateLightAdd();
 		NeighborDirection opposite = NeighborDirectionUtils.oppositeNeighborDirection(fromDirection);
 		exchangedTerrainDataAlready.setBooleanForDirection(opposite, true);
 	}
@@ -1930,6 +1946,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 					
 //					heightMap[ lookup.s * patchDimensions.x + lookup.t] = range_l; 
 					// update window map here...
+					
+					//TODO: consider, do we want to update, not add? (what's the difference again?)
+					
 					addDiscontinuityToWindowMapWithRanges(range_l, lookup.s, lookup.t);
 				}
 			}

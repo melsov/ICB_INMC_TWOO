@@ -28,7 +28,6 @@ public class TestRunner : MonoBehaviour {
 	
 	void Start () 
 	{
-
 		if (dontRunGame)
 		{
 //			FaceSetTest fst = new FaceSetTest();
