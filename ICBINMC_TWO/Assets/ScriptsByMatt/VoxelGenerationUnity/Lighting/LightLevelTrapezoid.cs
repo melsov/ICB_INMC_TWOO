@@ -186,21 +186,25 @@ public class LightLevelTrapezoid
 			byte myCurrentLightLevel = zLightLevels[i];
 			byte othersLightLevel = other.zLightLevels[i];
 
-			if (myCurrentLightLevel == Window.LIGHT_LEVEL_MAX_BYTE)
-				continue;
+//			if (myCurrentLightLevel == Window.LIGHT_LEVEL_MAX_BYTE)
+//				continue;
 			
 			byte influenceAmount = 0;
 
 			if (myCurrentLightLevel <= influenceFromOther) {
-				minInfluenceIndex = Mathf.Min(minInfluenceIndex, i);
-				maxInfluenceIndex = Mathf.Max(maxInfluenceIndex, i + 1);
-				if (!subtract)
+//				if (subtract) {
+//				} else {
 					influenceAmount = (byte)(other.zLightLevels[i] - Window.UNIT_FALL_OFF_BYTE);
+//				}
+				
 			} else {
 				//cheap0
-				influenceAmount = (byte)(myCurrentLightLevel + ( influenceFromOther / 2 * (subtract? -1 : 1) ));
+				influenceAmount = (byte)(myCurrentLightLevel + ( influenceFromOther / 2f * (subtract? -1 : 1) ));
 			}
-			zLightLevels[i] = influenceAmount;
+			zLightLevels[i] =(byte)Mathf.Clamp( influenceAmount, 0, (int)Window.LIGHT_LEVEL_MAX_BYTE);
+			
+			minInfluenceIndex = Mathf.Min(minInfluenceIndex, i);
+			maxInfluenceIndex = Mathf.Max(maxInfluenceIndex, i + 1);
 
 		}
 		

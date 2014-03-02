@@ -81,6 +81,8 @@ public class WindowMap
 	private List<Window>[] windows = new List<Window>[NoisePatch.patchDimensions.x];
 	private NoisePatch m_noisePatch;
 	
+	private LightColumnMap lightColumnMap = new LightColumnMap();
+	
 	public Coord worldCoord {
 		get {
 			return CoordUtil.WorldCoordFromNoiseCoord( m_noisePatch.coord);
@@ -111,10 +113,8 @@ public class WindowMap
 		{
 			return closestWindow.lightValueForYZPoint(new PTwo(relCo.y, relCo.z));	
 		}
-		
 
 		return 0f;
-		
 	}
 	
 	private Window windowClosestToYZInDirection(List<Window> winList, int y, int z, Direction faceDirection)
@@ -175,6 +175,9 @@ public class WindowMap
 	
 	public void updateWindowsWithNewSurfaceHeight(int newHeight, int xx, int zz)
 	{
+		// TODO. deal with this the light col way!
+		// prune a list of exposed light columns
+		
 		// get any windows with edge (start or extent) at z
 		
 		//deal with Z edges.
@@ -322,6 +325,8 @@ public class WindowMap
 	
 	private void addDiscontinuityAt(SimpleRange disRange, int x, int z, SurroundingSurfaceValues surroundingSurfaceHeights, bool allowEditing, bool doLightUpdate)
 	{
+		//TODO: deal with this the light column way!
+		
 		Window tookDiscontinuity = incorporateDiscontinuityAt(disRange, x, z, allowEditing);
 		
 		if (tookDiscontinuity != null)

@@ -17,10 +17,10 @@ using System.Diagnostics;
 
 using System.Runtime.Serialization.Formatters.Binary;
 
-public struct CavePoint
-{
-
-}
+//public struct CavePoint
+//{
+//	//TODO: purge?
+//}
 
 public enum RelationToRange {
 	BelowRange, WithinRange, AboveRange
@@ -104,9 +104,49 @@ public struct AlignedCoord
 //}
 
 [Serializable]
-public struct SimpleRange : IEquatable<SimpleRange>
+public struct SimpleRange : IEquatable<SimpleRange>, iRange
 {
 	public int start, range; // TODO: convert to short?
+	
+	#region iRange
+	public int startP{
+		get {
+			return start;
+		}
+		set {
+			start = value;
+		}
+	}
+	
+	public int rangeP{
+		get{
+			return range;
+		}
+		set {
+			range = value;
+		}
+	}
+
+// 	int extent(); //below	
+//	bool contains(iRange other) {} //below
+//	bool contains(int i){} //below
+	
+	public OverlapState overlapStateWith(iRange other)
+	{
+		return this.overlapWithRange((SimpleRange) other);
+	}
+	
+	public bool intersectsWith(iRange other)
+	{ 
+		return SimpleRange.RangesIntersect(this, other); 
+	}
+	
+	public iRange intersection(iRange other)
+	{
+		return SimpleRange.IntersectingIRange(this, other);
+	}
+	
+	#endregion
 	
 	public SimpleRange (int _start, int _range) 
 	{
@@ -239,22 +279,55 @@ public struct SimpleRange : IEquatable<SimpleRange>
 		return SimpleRange.SimpleRangeWithStartAndExtent(new_start, new_extent);
 	}
 	
-	public static bool RangesIntersect(SimpleRange raa, SimpleRange rbb)
+	public static bool RangesIntersect(iRange raa, iRange rbb)
 	{
-		return !(SimpleRange.IntersectingRange(raa, rbb).isErsatzNull() );
+		return !(SimpleRange.IntersectingIRange(raa, rbb).isErsatzNull() );
+	}
+	
+	public static iRange IntersectingIRange(iRange raa, iRange rbb)
+	{
+		return (iRange) SimpleRange.IntersectingRange((SimpleRange) raa, (SimpleRange) rbb);
 	}
 	
 	public static SimpleRange IntersectingRange(SimpleRange raa, SimpleRange rbb)
 	{
 		int interExtent = raa.extent() < rbb.extent() ? raa.extent() : rbb.extent();
-		int interStart = raa.start > rbb.start ? raa.start : rbb.start;
+		int interStart = raa.startP > rbb.startP ? raa.startP : rbb.startP;
 		
 		if (interStart >= interExtent)
 			return SimpleRange.theErsatzNullRange();
 		
 		return new SimpleRange(interStart, interExtent - interStart);
-//		int extentDif = raa.e
+	}	
+		
+	public OverlapState overlapWithRange(SimpleRange other)
+	{
+		if (this.start == other.extent())
+			return OverlapState.FlushWithStart;
+		
+		if (this.start > other.extent())
+			return OverlapState.BeforeStart;
+		
+		if (this.extent() == other.start)
+			return OverlapState.FlushWithExtent;
+		
+		if (RangesIntersect(this, other)) 
+		{
+			if (this.contains(other)) {
+				return OverlapState.IContainIt;					
+			}
+			if (other.contains(this)) {
+				return OverlapState.ItContainsMe;	
+			}
+			if (other.start < this.start)
+				return OverlapState.OverlappingOverStart;
+			
+			return OverlapState.OverlappingOverEnd;
+		}
+		
+		return OverlapState.BeyondExtent;
 	}
+
 	
 	public static bool SimpleRangeCoversRange(SimpleRange covering, SimpleRange covered)
 	{
@@ -266,8 +339,8 @@ public struct SimpleRange : IEquatable<SimpleRange>
 		return new SimpleRange((_aa.start + _bb.start)/2, (_aa.range + _bb.range)/2);	
 	}
 	
-	public bool contains(SimpleRange r) {
-		return this.start <= r.start && this.extent() >=r.extent();	
+	public bool contains(iRange r) {
+		return this.startP <= r.startP && this.extent() >=r.extent();	
 	}
 	
 }
@@ -927,8 +1000,6 @@ public struct NoiseCoord : IEquatable<NoiseCoord>
 	public static NoiseCoord NoiseCoordWithPTwo(PTwo ptwo) {
 		return new NoiseCoord(ptwo.s, ptwo.t);	
 	}
-	
-	
 
 	public string toString() {
 		return "Noise Coord :) x: " + x + " z: " + z;

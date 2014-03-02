@@ -425,6 +425,11 @@ public struct Quad
 		return new Quad( new PTwo(hLocation, strip.range.start) , new PTwo(strip.width, strip.range.range) );	
 	}
 	
+	public static Quad Intersection(Quad ii, PTwo size) 
+	{
+		return Quad.Intersection(ii, new Quad(new PTwo(0,0),size));
+	}
+	
 	//TODO: test this func.
 	public static Quad Intersection(Quad ii, Quad kk) {
 		Range1D ii_s = new Range1D(ii.origin.s, ii.dimensions.s);

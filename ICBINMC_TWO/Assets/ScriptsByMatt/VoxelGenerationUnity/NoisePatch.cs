@@ -919,10 +919,11 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		Coord patchRel = patchRelativeBlockCoordForChunkCoord (chunk.chunkCoord);
 
 		int startIndex = patchRel.x * patchDimensions.x + patchRel.z;
-		int i = 0;
-		for(; i < CHUNKLENGTH; ++i) 
+		int startRange = 0;
+		
+		for(int i = 0; i < CHUNKLENGTH; ++i) 
 		{
-			int startRange = startIndex + patchDimensions.x * i;
+			startRange = startIndex + patchDimensions.x * i;
 			retList.AddRange ( heightMap.Skip(startRange).Take(CHUNKLENGTH));
 		}
 	
