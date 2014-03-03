@@ -91,6 +91,13 @@ public static class CoordUtil
 		return (co + co.booleanNegative() - chcoAdjustNeg)  / Chunk.DIMENSIONSINBLOCKS; //  CHUNKLENGTH;
 	}
 	
+	public static NoiseCoord NoiseCoordForWorldCoord(Coord woco)
+	{
+//		return BlockCollection.noiseCoordForWorldCoord(woco);
+		woco =  woco - (woco.booleanNegative () * (BlockCollection.BLOCKSPERNOISEPATCH  - 1)) ; // (shift neg coords by -1)
+		return new NoiseCoord (woco / BlockCollection.BLOCKSPERNOISEPATCH);
+	}
+	
 
 	public static Coord ChunkRelativeCoordForWorldCoord(Coord worldBlockCoord) 
 	{

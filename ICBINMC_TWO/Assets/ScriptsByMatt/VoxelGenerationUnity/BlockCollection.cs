@@ -25,7 +25,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 public class BlockCollection
 {
 	public Dictionary<NoiseCoord, NoisePatch> noisePatches = new Dictionary<NoiseCoord, NoisePatch>();
-	private static Coord BLOCKSPERNOISEPATCH = NoisePatch.PATCHDIMENSIONSCHUNKS * new Coord((int)ChunkManager.CHUNKLENGTH, 
+	public static Coord BLOCKSPERNOISEPATCH = NoisePatch.PATCHDIMENSIONSCHUNKS * new Coord((int)ChunkManager.CHUNKLENGTH, 
 	                                                                                                   (int) ChunkManager.CHUNKHEIGHT, 
 	                                                                                                   (int)ChunkManager.CHUNKLENGTH);
 	private const string NOISE_PATCHES_SAVE_NAME = "SavedNoisePatches";
@@ -210,8 +210,10 @@ public class BlockCollection
 	}
 	
 	public static NoiseCoord noiseCoordForWorldCoord(Coord woco){
-		woco =  woco - (woco.booleanNegative () * (BLOCKSPERNOISEPATCH  - 1)) ; // (shift neg coords by -1)
-		return new NoiseCoord (woco / BLOCKSPERNOISEPATCH);
+		
+		return CoordUtil.NoiseCoordForWorldCoord(woco);
+//		woco =  woco - (woco.booleanNegative () * (BLOCKSPERNOISEPATCH  - 1)) ; // (shift neg coords by -1)
+//		return new NoiseCoord (woco / BLOCKSPERNOISEPATCH);
 	}
 	
 	public void destroyPatchAt(NoiseCoord nco) {

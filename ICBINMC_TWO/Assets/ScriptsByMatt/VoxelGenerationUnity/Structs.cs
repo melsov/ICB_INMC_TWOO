@@ -123,9 +123,12 @@ public struct PTwo
 	}
 	
 	public static PTwo PTwoZero() {
-		return new PTwo(1,1);	
+		return new PTwo(0,0);	
 	}
 	
+	public PTwo(int st) {
+		this = new PTwo(st,st);
+	}
 	
 	public PTwo plusOne() {
 		return new PTwo(this.s + 1, this.t + 1);	
@@ -151,6 +154,10 @@ public struct PTwo
 	
 	public static PTwo PTwoFromAlignedCoord(AlignedCoord alco) {
 		return new PTwo(alco.across, alco.up);	
+	}
+	
+	public PTwo flipSAndT(){
+		return new PTwo(this.t, this.s);
 	}
 	
 	public int area() {
@@ -453,6 +460,14 @@ public struct Quad
 	
 	public Range1D tRange() {
 		return new Range1D(this.origin.t, this.dimensions.t);	
+	}
+	
+	public SimpleRange sSimpleRange() {
+		return new SimpleRange(this.origin.s, this.dimensions.s);	
+	}
+	
+	public SimpleRange tSimpleRange() {
+		return new SimpleRange(this.origin.t, this.dimensions.t);	
 	}
 	
 //	public static Quad Union(Quad one, Quad two)

@@ -7,7 +7,6 @@ using System.Collections.Specialized;
 using System.Runtime.Serialization;
 using System.Runtime.InteropServices;
 
-
 using System.IO;
 using System;
 using System.Security.Cryptography.X509Certificates;
@@ -133,7 +132,7 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 	
 	public OverlapState overlapStateWith(iRange other)
 	{
-		return this.overlapWithRange((SimpleRange) other);
+		return this.overlapWithRange(other);
 	}
 	
 	public bool intersectsWith(iRange other)
@@ -166,6 +165,12 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 		return this.start == other.start && this.range == other.range;
 	}
 	
+	public bool Equals(iRange other) 
+	{
+//		return this.Equals((SimpleRange) other);
+		return this.startP == other.startP && this.rangeP == other.rangeP;
+	}
+	
 	public int extent() {
 		return this.start + this.range;
 	}
@@ -184,6 +189,10 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 	
 	public bool isErsatzNull() {
 		return SimpleRange.Equal(this, SimpleRange.theErsatzNullRange() );	
+	}
+	
+	public iRange theErsatzNullIRange() {
+		return (iRange) SimpleRange.theErsatzNullRange();
 	}
 	
 	public bool contains(int index) {
@@ -286,10 +295,10 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 	
 	public static iRange IntersectingIRange(iRange raa, iRange rbb)
 	{
-		return (iRange) SimpleRange.IntersectingRange((SimpleRange) raa, (SimpleRange) rbb);
+		return (iRange) SimpleRange.IntersectingRange(raa, rbb);
 	}
 	
-	public static SimpleRange IntersectingRange(SimpleRange raa, SimpleRange rbb)
+	public static SimpleRange IntersectingRange(iRange raa, iRange rbb)
 	{
 		int interExtent = raa.extent() < rbb.extent() ? raa.extent() : rbb.extent();
 		int interStart = raa.startP > rbb.startP ? raa.startP : rbb.startP;
@@ -300,7 +309,7 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 		return new SimpleRange(interStart, interExtent - interStart);
 	}	
 		
-	public OverlapState overlapWithRange(SimpleRange other)
+	public OverlapState overlapWithRange(iRange other)
 	{
 		if (this.start == other.extent())
 			return OverlapState.FlushWithStart;
@@ -308,7 +317,7 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 		if (this.start > other.extent())
 			return OverlapState.BeforeStart;
 		
-		if (this.extent() == other.start)
+		if (this.extent() == other.startP)
 			return OverlapState.FlushWithExtent;
 		
 		if (RangesIntersect(this, other)) 
@@ -319,7 +328,7 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 			if (other.contains(this)) {
 				return OverlapState.ItContainsMe;	
 			}
-			if (other.start < this.start)
+			if (other.startP < this.startP)
 				return OverlapState.OverlappingOverStart;
 			
 			return OverlapState.OverlappingOverEnd;

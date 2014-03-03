@@ -1,13 +1,6 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/CoordStructs.cs">
-    <Files>
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightStructs.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/VertexAggregating/FaceSet.cs" Line="1" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/CoordStructs.cs" Line="895" Column="15" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structs.cs" Line="430" Column="2" />
-    </Files>
-  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>

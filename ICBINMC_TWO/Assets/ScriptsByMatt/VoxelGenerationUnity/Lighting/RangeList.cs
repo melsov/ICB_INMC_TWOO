@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 
-public interface iRange
+public interface iRange : IEquatable<iRange>
 {
 	int startP{
 		get; set;	
@@ -21,6 +22,7 @@ public interface iRange
 	iRange intersection(iRange other);
 	
 	bool isErsatzNull();
+	iRange theErsatzNullIRange();
 }	
 
 /*
@@ -32,17 +34,48 @@ public interface iRange
  * intersecting ranges
  * */
 
-public class DiscreteDomainRangeList<T> where T : iRange
+
+//public class DiscreteDomainRangeList<T> : ICollection<T>, ICollection where T : iRange	
+public class DiscreteDomainRangeList<T>  where T : iRange	
 {
-	private List<T> ranges = new List<T>();
+	private List<T> _ranges = new List<T>();
+
+	public int Count{
+		get {
+			return _ranges.Count;
+		}
+	}
+
+	public void Clear() {
+		_ranges.Clear();
+	}
+
+	public bool Remove(T rangeItem){
+		return _ranges.Remove(rangeItem);
+	}
+	
+	public void RemoveAt(int index){
+		_ranges.RemoveAt(index);
+	}
 	
 	public void Add(T rangeItem)
+	{
+		Add (rangeItem, false);
+	}
+	
+	public void AddOverwrite(T rangeItem)
+	{
+		Add(rangeItem, true);
+	}
+	
+	private void Add(T rangeItem, bool wantOverwrite)
 	{
 		//ranges ordered from low start to high start
 		int insertIndex = 0;
 		
-		foreach(iRange r in ranges)
+		for(int i = 0; i < _ranges.Count; ++i)
 		{
+			iRange r = _ranges[i];
 			//if r is 'beyond' rangeItem
 			//insert at the curr insert index
 			if (rangeItem.startP > r.extent())
@@ -54,26 +87,58 @@ public class DiscreteDomainRangeList<T> where T : iRange
 			{
 				break;
 			}
-			throw new Exception("Discrete Domain Range List doesn't put up with flush or overlapping ranges");
+			OverlapState overlState = rangeItem.overlapStateWith(r);
+			if (OverLapUtil.OverlapExists(overlState))
+			{
+				//want overwrite??
+				_ranges.RemoveAt(i);
+				insertIndex = i;
+//				throw new Exception("Discrete Domain Range List doesn't put up with flush or overlapping ranges");
+			}
 		}
 		this.Insert(insertIndex, rangeItem);
 	}
 	
+	public T rangeContaining(int y)
+	{
+		T result = default(T);
+		if (result != null && result.GetType().IsValueType) {
+			result = (T)result.theErsatzNullIRange();
+		}
+		
+		for(int i =0; i < _ranges.Count; ++i)
+		{
+			T range = _ranges[i];
+			if (range.startP <= y)
+			{
+				if (range.contains(y))
+				{
+					result = range;
+				}
+				break;
+			}
+		}
+		
+		return result;
+	}
+	
+//	#endregion
+	
 	private void Insert(int index, T item)
 	{
-		this.ranges.Insert(index, item);
+		this._ranges.Insert(index, item);
 	}
 	
 	public T this[int i]
 	{
 		get {
-			return this.ranges[i];
+			return this._ranges[i];
 		} set {
-			this.ranges[i] = value;
+			this._ranges[i] = value;
 		}
 	}
 	
 	public List<T> toList() {
-		return ranges;
+		return _ranges;
 	}
 }

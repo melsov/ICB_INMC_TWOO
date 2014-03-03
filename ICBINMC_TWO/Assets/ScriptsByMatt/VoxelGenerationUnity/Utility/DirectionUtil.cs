@@ -65,6 +65,18 @@ public static class DirectionUtil
 		return result;
 	}
 	
+	public static PTwo NudgeCoordForDirectionPTwo(Direction dir)
+	{
+		PTwo result = new PTwo(0,1);
+		if (dir <= Direction.xneg)
+			result = new PTwo(1,0);
+		
+		if (!IsPosDirection(dir))
+			result *= -1;
+		
+		return result;
+	}
+	
 	public static Direction[] TheDirections()
 	{
 		return new Direction[] {Direction.xpos, Direction.xneg, Direction.ypos, Direction.yneg, Direction.zpos, Direction.zneg};

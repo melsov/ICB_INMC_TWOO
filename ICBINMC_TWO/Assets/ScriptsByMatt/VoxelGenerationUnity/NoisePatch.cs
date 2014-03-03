@@ -102,6 +102,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	public static Coord patchDimensions =new Coord(CHUNKLENGTH * PATCHDIMENSIONSCHUNKS.x, 
 					ChunkManager.CHUNKHEIGHT * ChunkManager.WORLD_HEIGHT_CHUNKS,
 					CHUNKLENGTH * PATCHDIMENSIONSCHUNKS.z);
+	
+	private static PTwo patchDimsXZ = PTwo.PTwoXZFromCoord(patchDimensions);
 
 	public bool generatedBlockAlready {get; set;}
 	
@@ -467,6 +469,16 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		return heightMap[index.x * patchDimensions.x + index.z];
 	}
 	
+	public DiscreteDomainRangeList<LightColumn> lightColumnsAt(PTwo pRel)
+	{
+		if (!patchDimsXZ.isIndexSafe(pRel) )
+		{
+			throw new Exception("not a safe index (get light column): " + pRel.toString() + "patch dims: " + patchDimsXZ.toString());
+		}
+		return m_windowMap.getLightColumnsAt(pRel);
+
+	}
+	
 	// TODO: re-consolidate funcs.
 	public CoordSurfaceStatus coordIsAboveSurface(Coord chunkCo, Coord offset)
 	{
@@ -756,6 +768,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		bool isAirBlock = bb.type == BlockType.Air; 
 		
+		bool discontinuityChanged = false;
 		int heightsIndex = 0;
 		Range1D rOD = Range1D.theErsatzNullRange();
 		if (isAirBlock)
@@ -897,11 +910,15 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		//TODO: in some case, don't need to adjust window map (only one range and it wasn't changed e.g.)
 		
 		//HERE  WE WANT TO UPDATE
-		updateDiscontinuityInWindowMapWithRanges(heights, relCo.x, relCo.z);
+		if (discontinuityChanged)
+		{
+			updateDiscontinuityInWindowMapWithRanges(heights, relCo.x, relCo.z);
+		} else {
+			updateWindowMapWithNewSurfaceHeight((int) surfaceMap[relCo.x, relCo.z], relCo.x, relCo.z);
+		}
 //		addDiscontinuityToWindowMapWithRanges(heights, relCo.x, relCo.z);
 		
 		
-		updateWindowMapWithNewSurfaceHeight((int) surfaceMap[relCo.x, relCo.z], relCo.x, relCo.z);
 	}
 	
 	#endregion
@@ -1479,7 +1496,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		tradeDataWithFourNeighbors();
 		
 		m_windowMap.calculateLightAdd();
-		
+		m_windowMap.calculateLight(); // calls columns all patch update
 		//TEST
 //		m_chunkManager.assertNoChunksActiveInNoiseCoord(this.coord);
 		

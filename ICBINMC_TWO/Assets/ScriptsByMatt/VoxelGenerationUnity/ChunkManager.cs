@@ -111,8 +111,15 @@ public class ChunkManager : MonoBehaviour
 	private Vector3 farAwayPos;
 	private bool wasNullAndNeededToRenderTest;
 	private bool wasInactiveAndNotNullTest;
-
-	public BlockCollection blocks;
+	
+	private BlockCollection m_blocks;
+	public BlockCollection blocks {
+		get {
+			return m_blocks;
+		}
+	}
+	
+	public static LightColumnWorldMap lightColumnWorldMap;
 
 	private bool firstNoisePatchDone = false;
 
@@ -132,10 +139,11 @@ public class ChunkManager : MonoBehaviour
 	public ChunkManager()
 	{
 		noiseHandler = new NoiseHandler ();
-
+		
+		
 //		WORLD_HEIGHT_BLOCKS = (int) (WORLD_HEIGHT_CHUNKS * CHUNKHEIGHT);
 
-		blocks = new BlockCollection (); // (NoisePatch.PATCHDIMENSIONSCHUNKS * CHUNKLENGTH));
+		m_blocks = new BlockCollection (); // (NoisePatch.PATCHDIMENSIONSCHUNKS * CHUNKLENGTH));
 
 		activeChunks = new List<Chunk> ();
 		createTheseVeryCloseAndInFrontChunks = new List<Coord> ();
@@ -296,6 +304,21 @@ public class ChunkManager : MonoBehaviour
 		
 		return blocks.ligtValueAtWorldCoord(woco, dir);
 		
+	}
+	
+	public DiscreteDomainRangeList<LightColumn> lightColumnsAtWoco(int x, int z)
+	{
+		NoiseCoord nco = CoordUtil.NoiseCoordForWorldCoord(new Coord(x,0,z));
+		NoisePatch npatch = blocks.noisePatchAtNoiseCoord(nco);
+		if (npatch == null)
+		{
+			return null;
+		}
+		
+		Coord pRelCo = CoordUtil.PatchRelativeBlockCoordForWorldBlockCoord(new Coord(x,0,z));
+		
+		// noisepatch return lightcol map at rel co
+		return npatch.lightColumnsAt(PTwo.PTwoXZFromCoord(pRelCo));
 	}
 	
 //	
@@ -1828,7 +1851,9 @@ public class ChunkManager : MonoBehaviour
 		firstNoisePatchDone = false;
 
 		chunkMap = new ChunkMap (); //new Coord (WORLD_XLENGTH_CHUNKS, WORLD_HEIGHT_CHUNKS, WORLD_ZLENGTH_CHUNKS));
-
+		
+		lightColumnWorldMap = new LightColumnWorldMap(this);
+		
 		blocks.getSavedNoisePatches (); // from player prefs, if any...
 		
 		// REFRESH SAVED NOISEPATCHES
