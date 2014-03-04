@@ -216,11 +216,10 @@ public static class DebugLinesUtil
 		Coord start = new Coord(colm.xz.s, colm.range.start, colm.xz.t);
 		Coord dims = new Coord(1, colm.range.range, 1);
 		
-//		float red = (float)(colm.handyInteger % 4)/4f;
-//		float green = (float)((colm.handyInteger + 3) % 4)/4f;
-		Color col = new Color(1.0f, 0f, 0.0f, 1.0f); //red
-		
-		switch(colm.handyInteger % 8) {
+//		Color col = new Color(1.0f*((float) colm.handyInteger/Window.LIGHT_LEVEL_MAX), .4f, 1.0f, 1.0f); //red
+		Color col = new Color(1.0f, .4f, 1.0f, 1.0f); //red
+		int level = colm.handyInteger == 0 ? 0 : 2;
+		switch(level % 8) {
 		case 0:
 			col = new Color(1.0f, 1f, 0.0f, 1.0f); //yellow
 			break;
@@ -249,6 +248,7 @@ public static class DebugLinesUtil
 		}
 		
 		drawDebugCube(start, dims, col);
+//		drawDebugCubeJustDiagonal(start, dims, col);
 	}
 	
 	static void drawDebugCube(Coord start, Coord dims, Color col)
@@ -277,6 +277,15 @@ public static class DebugLinesUtil
 		
 		//diag on top
 //		debugLine(new Coord (start.x, outer.y, start.z), outer);
+		
+		debugLine(start, outer, col );  // across 
+	}
+	
+	static void drawDebugCubeJustDiagonal(Coord start, Coord dims, Color col)
+	{
+//		int length = drawBlock ? 1 : (int) CHUNKLENGTH;
+//		Coord start = start; // * length;
+		Coord outer = start + dims; // chunkCoRange.outerLimit () * length;
 		
 		debugLine(start, outer, col );  // across 
 	}

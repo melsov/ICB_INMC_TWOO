@@ -25,11 +25,21 @@ public class LightColumn : iRange, IEquatable<LightColumn>
 		}
 	}
 	
+	public LightColumn Copy()
+	{
+		return new LightColumn(this.coord, this.lightLevel, this.range);
+	}
+	
 	public LightColumn(PTwo _coord, byte _lightLevel, SimpleRange _range)
 	{
 		lightLevel = _lightLevel;
 		coord = _coord;
 		range = _range;
+	}
+	
+	public LightColumn()
+	{
+		
 	}
 	
 	public void setLightLevelToMax()
@@ -106,7 +116,20 @@ public class LightColumn : iRange, IEquatable<LightColumn>
 	
 	public iRange theErsatzNullIRange() 
 	{
-		return (iRange) SimpleRange.theErsatzNullRange();
+		return null; // (iRange) SimpleRange.theErsatzNullRange();
+	}
+	
+	#endregion
+	
+	#region debug
+	
+	public Column toColumnDebug()
+	{
+		Column col = new Column();
+		col.range = this.range;
+		col.xz = this.coord;
+		col.handyInteger = (int) this.lightLevel;
+		return col;
 	}
 	
 	#endregion

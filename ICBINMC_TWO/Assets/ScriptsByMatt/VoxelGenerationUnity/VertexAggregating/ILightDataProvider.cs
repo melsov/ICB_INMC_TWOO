@@ -43,7 +43,7 @@ public class LightDataProvider : ILightDataProvider
 		if (m_noisePatch == null)
 			m_noisePatch = m_chunk.m_noisePatch;
 		
-		AssertUtil.Assert(m_noisePatch != null, "what? noisepatch still null?");
+//		AssertUtil.Assert(m_noisePatch != null, "what? noisepatch still null?");
 		
 		Coord chunkRelCoOfOrigin = chunkRelativeCoordFrom(quad, dir, normalOffset) + DirectionUtil.NudgeCoordForDirection(dir);
 

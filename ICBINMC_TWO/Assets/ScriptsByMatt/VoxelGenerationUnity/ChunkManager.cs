@@ -497,8 +497,7 @@ public class ChunkManager : MonoBehaviour
 
 	public System.Collections.IEnumerable directionCoordsForRelativeEdgeCoords(Coord blkRelativeCoord, Coord worldCoordOfBlockInQuestion)
 	{
-		bug ("block rel coord: " + blkRelativeCoord.toString () + " world co of changed block: " + worldCoordOfBlockInQuestion.toString ());
-		Coord negPosOne = Coord.coordOne (); // worldCoordOfBlockInQuestion.negNegOnePosPosOne ();
+		Coord negPosOne = Coord.coordOne (); 
 		if (blkRelativeCoord.x == 0)
 			yield return new Coord (-1, 0, 0) * negPosOne;
 		if (blkRelativeCoord.x == CHUNKLENGTH - 1)
@@ -663,6 +662,8 @@ public class ChunkManager : MonoBehaviour
 		
 		//legend for debug lines
 //		GUI.Box (new Rect ( 40, Screen.height - 40, Screen.width - 40, 60), "Chunk lists: Destroy: red, CheckASync: blue, VCloseAInfront: cyan" );
+		
+		GUI.Box (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "NPatch Count:" + blocks.noisePatches.Count);
 		
 		return; // !!!!!
 		

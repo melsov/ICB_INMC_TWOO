@@ -1,12 +1,18 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 
-public struct Column
+public struct Column : IEquatable<Column>
 {
 	public SimpleRange range;
 	public PTwo xz;
 	public int handyInteger;
+	
+	public bool Equals(Column other)
+	{
+		return this.range.start == other.range.start && this.range.range == other.range.range && PTwo.Equal(this.xz, other.xz);
+	}
 }
 
 public class DebugLinesMonoBAssistant : MonoBehaviour 
@@ -24,6 +30,21 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 		}
 	}
 	
+	public void addColumn(Column column)
+	{
+		int index = columns.IndexOf(column);
+		if (index >= 0)
+		{
+			Column col = columns[index];
+			col.handyInteger = column.handyInteger;
+			columns[index] = col;
+		} else {
+			columns.Add(column);
+		}
+//		if (!columns.Contains(column))
+//			columns.Add(column);
+	}
+	
 	public void addColumn(SimpleRange range, PTwo _xz, int debugInteger)
 	{
 		Column column = new Column();
@@ -33,6 +54,11 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 		
 		if (!columns.Contains(column))
 			columns.Add(column);
+	}
+	
+	public void removeColumn(Column col)
+	{
+		columns.Remove(col);
 	}
 	
 	public void clearColumns()
@@ -95,8 +121,10 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 	
 	void drawColumns()
 	{
-		foreach(Column colm in columns)
+//		foreach(Column colm in columns)
+		for(int i=0; i < columns.Count; ++i)
 		{
+			Column colm = columns[i];
 			DebugLinesUtil.DrawDebugColumn(colm);
 		}
 	}

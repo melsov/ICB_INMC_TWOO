@@ -53,6 +53,13 @@ public struct SurroundingSurfaceValues {
 		
 		return 258;
 	}
+	
+	public int lowestValue()
+	{
+		int lowest = xneg < xpos ? xneg : xpos;
+		lowest = lowest < zneg ? lowest : zneg;
+		return lowest < zpos ? lowest : zpos;
+	}
 }
 
 public class WindowMap  
@@ -82,16 +89,16 @@ public class WindowMap
 	private NoisePatch m_noisePatch;
 	
 
-	private LightColumnCalculator m_lightColumnCalculator = new LightColumnCalculator();
-	public LightColumnMap lightColumnMap {
-		get {
-			return m_lightColumnCalculator.lightColumnMap;
-		}
-	}
+//	private LightColumnCalculator m_lightColumnCalculator; // = new LightColumnCalculator();
+//	public LightColumnMap lightColumnMap {
+//		get {
+//			return m_lightColumnCalculator.lightColumnMap;
+//		}
+//	}
 	
 	public DiscreteDomainRangeList<LightColumn> getLightColumnsAt(PTwo patchRelPoint)
 	{
-		return m_lightColumnCalculator.getLightColumnsAt(patchRelPoint);
+		return null; // m_lightColumnCalculator.getLightColumnsAt(patchRelPoint);
 	}
 	
 	public Coord worldCoord {
@@ -103,6 +110,7 @@ public class WindowMap
 	public WindowMap(NoisePatch _npatch)
 	{
 		m_noisePatch = _npatch;
+//		m_lightColumnCalculator = new LightColumnCalculator(_npatch); // FOR DBG give npatch
 	}
 	
 	#region query
@@ -110,7 +118,7 @@ public class WindowMap
 	// TODO: add direction ... so that we know which way to look for windows...
 	public float ligtValueAtPatchRelativeCoord(Coord relCo, Direction faceDirection)
 	{
-		return m_lightColumnCalculator.ligtValueAtPatchRelativeCoord(relCo); //, faceDirection);
+		return 0f; // m_lightColumnCalculator.ligtValueAtPatchRelativeCoord(relCo); //, faceDirection);
 //		relCo.x = Mathf.Clamp(relCo.x, 0, NoisePatch.patchDimensions.x - 1); //shouldn't need...
 		
 		AssertUtil.Assert(relCo.x < windows.Length && relCo.x >= 0 , "relco was out of bounds: " + relCo.x);
@@ -188,7 +196,7 @@ public class WindowMap
 	
 	public void updateWindowsWithNewSurfaceHeight(int newHeight, int xx, int zz)
 	{
-		m_lightColumnCalculator.updateWindowsWithHeightRangesAndUpdateLight(newHeight, xx, zz);
+//		m_lightColumnCalculator.updateWindowsWithHeightRangesAndUpdateLight(newHeight, xx, zz,);
 //		m_lightColumnCalculator.updateWindowsWithNewSurfaceHeight(newHeight, xx,zz);
 		return;
 		// TODO. deal with this the light col way!
@@ -244,7 +252,7 @@ public class WindowMap
 	 */ 
 	public void updateWindowsWithHeightRanges(List<Range1D> heightRanges, int x, int z, SurroundingSurfaceValues ssvs)
 	{
-		m_lightColumnCalculator.updateWindowsWithHeightRangesAndUpdateLight(heightRanges, x, z, ssvs, -1, false);
+//		m_lightColumnCalculator.updateWindowsWithHeightRangesAndUpdateLight(heightRanges, x, z, ssvs, -1, false);
 		return;
 		
 		//reset column 
@@ -328,7 +336,7 @@ public class WindowMap
 	 */ 
 	public void addDiscontinuityToWindowsWithHeightRanges(List<Range1D> heights1D, int xx, int zz, SurroundingSurfaceValues ssvs)
 	{
-		m_lightColumnCalculator.updateWindowsWithHeightRanges(heights1D, xx,zz,ssvs, -1, false);
+//		m_lightColumnCalculator.updateWindowsWithHeightRanges(heights1D, xx,zz,ssvs, -1, false);
 		return;
 		
 		for(int j = 1; j < heights1D.Count; ++j)
@@ -411,7 +419,7 @@ public class WindowMap
 	
 	public void calculateLight()
 	{
-		m_lightColumnCalculator.calculateLight();
+//		m_lightColumnCalculator.calculateLight();
 	}
 		
 	

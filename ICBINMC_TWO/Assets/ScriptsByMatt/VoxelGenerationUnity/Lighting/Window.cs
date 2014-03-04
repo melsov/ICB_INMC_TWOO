@@ -25,7 +25,7 @@ public class Window : IEquatable<Window>
 	public const float LIGHT_LEVEL_MAX = 24f;
 	public const byte LIGHT_LEVEL_MAX_BYTE = (byte) LIGHT_LEVEL_MAX;
 	
-	public const float LIGHT_TRAVEL_MAX_DISTANCE = 16;
+	public const float LIGHT_TRAVEL_MAX_DISTANCE = 8; //SILLY?
 	public const float UNIT_FALL_OFF = 1f;
 	public const byte UNIT_FALL_OFF_BYTE = (byte) UNIT_FALL_OFF;
 	

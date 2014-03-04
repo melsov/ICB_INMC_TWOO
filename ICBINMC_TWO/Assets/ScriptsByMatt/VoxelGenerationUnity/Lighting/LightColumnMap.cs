@@ -44,7 +44,7 @@ public class LightColumnMap
 	{
 		if (!NoisePatchDims.isIndexSafe(new PTwo(x,z)))
 		{
-			return null; //WANT// ChunkManager.lightColumnWorldMap.lightColumnsAtWoco(x,z);
+			return ChunkManager.lightColumnWorldMap.lightColumnsAtWoco(x,z);
 		}
 		return m_lightColumns[x * NoisePatchDims.s + z];
 	}
@@ -56,6 +56,33 @@ public class LightColumnMap
 		lcolms.Add(newlcolm);
 		this[x,z] = lcolms;
 	}
+	
+	public void addReplaceColumn(LightColumn col)
+	{
+		DiscreteDomainRangeList<LightColumn> cols = this[col.coord];
+		cols.RemoveWithRangeEqualTo(col.range);
+		
+		cols.Add(col);
+		this[col.coord] = cols;
+	}
+	
+	public void clearColumnsAt(int x, int z)
+	{
+		DiscreteDomainRangeList<LightColumn> lcolms = this[x,z];
+		
+		lcolms.Clear();
+		this[x,z] = lcolms;
+	}
+	
+	public int countAt(int x, int z)
+	{
+		DiscreteDomainRangeList<LightColumn> cols = this.lightColumnListAtOrNull(x,z);
+		if (cols == null)
+			return 0;
+		
+		return cols.Count;
+	}
+	
 	
 	public LightColumn columnContaining(int x, int y, int z)
 	{
@@ -130,7 +157,12 @@ public class LightColumnMap
 	
 	public List<LightColumn> lightColumnsAdjacentToAndFlushWith(LightColumn colm)
 	{
-		PTwo coord = colm.coord;
+		return lightColumnsAdjacentToAndFlushWithSimpleRangeAndPoint(colm.range, colm.coord);
+	}
+	
+	public List<LightColumn> lightColumnsAdjacentToAndFlushWithSimpleRangeAndPoint(SimpleRange colmRange, PTwo coord)
+	{
+//		PTwo coord = colm.coord;
 		List<LightColumn> result = new List<LightColumn>();
 		
 		foreach(PTwo surroundingCo in DirectionUtil.SurroundingPTwoCoordsFromPTwo(coord))
@@ -142,8 +174,29 @@ public class LightColumnMap
 			{
 				LightColumn adjLightColumn = adjRangeList[i];
 				
-				OverlapState overlap = colm.overlapStateWith(adjLightColumn);
+				OverlapState overlap = colmRange.overlapStateWith(adjLightColumn.range);
 				if (OverLapUtil.OverlapExists(overlap))
+				{
+					result.Add(adjLightColumn);
+				}
+			}
+		}
+		return result;
+	}
+	
+	public List<LightColumn> lightColumnsAdjacentToAndAtleastPartiallyAbove(Coord coord)
+	{
+		List<LightColumn> result = new List<LightColumn>();
+		
+		foreach(PTwo surroundingCo in DirectionUtil.SurroundingPTwoCoordsFromPTwo(PTwo.PTwoXZFromCoord(coord)))
+		{
+			DiscreteDomainRangeList<LightColumn> adjRangeList = this.lightColumnListAtOrNull(surroundingCo.s, surroundingCo.t);
+			if (adjRangeList == null)
+				continue;
+			for(int i = 0; i < adjRangeList.Count; ++i)
+			{
+				LightColumn adjLightColumn = adjRangeList[i];
+				if (adjLightColumn.extent() < coord.y)
 				{
 					result.Add(adjLightColumn);
 				}

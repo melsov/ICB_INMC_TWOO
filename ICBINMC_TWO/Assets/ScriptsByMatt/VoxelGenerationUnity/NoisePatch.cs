@@ -1,8 +1,10 @@
 ﻿#define NO_CAVES
+#define STRUCTURES_WIN
+//#define FLAT_TOO
+
 //#define NO_SOD
 //#define LIGHT_HACK
 //#define TURN_OFF_STRUCTURES
-//#define FLAT_TOO
 //#define TERRAIN_TEST
 //#define FLAT
 
@@ -143,12 +145,14 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	private float lastXRowStartLightLevel = 3.5f;
 #endif
 	
-	private WindowMap m_windowMap;
-	public WindowMap windowMap {
-		get {
-			return m_windowMap;	
-		}
-	}
+//	private WindowMap m_windowMap;
+//	public WindowMap windowMap {
+//		get {
+//			return m_windowMap;	
+//		}
+//	}
+	
+	private LightColumnCalculator m_lightColumnCalculator;
 	
 	public NoisePatch(NoiseCoord _noiseCo, ChunkManager _chunkMan)
 	{
@@ -166,7 +170,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		BLOCKSPERPATCHLENGTH = patchDimensions.x;
 		
-		m_windowMap = new WindowMap(this);
+//		m_windowMap = new WindowMap(this);
+		m_lightColumnCalculator = new LightColumnCalculator(this);
 	}
 	
 	public bool Equals(NoisePatch other) {
@@ -357,7 +362,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 #endif
 		
 		if (tradeDataWithFourNeighbors())
-			m_windowMap.calculateLightAdd();
+			m_lightColumnCalculator.calculateLight();
+//			m_windowMap.calculateLightAdd();
 		
 		
 		
@@ -475,7 +481,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		{
 			throw new Exception("not a safe index (get light column): " + pRel.toString() + "patch dims: " + patchDimsXZ.toString());
 		}
-		return m_windowMap.getLightColumnsAt(pRel);
+		return m_lightColumnCalculator.getLightColumnsAt(pRel); // m_windowMap.getLightColumnsAt(pRel);
 
 	}
 	
@@ -560,7 +566,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 			return m_chunkManager.ligtValueAtPatchRelativeCoordNoiseCoord(relCo, this.coord, dir);
 		}
 		
-		return m_windowMap.ligtValueAtPatchRelativeCoord(relCo, dir);	
+		return m_lightColumnCalculator.ligtValueAtPatchRelativeCoord(relCo);
+//		return m_windowMap.ligtValueAtPatchRelativeCoord(relCo, dir);	
 	}
 	
 	#endregion
@@ -626,6 +633,19 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		
 		Coord woco = patchWorldCoord() + relCo;
 		return highestPointAtWorldCoord(woco);
+	}
+	
+	public SurroundingSurfaceValues surfaceValuesSurrounding(PTwo point)
+	{
+		SurroundingSurfaceValues ssvs = new SurroundingSurfaceValues();
+		foreach(Direction dir in DirectionUtil.TheDirectionsXZ())
+		{
+						
+			PTwo adjPoint = point + DirectionUtil.NudgeCoordForDirectionPTwo(dir);
+			ssvs.setValueForDirection( highestPointAtPatchRelativeCoord(PTwo.CoordFromPTwoWithY(adjPoint, 0)), dir );
+		}
+		
+		return ssvs;
 	}
 	
 	public List<Range1D> rangesAtWorldCoord(Coord woco)
@@ -768,7 +788,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		bool isAirBlock = bb.type == BlockType.Air; 
 		
-		bool discontinuityChanged = false;
+		bool changedSurfaceOnly = (relCo.y == surfaceMap[relCo.x, relCo.z] - 1 || relCo.y == surfaceMap[relCo.x, relCo.z]);
 		int heightsIndex = 0;
 		Range1D rOD = Range1D.theErsatzNullRange();
 		if (isAirBlock)
@@ -902,23 +922,21 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		}
 		heightMap [relCo.x * patchDimensions.x + relCo.z] = heights;
 		surfaceMap[relCo.x, relCo.z] = (byte) lastRangeAtRelativeCoordUnsafe(relCo).extent(); 
-		// also update windowMap here...
 		
 		// MORE WORK HERE...
 		// what if ranges were removed? 
 		
 		//TODO: in some case, don't need to adjust window map (only one range and it wasn't changed e.g.)
 		
-		//HERE  WE WANT TO UPDATE
-		if (discontinuityChanged)
+		
+		// update light
+		if (!changedSurfaceOnly)
 		{
-			updateDiscontinuityInWindowMapWithRanges(heights, relCo.x, relCo.z);
-		} else {
 			updateWindowMapWithNewSurfaceHeight((int) surfaceMap[relCo.x, relCo.z], relCo.x, relCo.z);
+		} else {
+			updateDiscontinuityInWindowMapWithRanges(heights,relCo,isAirBlock);
 		}
-//		addDiscontinuityToWindowMapWithRanges(heights, relCo.x, relCo.z);
-		
-		
+
 	}
 	
 	#endregion
@@ -1485,6 +1503,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 #if TURN_OFF_STRUCTURES
 #else
 		//add stucturs
+		// TODO: switch this to be in front of popWindowMap
+		// and don't bother adding windows in add structurz
+		// (make this an option in this func.)
 		addStructuresToHeightMap(structurz); 
 		//any structures for me from neighbors?
 		getDataFromNeighbors(); 
@@ -1495,8 +1516,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		
 		tradeDataWithFourNeighbors();
 		
-		m_windowMap.calculateLightAdd();
-		m_windowMap.calculateLight(); // calls columns all patch update
+//		m_windowMap.calculateLightAdd();
+		m_lightColumnCalculator.calculateLight(); // calls columns all patch update
 		//TEST
 //		m_chunkManager.assertNoChunksActiveInNoiseCoord(this.coord);
 		
@@ -1528,7 +1549,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// clear windows at this x,z
 		
 		// window map deal with this...	
-		m_windowMap.updateWindowsWithNewSurfaceHeight(newHeight, xx, zz);
+//		m_windowMap.updateWindowsWithNewSurfaceHeight(newHeight, xx, zz);
+		m_lightColumnCalculator.updateWindowsWithNewSurfaceHeight(newHeight, xx,zz);
 		
 		//unsubtle
 		//TODO: make window map update light by itself when upWithNewSurface is called.
@@ -1540,9 +1562,14 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	
 	//* UPDATE (DON'T ADD TO) WINDOW MAP
-	private void updateDiscontinuityInWindowMapWithRanges(List<Range1D> heightRanges, int xx, int zz)
+	private void updateDiscontinuityInWindowMapWithRanges(List<Range1D> heightRanges, Coord blockChangedCoord, bool solidBlockRemoved)
 	{
-		m_windowMap.updateWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
+//		m_windowMap.updateWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
+		m_lightColumnCalculator.updateLightWith(heightRanges, 
+			blockChangedCoord, 
+			valuesSurrounding(blockChangedCoord), 
+			solidBlockRemoved);
+		
 	}
 	
 	// TODO: give this func. to window map
@@ -1553,7 +1580,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	//* ADD TO (DON'T UPDATE) WINDOW MAP
 	private void addDiscontinuityToWindowMapWithRanges(List<Range1D> heightRanges, int xx, int zz)
 	{
-		m_windowMap.addDiscontinuityToWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx,0,zz)));
+//		m_windowMap.addDiscontinuityToWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx,0,zz)));
+		m_lightColumnCalculator.replaceColumnsWithHeightRanges(heightRanges,xx,zz,valuesSurrounding(new Coord(xx,0,zz)));
 	}
 
 	
@@ -1724,7 +1752,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// light for windows that changed.
 		// e.g. any windows that are flush with this edge, presumably...
 		// also, any windows flush with those windows (which can happen within nPatch we think)
-		m_windowMap.calculateLightAdd();
+//		m_windowMap.calculateLightAdd();
+		m_lightColumnCalculator.calculateLight();
 		NeighborDirection opposite = NeighborDirectionUtils.oppositeNeighborDirection(fromDirection);
 		exchangedTerrainDataAlready.setBooleanForDirection(opposite, true);
 	}
@@ -1734,12 +1763,15 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		byte[] edgeHeights = neighborPatch.giveFlushSurfaceHeightDataForNeighborFromDirection(ndir);
 		
 		// ... pass data to windowMap and tell it which edge...
-		m_windowMap.updateWindowsFlushWithEdgeInNeighborDirection(edgeHeights, ndir);
+//		m_windowMap.updateWindowsFlushWithEdgeInNeighborDirection(edgeHeights, ndir);
+		
+		// TODO: update calc with this?
 	}
 	
 	private void introduceAdjacentWindowsWithNeighborInDirection(NoisePatch neighborPatch, NeighborDirection ndir)
 	{
-		this.m_windowMap.introduceFlushWindowsWithWindowInNeighborDirection(neighborPatch.windowMap, ndir);	
+//		this.m_windowMap.introduceFlushWindowsWithWindowInNeighborDirection(neighborPatch.windowMap, ndir);	
+		// TODO need calc to deal with this?
 	}
 	
 	private byte[] giveFlushSurfaceHeightDataForNeighborFromDirection(NeighborDirection fromNDir)
@@ -1921,12 +1953,13 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 						str_ranges[u] = str_range;
 						
 						// if structure range happens to contain the highest_at range:
-						if (str_range.contains(highest_at))
+						if (str_range.contains(highest_at) )
 						{
-							// and then what about ranges below that? TODO:
-//							range_l.RemoveAt(range_l.Count - 1);
-//							range_l.Add(str_range); //NO. the terrain -- or previous structures win this one. (commenting out)
+#if STRUCTURES_WIN
+
+#else
 							continue;
+#endif
 						}
 						
 						above_struck = highest_at.subRangeAbove(str_range.extentMinusOne());

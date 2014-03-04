@@ -558,6 +558,19 @@ public class FaceAggregator
 	
 	#region get light level tanges
 	
+	//TODO: reset  light level tangents within...?
+	// INVESTIGATE WHY LIGHT LEVELS DON'T COMPLETELY UPDATE SOMETIMES...
+	
+//	public List<Vector4> recalculateLightLevelTangents(int normalHeight)
+//	{
+//		
+//	}
+//	
+//	public List<Vector4> recalculateLightLevelTangents(int normalHeight)
+//	{
+//		
+//	}
+	
 	public List<Vector4> recalculateLightLevelTangents(int normalHeight)
 	{
 		List<Vector4> result = new List<Vector4>();
@@ -567,7 +580,7 @@ public class FaceAggregator
 			result.AddRange(fs.recalculateTangents(normalHeight));	
 		}
 		
-		assertMeshSetElementsNotNull(); //DBG
+//		assertMeshSetElementsNotNull(); //DBG
 		
 		return result;
 	}
