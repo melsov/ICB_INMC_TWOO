@@ -308,10 +308,10 @@
 			
 			fixed local_light = (light_one + 2.0) / NUM_LIGHT_LEVELS_PLUS_ONE; // LOWEST IS NOT ZERO //   light_one / 3.0;
 
-			if (light_one > NUM_LIGHT_LEVELS - 1.5) 
-				return fixed4(0.3, .4 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,0.5,1.0) * i.color.z; //test		
-			if (light_one < 1.0) 
-				return fixed4(0.4, 0.4 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,0.0,1.0) * i.color.z; //test	
+//			if (light_one > NUM_LIGHT_LEVELS - 1.5) 
+//				return fixed4(0.3, .4 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,0.5,1.0) * i.color.z; //test		
+//			if (light_one < 1.0) 
+//				return fixed4(0.4, 0.4 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,0.0,1.0) * i.color.z; //test	
 
 			
 	        return tex2D(_BlockTex, scaled_uv) * i.color.z * local_light; // color z == light level
