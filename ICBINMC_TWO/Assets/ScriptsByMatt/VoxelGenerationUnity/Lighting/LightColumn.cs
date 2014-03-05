@@ -119,6 +119,12 @@ public class LightColumn : iRange, IEquatable<LightColumn>
 		return null; // (iRange) SimpleRange.theErsatzNullRange();
 	}
 	
+	public string toString()
+	{
+		return "Light Colm: start: " + startP + " range: " + rangeP + " coord: " + coord.toString() + " lightlev: " + lightLevel;
+	}
+	
+	
 	#endregion
 	
 	#region debug
@@ -128,7 +134,7 @@ public class LightColumn : iRange, IEquatable<LightColumn>
 		Column col = new Column();
 		col.range = this.range;
 		col.xz = this.coord;
-		col.handyInteger = (int) this.lightLevel;
+		col.handyInteger = (int) this.startP;
 		return col;
 	}
 	

@@ -45,6 +45,21 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 //			columns.Add(column);
 	}
 	
+	public void addColumn(Column column, int handyInt)
+	{
+		int index = columns.IndexOf(column);
+		if (index >= 0)
+		{
+			Column col = columns[index];
+			col.handyInteger = handyInt; // column.handyInteger;
+			columns[index] = col;
+		} else {
+			columns.Add(column);
+		}
+//		if (!columns.Contains(column))
+//			columns.Add(column);
+	}
+	
 	public void addColumn(SimpleRange range, PTwo _xz, int debugInteger)
 	{
 		Column column = new Column();

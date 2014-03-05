@@ -23,6 +23,7 @@ public interface iRange : IEquatable<iRange>
 	
 	bool isErsatzNull();
 	iRange theErsatzNullIRange();
+	string toString();
 }	
 
 /*
@@ -71,6 +72,22 @@ public class DiscreteDomainRangeList<T>  where T : iRange, new()
 		}
 	}
 	
+	public void RemoveStartAbove(int y)
+	{
+		for(int i = _ranges.Count - 1; i >= 0 ; --i)
+		{
+			T r = _ranges[i];
+			if (r.startP >= y)
+			{
+				_ranges.RemoveAt(i);
+				b.bug("removed a range with start above: " + r.toString());
+			} else {
+				b.bug("done removing");
+				break;
+			}
+		}
+	}
+	
 	public void Add(T rangeItem)
 	{
 		Add (rangeItem, false);
@@ -82,12 +99,13 @@ public class DiscreteDomainRangeList<T>  where T : iRange, new()
 	}
 	
 	//NOISE PATCH STYLE
-	public bool Incorporate(int y, bool YIsAnAddition)
+	public T Incorporate(int y, bool YIsAnAddition)
 	{
+		b.bug("incorp");
 		if (YIsAnAddition)
 		{
-			addPoint(y);
-			return true;
+			return addPoint(y);
+//			return true;
 		}
 		return subtractPoint(y);
 	}
@@ -100,8 +118,17 @@ public class DiscreteDomainRangeList<T>  where T : iRange, new()
 		return highest.extent();
 	}
 	
-	private void addPoint(int y)
+	private T addPoint(int y)
 	{
+		
+		if (_ranges.Count == 0)
+		{
+			T range = new T();
+			range.startP = y;
+			range.rangeP = 1;
+			_ranges.Add(range);
+			return range;
+		}
 		
 		T rOD;
 		for (int heightsIndex = 0; heightsIndex < _ranges.Count ; ++heightsIndex)
@@ -154,17 +181,21 @@ public class DiscreteDomainRangeList<T>  where T : iRange, new()
 				rangeForRelCoY.rangeP = 1;
 				rangeForRelCoY.startP = y;
 				_ranges.Insert(heightsIndex + 1, rangeForRelCoY);
-				break;
+				return rangeForRelCoY;
+//				break;
 			}
 			
 			if (rOD.contains(y) )
-				throw new Exception("confusing: adding a block to an already solid area??");
+				throw new Exception("confusing: adding a block to an already solid area?? \n containg range: " + 
+					rOD.toString() + " y: " + y);
 		}
+		return default(T);
 	}
 
 	
-	private bool subtractPoint(int y)
+	private T subtractPoint(int y)
 	{
+		b.bug("subtracting at: " + y);
 		bool checkGotAContainingRange = false;
 		T rOD;
 		for (int heightsIndex = 0; heightsIndex < _ranges.Count ; ++heightsIndex)
@@ -176,10 +207,14 @@ public class DiscreteDomainRangeList<T>  where T : iRange, new()
 				if (y == rOD.startP) {
 					rOD.startP ++;	
 					rOD.rangeP--; // corner case: range now zero: (check for this later)
+					b.bug("got y at start");
 					_ranges[heightsIndex] = rOD;
 				} else if (y == rOD.extent() - 1 ) {
+					b.bug("got y is == extent minus one");
 					rOD.rangeP--;
+					_ranges[heightsIndex] = rOD;
 				} else {
+					b.bug("got y in the middle");
 					int newBelowRange = y - rOD.startP;
 					T newAboveRange = new T ();
 					newAboveRange.startP = y + 1;
@@ -187,6 +222,7 @@ public class DiscreteDomainRangeList<T>  where T : iRange, new()
 					rOD.rangeP = newBelowRange;
 					_ranges.Insert(heightsIndex + 1, newAboveRange);
 					_ranges[heightsIndex] = rOD;
+					return newAboveRange;
 				}
 				
 				if (rOD.rangeP == 0) {// no more blocks here?
@@ -200,10 +236,10 @@ public class DiscreteDomainRangeList<T>  where T : iRange, new()
 			}
 		}
 		
-		if (!checkGotAContainingRange){
-			return false;
-		}
-		return true;
+//		if (!checkGotAContainingRange){
+//			return false;
+//		}
+		return default(T);
 	}
 	
 	private void Add(T rangeItem, bool wantOverwrite)

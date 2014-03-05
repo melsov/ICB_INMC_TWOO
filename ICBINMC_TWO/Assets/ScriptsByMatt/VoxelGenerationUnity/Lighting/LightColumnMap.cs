@@ -74,6 +74,13 @@ public class LightColumnMap
 		this[x,z] = lcolms;
 	}
 	
+	public void removeColumnsAbove(int x, int y, int z)
+	{
+		DiscreteDomainRangeList<LightColumn> licoms = this[x,z];
+		licoms.RemoveStartAbove(y);
+		this[x,z] = licoms;
+	}
+	
 	public int countAt(int x, int z)
 	{
 		DiscreteDomainRangeList<LightColumn> cols = this.lightColumnListAtOrNull(x,z);
@@ -187,7 +194,7 @@ public class LightColumnMap
 	public List<LightColumn> lightColumnsAdjacentToAndAtleastPartiallyAbove(Coord coord)
 	{
 		List<LightColumn> result = new List<LightColumn>();
-		
+
 		foreach(PTwo surroundingCo in DirectionUtil.SurroundingPTwoCoordsFromPTwo(PTwo.PTwoXZFromCoord(coord)))
 		{
 			DiscreteDomainRangeList<LightColumn> adjRangeList = this.lightColumnListAtOrNull(surroundingCo.s, surroundingCo.t);
@@ -196,8 +203,9 @@ public class LightColumnMap
 			for(int i = 0; i < adjRangeList.Count; ++i)
 			{
 				LightColumn adjLightColumn = adjRangeList[i];
-				if (adjLightColumn.extent() < coord.y)
+				if (adjLightColumn.extent() > coord.y)
 				{
+					b.bug("actually added one");
 					result.Add(adjLightColumn);
 				}
 			}

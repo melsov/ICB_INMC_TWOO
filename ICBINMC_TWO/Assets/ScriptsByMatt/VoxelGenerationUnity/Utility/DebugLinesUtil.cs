@@ -218,7 +218,7 @@ public static class DebugLinesUtil
 		
 //		Color col = new Color(1.0f*((float) colm.handyInteger/Window.LIGHT_LEVEL_MAX), .4f, 1.0f, 1.0f); //red
 		Color col = new Color(1.0f, .4f, 1.0f, 1.0f); //red
-		int level = colm.handyInteger == 0 ? 0 : 2;
+		int level = colm.handyInteger; // colm.xz.s | colm.xz.t | colm.range.start | colm.range.range; //   == 0 ? 0 : 2;
 		switch(level % 8) {
 		case 0:
 			col = new Color(1.0f, 1f, 0.0f, 1.0f); //yellow

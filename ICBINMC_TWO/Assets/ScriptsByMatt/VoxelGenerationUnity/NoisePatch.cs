@@ -788,7 +788,23 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		bool isAirBlock = bb.type == BlockType.Air; 
 		
+		//TODO: this calculation creates inaccuracies.
+		//make it more difficult to detect light columns that changed to surface columns
+		//e.g. when removing a block from the roof of a plinth
+		
+		//TODO: (not here) LIGHTCOLUMNS DON'T ALWAYS 'MIX' WHEN A NEW NPATCH COMES ON THE SCENE
+		
+		//CONSIDER: maybe noisePatch's need their 'minion' classes to implement an interface
+		// that allows npatch to destroy them when it needs to destroy itself.
+		
+		//TODO: move this logic somewhere else. 
+		// along with calls to the light calc and surfacemap setting...
 		bool changedSurfaceOnly = (relCo.y == surfaceMap[relCo.x, relCo.z] - 1 || relCo.y == surfaceMap[relCo.x, relCo.z]);
+		Range1D debugHighest = heights[heights.Count - 1];
+		int dbghighLevel = debugHighest.extent();
+		b.bug("changed surface only is " +changedSurfaceOnly+". relco y: " + relCo.y + 
+			" surf map at xz: " + surfaceMap[relCo.x, relCo.z] + "\nhighest height currently: " + dbghighLevel);
+		
 		int heightsIndex = 0;
 		Range1D rOD = Range1D.theErsatzNullRange();
 		if (isAirBlock)
@@ -819,6 +835,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 					if (rOD.range == 0) // no more blocks here
 					{
 						heights.RemoveAt(heightsIndex);	
+						changedSurfaceOnly = false; //awkward but works?
 					}
 					else
 					{
@@ -838,6 +855,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		else
 		{
 			bool dealtWithBlock = false;
+			int indexNudge = 0;
 			for (; heightsIndex < heights.Count ; ++heightsIndex)
 			{
 				rOD = heights[heightsIndex];
@@ -864,7 +882,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 						heights[heightsIndex] = rOD;
 						dealtWithBlock = true;
 					}
-					
+					indexNudge = 1;
 										
 					break;
 					
@@ -878,7 +896,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 						heights[heightsIndex] = rOD;
 						dealtWithBlock = true;
 					}
-										
+					indexNudge = 0;					
 					break;
 					// we already checked if the relCo y was one above the previous range (if it existed)
 				}
@@ -917,11 +935,12 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 			
 			if (!dealtWithBlock) {
 				Range1D rangeForRelCoY = new Range1D(relCo.y, 1, bb.type);
-				heights.Insert(heightsIndex + 1, rangeForRelCoY);
+				heights.Insert(heightsIndex + indexNudge, rangeForRelCoY);
 			}
 		}
 		heightMap [relCo.x * patchDimensions.x + relCo.z] = heights;
-		surfaceMap[relCo.x, relCo.z] = (byte) lastRangeAtRelativeCoordUnsafe(relCo).extent(); 
+		updateSurfaceMapAt(heights, relCo.x, relCo.z);
+//		surfaceMap[relCo.x, relCo.z] = (byte) lastRangeAtRelativeCoordUnsafe(relCo).extent(); 
 		
 		// MORE WORK HERE...
 		// what if ranges were removed? 
@@ -932,9 +951,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// update light
 		if (!changedSurfaceOnly)
 		{
-			updateWindowMapWithNewSurfaceHeight((int) surfaceMap[relCo.x, relCo.z], relCo.x, relCo.z);
-		} else {
 			updateDiscontinuityInWindowMapWithRanges(heights,relCo,isAirBlock);
+		} else {
+			updateWindowMapWithNewSurfaceHeight((int) surfaceMap[relCo.x, relCo.z], relCo.x, relCo.z, isAirBlock);
 		}
 
 	}
@@ -1497,7 +1516,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		} // end for xx
 		
-		populateWindowMap(); 
+		
 		
 		
 #if TURN_OFF_STRUCTURES
@@ -1506,7 +1525,10 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// TODO: switch this to be in front of popWindowMap
 		// and don't bother adding windows in add structurz
 		// (make this an option in this func.)
-		addStructuresToHeightMap(structurz); 
+		addStructuresToHeightMap(structurz, false); 
+		
+		populateWindowMap(); 
+		
 		//any structures for me from neighbors?
 		getDataFromNeighbors(); 
 		//TURN ON STRUCTURES really means shared structures
@@ -1544,13 +1566,13 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	}
 	
 	// * obviated ??
-	private void updateWindowMapWithNewSurfaceHeight(int newHeight, int xx, int zz)
+	private void updateWindowMapWithNewSurfaceHeight(int newHeight, int xx, int zz, bool isAirBlock)
 	{
 		// clear windows at this x,z
 		
 		// window map deal with this...	
 //		m_windowMap.updateWindowsWithNewSurfaceHeight(newHeight, xx, zz);
-		m_lightColumnCalculator.updateWindowsWithNewSurfaceHeight(newHeight, xx,zz);
+		m_lightColumnCalculator.updateWindowsWithNewSurfaceHeight(newHeight, xx,zz, isAirBlock );
 		
 		//unsubtle
 		//TODO: make window map update light by itself when upWithNewSurface is called.
@@ -1904,6 +1926,11 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	private void addStructuresToHeightMap(List<StructureBase> structurz) 
 	{
+		addStructuresToHeightMap(structurz, true);
+	}
+	
+	private void addStructuresToHeightMap(List<StructureBase> structurz, bool editLight) 
+	{
 		if (structurz == null || structurz.Count == 0)
 			return;
 		
@@ -1995,11 +2022,29 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 						
 					}
 					
+					
+					
 //					heightMap[ lookup.s * patchDimensions.x + lookup.t] = range_l; 
-					// update window map here...
+					
+					//SURFACE MAP UDPATE
+					updateSurfaceMapAt(range_l, lookup.s, lookup.t);
 					
 					//TODO: consider, do we want to update, not add? (what's the difference again?)
 					
+				}
+			}
+			
+			
+			// DO LIGHT AT THE END
+			for(j = 0; j < dims.s; ++j)
+			{
+				for (k = 0; k < dims.t; ++k)
+				{
+					offset =  new PTwo(j, k);
+					lookup = origin + offset;
+					
+//					List<Range1D> str_ranges = structure[offset];
+					range_l = heightMap[ lookup.s * patchDimensions.x + lookup.t];
 					addDiscontinuityToWindowMapWithRanges(range_l, lookup.s, lookup.t);
 				}
 			}
@@ -2009,6 +2054,12 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	#endregion
 	
 	#region woodlands
+	
+	private void updateSurfaceMapAt(List<Range1D> height_ranges, int x, int z)
+	{
+		Range1D highest = height_ranges[height_ranges.Count - 1];
+		surfaceMap[x , z ] = (byte) highest.extent();
+	}
 
 	private static bool caveIsHere(float cave_noise_val,int yy, int surfaceNudge) {
 		float yLevel = yy - surfaceNudge;

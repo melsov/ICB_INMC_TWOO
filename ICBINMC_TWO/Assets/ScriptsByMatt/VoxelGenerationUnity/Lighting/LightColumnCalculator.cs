@@ -22,9 +22,9 @@ public class LightColumnCalculator
 	private static PTwo NoisePatchDimxz = PTwo.PTwoXZFromCoord(NoisePatchDims);
 	private static Quad PatchQuad = new Quad(new PTwo(0), NoisePatchDimxz);
 	
-	private bool calculatedLightAlready = false;
-	
 	private NoisePatch m_noisePatch;
+	
+	private int debugTimeDrewDebugColm = 0;
 	
 	public LightColumnMap lightColumnMap {
 		get {
@@ -47,12 +47,11 @@ public class LightColumnCalculator
 		
 		
 		if (lilc == null) {
-			return Window.LIGHT_LEVEL_MAX; //TEST// 0f;
+			return 0f; // Window.LIGHT_LEVEL_MAX; //TEST// 0f;
 		}
-		addColumnIfNoiseCoordOO(lilc);
-		
-		return (float) lilc.lightLevel * .65f;
-//		return (float) lilc.lightLevel; //WANT
+		addColumnIfNoiseCoordOO(lilc); //DBG
+
+		return (float) lilc.lightLevel; //WANT
 	}
 	#endregion
 	
@@ -60,23 +59,32 @@ public class LightColumnCalculator
 	
 	//should be able to
 	// update with new surface height...
-	public void updateWindowsWithNewSurfaceHeight(int newHeight, int xx, int zz)
+	public void updateWindowsWithNewSurfaceHeight(int newHeight, int xx, int zz, bool removedABlock)
 	{
 		ChangeOfLightStatus lightChangeStatus = ChangeOfLightStatus.NO_CHANGE;
 		List<LightColumn> needUpdateCols = new List<LightColumn>();
 		
-		checkSurfaceStatusAt(newHeight,xx,zz, ref lightChangeStatus, ref needUpdateCols);
+		b.bug("upd with new surf height");
+		//REMOVE COLUMNS IF COLUMN REVEALED
+		if (removedABlock)
+		{
+			b.bug("remove cols above  at x: " + xx + " zz: " + zz + "height: " + newHeight);
+			m_lightColumnMap.removeColumnsAbove(xx, newHeight, zz);
+			ChunkManager.debugLinesAssistant.clearColumns(); //DBG
+		}
+		
+		checkSurfaceStatusAt(newHeight, xx, zz, ref lightChangeStatus, ref needUpdateCols);
 		
 		//for now
 		if (lightChangeStatus == ChangeOfLightStatus.DARKENED)
 		{
 			Quad area = LightDomainAround(xx,zz);
-//			b.bug("got darken by surface change. reset area" + area.toString());
-			resetLightColumnsWithin(area); 
-//			updateColumnsWithin(area); //TEST WANT
+			b.bug("got darken by surface change. reset area" + area.toString());
+			resetAndUpdateColumnsWithin(area); //TEST WANT
 		}
 		else if (lightChangeStatus == ChangeOfLightStatus.LIGHTENED)
 		{
+			b.bug("got lightened");
 			updateColumnsWithin(LightDomainAround(xx,zz), needUpdateCols);
 		}
 	}
@@ -101,8 +109,11 @@ public class LightColumnCalculator
 
 		//add new discons
 		int lowestSurroundingSurfaceHeight = ssvs.lowestValue();
+		
 		List<SimpleRange> discons = discontinuitiesFromHeightRanges(heightRanges);
+		
 		int light = 0;
+		
 		foreach(SimpleRange discon in discons)
 		{
 			light = discon.extent() > lowestSurroundingSurfaceHeight ? (int) Window.LIGHT_LEVEL_MAX_BYTE : 0;
@@ -112,6 +123,14 @@ public class LightColumnCalculator
 				surfaceExposedColumns.Add(col);
 			}
 			m_lightColumnMap.addColumnAt(col, x,z);
+		}
+	}
+	
+	private void bugIf00(string stir)
+	{
+		if (this.m_noisePatch.coord.x == 0 && m_noisePatch.coord.z == 0)
+		{
+			b.bug(stir);
 		}
 	}
 	
@@ -131,13 +150,17 @@ public class LightColumnCalculator
 	private void updateWindowsWithHeightRanges(List<Range1D> heightRanges, Coord pRelCoord, 
 		SurroundingSurfaceValues ssvs,  bool solidBlockRemoved, bool shouldPropagateLight)
 	{
+		b.bug("update with ranges");
 		if (solidBlockRemoved)
 		{
 			updateWindowsWithHeightRangesSolidRemoved(heightRanges, pRelCoord, ssvs, shouldPropagateLight);
+			ChunkManager.debugLinesAssistant.clearColumns(); //DBG
 			return;
 		}
 		
 		updateWindowsWithHeightRangesSolidAdded(heightRanges, pRelCoord,ssvs, shouldPropagateLight);
+		
+		ChunkManager.debugLinesAssistant.clearColumns(); //DBG
 	}
 	
 	#region solid block removed
@@ -171,17 +194,23 @@ public class LightColumnCalculator
 			// add them to need update list
 			// our work is done...return (put the above in a function)
 			
+			b.bug("got new surf less than y");
 			Coord surfaceTopCoord = pRelCoord;
-			if (newSurfaceHeightExtentAtXZ < y)
+			if (newSurfaceHeightExtentAtXZ < y) {
+				b.bug("is fully less than");
 				surfaceTopCoord.y = newSurfaceHeightExtentAtXZ;
+			}
 			
 			foreach(LightColumn col in  m_lightColumnMap.lightColumnsAdjacentToAndAtleastPartiallyAbove(surfaceTopCoord))
 			{
+				b.bug("updating ");
 				addToSurfaceExposedColumnIfNotContains(col);
+				col.lightLevel = Window.LIGHT_LEVEL_MAX_BYTE;
 				updateColumnAt(col, col.coord, null, LightDomainAround(col.coord));
 			}
 			
-			//TODO: do we need to remove a licol?
+			m_lightColumnMap[x,z] = liCols;
+			
 			return;
 		}
 		
@@ -190,7 +219,9 @@ public class LightColumnCalculator
 		int lowestSurroundingSurface = ssvs.lowestValue();
 		
 		LightColumn colAtY = liCols.rangeContaining(y);
-		AssertUtil.Assert(colAtY != null, "what? we didn't think this col could be null now");
+		
+		AssertUtil.Assert(colAtY != null, "(remove block. didn't get a col at y in lc calc) y was: " + y);
+		
 		
 		if (y > lowestSurroundingSurface)	//just update it. anything new will update. anything not new won't.
 		{
@@ -233,15 +264,11 @@ public class LightColumnCalculator
 	private void updateWindowsWithHeightRangesSolidAdded(List<Range1D> heightRanges, Coord pRelCoord, 
 		SurroundingSurfaceValues ssvs,  bool shouldPropagateLight)
 	{
-		int x = pRelCoord.x, y = pRelCoord.y, z = pRelCoord.z;
-		DiscreteDomainRangeList<LightColumn> liCols = m_lightColumnMap[x,z];
-		
-		int highestDisconExtentBefore = liCols.highestExtent();
-		
 		Range1D highest = heightRanges[heightRanges.Count - 1];
 		int newSurfaceHeightAtXZ = highest.extent();
-		bool yIsNewHighestSurface = y == newSurfaceHeightAtXZ - 1;
+		bool yIsNewHighestSurface = pRelCoord.y == newSurfaceHeightAtXZ - 1;
 		
+		b.bug("y is " + pRelCoord.y + " new surf height minus one: " + (newSurfaceHeightAtXZ - 1) );
 		// WAS A FORMERLY SURFACE EXPOSED SURFACE COLUMN JUST COVERED?
 		if (yIsNewHighestSurface )
 		{
@@ -254,6 +281,7 @@ public class LightColumnCalculator
 	
 	private void updateColumnsWithHigherHighestSurface(List<Range1D> heightRanges, Coord pRelCoord, SurroundingSurfaceValues ssvs, bool shouldPropagateLight)
 	{
+		b.bug("update w higher highest surf");
 		int x = pRelCoord.x, y = pRelCoord.y, z = pRelCoord.z;
 		SimpleRange justCoveredColumn = new SimpleRange(y, 1);
 		Range1D highest = heightRanges[heightRanges.Count - 1];
@@ -302,6 +330,8 @@ public class LightColumnCalculator
 	private void updateColumnsSolidAddedBelowSurface(List<Range1D> heightRanges, Coord pRelCoord, 
 		SurroundingSurfaceValues ssvs,  bool shouldPropagateLight)
 	{
+		
+		b.bug("adding below surface");
 		int x = pRelCoord.x, y = pRelCoord.y, z = pRelCoord.z;
 		DiscreteDomainRangeList<LightColumn> licols = m_lightColumnMap[x,z];
 		
@@ -311,13 +341,28 @@ public class LightColumnCalculator
 		
 		List<LightColumn> columnsJustDisconnected = this.columnsThatColumnJustConnectedWith(prevColContainingY, y);
 		
-		licols.Incorporate(y, false);
+		LightColumn aboveSplit = licols.Incorporate(y, false);
+		if (aboveSplit != null)
+		{
+			aboveSplit.coord = new PTwo(x,z);
+		}
 				
 		LightColumn newBelow = licols.rangeContaining(y - 1);
+		LightColumn newAbove = licols.rangeContaining(y + 1);
+		
+		if (newBelow == null && newAbove == null)// COLUMNS WERE CUT OFF?
+		{
+			b.bug("got both y above and below null");
+			// general reboot
+			resetAndUpdateColumnsWithin(LightDomainAround(PTwo.PTwoXZFromCoord(pRelCoord)));
+			return;
+		}
+		
 		updateColumnOrLightestNeighbor(newBelow);
 		
-		LightColumn newAbove = licols.rangeContaining(y + 1);
 		updateColumnOrLightestNeighbor(newAbove);
+		
+		
 		
 		foreach(LightColumn colm in columnsJustDisconnected)
 		{
@@ -450,10 +495,9 @@ public class LightColumnCalculator
 	
 	private void updateRangeListAtXZ(List<Range1D> heightRanges, Coord pRelCoord, bool solidBlockRemoved, SurroundingSurfaceValues ssvs)
 	{
-		//IF !SOLIDBLOCKREMOVED
 		DiscreteDomainRangeList<LightColumn> liCols = m_lightColumnMap[pRelCoord.x, pRelCoord.z];
 		
-		if(!solidBlockRemoved && heightRanges.Count <= 1) // equal zero! ? that would be odd also
+		if(!solidBlockRemoved && heightRanges.Count <= 1) // equal zero would be down right silly.
 			return;
 		// y above highest extent?
 		int highestDiscontinuity = liCols.highestExtent();
@@ -477,10 +521,25 @@ public class LightColumnCalculator
 			throw new Exception("don't want to be here. we think a block couldn't be placed vertically in between at this point");
 		}
 		
-		if (!liCols.Incorporate(pRelCoord.y, solidBlockRemoved))
+		//TODO handle case where y is above surface, solid block removed
+		// need to destroy some discon ranges (not incorporate y).
+		Range1D highest = heightRanges[heightRanges.Count - 1];
+		if (pRelCoord.y > highest.extent() )
 		{
-			throw new Exception("lots of exceptions. we failed to incorp a solid block added.");
+			liCols.RemoveStartAbove(highest.extent());
 		}
+		else
+		{
+			LightColumn newCol = liCols.Incorporate(pRelCoord.y, solidBlockRemoved);
+			if (newCol != null)
+			{
+				newCol.coord = new PTwo(pRelCoord.x, pRelCoord.z);
+			}
+//			throw new Exception("lots of exceptions. we failed to incorp a solid block added.");
+		} 
+		b.bug("we incorporated a pRelCOord: " + pRelCoord.toString() + "solid removed was: "+ solidBlockRemoved);
+		
+		m_lightColumnMap[pRelCoord.x, pRelCoord.z ] = liCols;
 	}
 
 	
@@ -489,7 +548,6 @@ public class LightColumnCalculator
 	public void calculateLight()
 	{
 		updateAllNoisePatchColumns();
-		calculatedLightAlready = true;
 	}
 	
 	#endregion
@@ -618,27 +676,31 @@ public class LightColumnCalculator
 	// this func. represnts our muddled strategy unfortuntly.
 	private void checkSurfaceStatusAt(int newHeight, int xx, int zz, ref ChangeOfLightStatus lightChangeStatus, ref List<LightColumn> needUpdateCols)	
 	{
+		AssertUtil.Assert(false, "this happens?");
 		foreach(PTwo neighborPoint in DirectionUtil.SurroundingPTwoCoordsFromPTwo(new PTwo(xx,zz)))
 		{
 			//inefficient?
 			DiscreteDomainRangeList<LightColumn> lilcoms = m_lightColumnMap[neighborPoint];
-			
+			b.bug("checking surface...");
 			if (lilcoms == null)
 				continue;
-			
+			b.bug("not ull");
 			for(int i = 0; i < lilcoms.Count; ++i)
 			{
 				LightColumn lilc = lilcoms[i];
 				bool wasAboveSurface = surfaceExposedColumns.Contains(lilc);
 				if (lilc.range.extent() > newHeight)
 				{
+					b.bug("extent was greater than new height");
 					if (!wasAboveSurface)
 					{
+						b.bug("added a column now surf exposed");
 						lightChangeStatus = ChangeOfLightStatus.LIGHTENED;
 						surfaceExposedColumns.Add(lilc);
 						needUpdateCols.Add(lilc);
 					}
 				} else {
+					b.bug("below surface new height is: " + newHeight + "lilc range extent is: " + lilc.range.extent());
 					if (wasAboveSurface)
 					{
 						lightChangeStatus = ChangeOfLightStatus.DARKENED;
@@ -817,7 +879,7 @@ public class LightColumnCalculator
 	{
 		if(NoiseCoord.Equal (this.m_noisePatch.coord, NoiseCoord.NoiseCoordZer() ))
 		{
-			ChunkManager.debugLinesAssistant.addColumn(lcol.toColumnDebug());
+			ChunkManager.debugLinesAssistant.addColumn(lcol.toColumnDebug(), this.debugTimeDrewDebugColm++ );
 		}
 	}
 	
