@@ -15,3 +15,19 @@ thinks its exposed to the surface.
 
  * 
  */ 
+
+/*
+ PLANNING:
+ --If light columns could deal with adjacent (vertically) light columns...
+ 	then maybe they could also deal with torches and other light emitting blocks. 
+ 	CONSIDER: what this would break, if anything...
+ 	
+ 	-- REALLY MIGHT BE EASIER TO HAVE A SEPARATE SYSTEM!
+ 		--if we could simply know, any lightemitting blocks within a woco.
+ 		
+ 	--IF we did those fancy shadows. might be able to devise a way to know whether the air block can "see" the light block.
+ 	--like how many walls are nearby...
+ 	
+ 	-- or: super simple: all light blocks are just light columns: who cares if they're super tall!
+ 	-- make lights a little weak? (nawh). lights are just powerful!
+ */

@@ -1,17 +1,13 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesMonoBAssistant.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs">
     <Files>
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightColumnMap.cs" Line="168" Column="30" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightColumnCalculator.cs" Line="111" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/RangeList.cs" Line="104" Column="19" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="1966" Column="15" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightColumn.cs" Line="124" Column="107" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesMonoBAssistant.cs" Line="145" Column="34" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesUtil.cs" Line="217" Column="3" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs" Line="153" Column="23" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/ChunkManager.cs" Line="203" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/BlockCollection.cs" Line="203" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightColumnMap.cs" Line="60" Column="83" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="654" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightColumnCalculator.cs" Line="898" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesMonoBAssistant.cs" Line="60" Column="35" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesUtil.cs" Line="215" Column="1" />
+      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs" Line="291" Column="64" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
