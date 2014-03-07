@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 
 public struct CoordLine
 {
@@ -213,11 +214,14 @@ public static class DebugLinesUtil
 	
 	public static void DrawDebugColumn(Column colm)
 	{
-		Coord start = new Coord(colm.xz.s, colm.range.start, colm.xz.t);
+		Coord start = CoordUtil.WorldCoordFromNoiseCoord(colm.noiseCoord);
+		
+		start += new Coord(colm.xz.s, colm.range.start, colm.xz.t);
 		Coord dims = new Coord(1, colm.range.range, 1);
 		
+		
 //		Color col = new Color(1.0f*((float) colm.handyInteger/Window.LIGHT_LEVEL_MAX), .4f, 1.0f, 1.0f); //red
-		Color col = new Color(1.0f, .4f, 1.0f, 1.0f); //red
+		Color col = new Color(1.0f, .2f, 0.0f, 1.0f); //red
 		int level = colm.handyInteger; // colm.xz.s | colm.xz.t | colm.range.start | colm.range.range; //   == 0 ? 0 : 2;
 		switch(level % 8) {
 		case 0:

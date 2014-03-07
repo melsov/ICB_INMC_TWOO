@@ -10,7 +10,20 @@ public class LightColumnMap
 	private static PTwo NoisePatchDims = new PTwo(NoisePatch.patchDimensions.x, NoisePatch.patchDimensions.z);
 	private DiscreteDomainRangeList<LightColumn>[] m_lightColumns = new DiscreteDomainRangeList<LightColumn>[NoisePatch.patchDimensions.x*NoisePatch.patchDimensions.z];
 //	private 
-
+	
+	private NoiseCoord noiseCoord {
+		get {
+			return this.m_lightColumnCalculator.noiseCoord;
+		}
+	}
+	
+	private LightColumnCalculator m_lightColumnCalculator;
+	
+	public LightColumnMap(LightColumnCalculator _calc)
+	{
+		this.m_lightColumnCalculator = _calc;
+	}
+	
 	public DiscreteDomainRangeList<LightColumn> this[PTwo patchRelPoint] 
 	{
 		get {
@@ -26,7 +39,7 @@ public class LightColumnMap
 			//check out of bounds and ask a singleton that will make for the ranges
 			if (!NoisePatchDims.isIndexSafe(new PTwo(x,z)))
 			{
-				return ChunkManager.lightColumnWorldMap.lightColumnsAtWoco(x,z); 
+				return ChunkManager.lightColumnWorldMap.lightColumnsAtWoco(x,z, this.noiseCoord); 
 			}
 			DiscreteDomainRangeList<LightColumn> lcolms = m_lightColumns[x * NoisePatch.patchDimensions.x + z];
 			if (lcolms == null) {
@@ -44,7 +57,7 @@ public class LightColumnMap
 	{
 		if (!NoisePatchDims.isIndexSafe(new PTwo(x,z)))
 		{
-			return ChunkManager.lightColumnWorldMap.lightColumnsAtWoco(x,z);
+			return ChunkManager.lightColumnWorldMap.lightColumnsAtWoco(x,z, this.noiseCoord);
 		}
 		return m_lightColumns[x * NoisePatchDims.s + z];
 	}
@@ -132,35 +145,41 @@ public class LightColumnMap
 //		return columnsOnBorderOfQuadInDirection(areaXZ, dir, false);
 //	}
 //	
-//	private List<DiscreteDomainRangeList<LightColumn>> columnsOnBorderOfQuadInDirection(Quad areaXZ, Direction dir, bool wantWithin) 
-//	{
-//		SimpleRange xRange = areaXZ.sRange();
-//		SimpleRange zRange = areaXZ.tRange();
-//		SimpleRange longRange;
-//		SimpleRange shortRange;
-//		int shortRangeStart;
-//		Axis axis = DirectionUtil.AxisForDirection(dir);
-//		if (axis == Axis.X)
-//		{
-//			longRange = zRange;
-//			shortRange = xRange;
-//		} else {
-//			longRange = xRange;
-//			shortRange = zRange;
-//		}
-//		if (DirectionUtil.IsPosDirection(dir))
-//		{
-//			shortRangeStart = wantWithin ? shortRange.extentMinusOne() : shortRange.extent();
-//		} else {
-//			shortRangeStart = wantWithin ? shortRange.start : shortRange.start - 1;
-//		}
-//		shortRange = new SimpleRange(shortRangeStart, 1);
-//		
-//		Quad area = (axis == Axis.X) ? new Quad(new PTwo( shortRange.start, longRange.start), new PTwo(shortRange.range, longRange.range)) :
-//			new Quad(new PTwo( longRange.start,shortRange.start), new PTwo(longRange.range, shortRange.range));
-//		
-//		return columnsWithin(new Quad(area));
-//	}
+	public List<DiscreteDomainRangeList<LightColumn>> columnsOnBorderOfNoisePatchInDirection(Direction dir) 
+	{
+		Quad patchQuad = new Quad(new PTwo(0,0), NoisePatchDims);
+		return columnsOnBorderOfQuadInDirection(patchQuad, dir, true);
+	}
+	
+	public List<DiscreteDomainRangeList<LightColumn>> columnsOnBorderOfQuadInDirection(Quad areaXZ, Direction dir, bool wantWithin) 
+	{
+		SimpleRange xRange = areaXZ.sSimpleRange();
+		SimpleRange zRange = areaXZ.tSimpleRange();
+		SimpleRange longRange;
+		SimpleRange shortRange;
+		int shortRangeStart;
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		if (axis == Axis.X)
+		{
+			longRange = zRange;
+			shortRange = xRange;
+		} else {
+			longRange = xRange;
+			shortRange = zRange;
+		}
+		if (DirectionUtil.IsPosDirection(dir))
+		{
+			shortRangeStart = wantWithin ? shortRange.extentMinusOne() : shortRange.extent();
+		} else {
+			shortRangeStart = wantWithin ? shortRange.start : shortRange.start - 1;
+		}
+		shortRange = new SimpleRange(shortRangeStart, 1);
+		
+		Quad area = (axis == Axis.X) ? new Quad(new PTwo( shortRange.start, longRange.start), new PTwo(shortRange.range, longRange.range)) :
+			new Quad(new PTwo( longRange.start,shortRange.start), new PTwo(longRange.range, shortRange.range));
+		
+		return columnsWithin(area);
+	}
 	
 	public List<LightColumn> lightColumnsAdjacentToAndFlushWith(LightColumn colm)
 	{

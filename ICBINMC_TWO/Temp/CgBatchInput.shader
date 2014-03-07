@@ -306,7 +306,8 @@
 			float power_lookup = floor(index / pow(NUM_LIGHT_LEVELS, model_rel_twoD.y)); 
 			half light_one = fmod( power_lookup , NUM_LIGHT_LEVELS  );
 			
-			fixed local_light = (light_one + 2.0) / NUM_LIGHT_LEVELS_PLUS_ONE; // LOWEST IS NOT ZERO //   light_one / 3.0;
+//			fixed local_light = (light_one + 2.0) / NUM_LIGHT_LEVELS_PLUS_ONE; // LOWEST IS NOT ZERO //   light_one / 3.0;
+			fixed local_light = (light_one) / (NUM_LIGHT_LEVELS); // LOWEST IS NOT ZERO //   light_one / 3.0;
 
 //			if (light_one > NUM_LIGHT_LEVELS - 1.5) 
 //				return fixed4(0.3, .4 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,0.5,1.0) * i.color.z; //test		

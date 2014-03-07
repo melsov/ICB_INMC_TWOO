@@ -411,7 +411,7 @@ void main ()
   };
   light_one_3 = tmpvar_18;
   mediump float tmpvar_19;
-  tmpvar_19 = ((light_one_3 + 2.0) / 9.0);
+  tmpvar_19 = (light_one_3 / 8.0);
   local_light_2 = tmpvar_19;
   tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
   gl_FragData[0] = tmpvar_1;
@@ -588,7 +588,7 @@ void main ()
   };
   light_one_3 = tmpvar_18;
   mediump float tmpvar_19;
-  tmpvar_19 = ((light_one_3 + 2.0) / 9.0);
+  tmpvar_19 = (light_one_3 / 8.0);
   local_light_2 = tmpvar_19;
   tmpvar_1 = ((texture2D (_BlockTex, scaled_uv_5) * xlv_COLOR.z) * local_light_2);
   gl_FragData[0] = tmpvar_1;
@@ -1173,7 +1173,7 @@ lowp vec4 frag( in v2f i ) {
     #line 400
     highp float power_lookup = floor((index / pow( 8.0, model_rel_twoD.y)));
     mediump float light_one = xll_mod_f_f( power_lookup, 8.0);
-    lowp float local_light = ((light_one + 2.0) / 9.0);
+    lowp float local_light = (light_one / 8.0);
     return ((texture( _BlockTex, scaled_uv) * i.color.z) * local_light);
 }
 in highp vec4 xlv_COLOR;
@@ -1198,15 +1198,14 @@ void main() {
 Program "fp" {
 // Fragment combos: 1
 //   opengl - ALU: 36 to 36, TEX: 1 to 1
-//   d3d9 - ALU: 42 to 42, TEX: 1 to 1
+//   d3d9 - ALU: 41 to 41, TEX: 1 to 1
 SubProgram "opengl " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D
 "!!ARBfp1.0
 # 36 ALU, 1 TEX
-PARAM c[3] = { { 0.25, 0.125, 0.11111111, 4 },
-		{ 1, 0, 2, 3 },
-		{ 8 } };
+PARAM c[2] = { { 0.25, 0.125, 4, 1 },
+		{ 0, 2, 3, 8 } };
 TEMP R0;
 TEMP R1;
 TEMP R2;
@@ -1216,19 +1215,20 @@ MUL R1.zw, R1.xyxy, c[0].x;
 MAD R0.xy, R0, c[0].x, fragment.color.primary;
 ABS R1.zw, R1;
 FRC R1.zw, R1;
-MUL R1.zw, R1, c[0].w;
+MUL R1.zw, R1, c[0].z;
 CMP R1.xy, R1, -R1.zwzw, R1.zwzw;
-ADD R2.y, R1.x, -c[1].x;
-SLT R1.z, R1.x, c[1];
-CMP R2.z, R2.y, c[1].y, c[1].x;
-MUL R1.w, R2.z, R1.z;
-CMP R1.z, -R1.w, c[1].y, R2;
+ADD R2.y, R1.x, -c[0].w;
+SLT R1.w, R1.x, c[1].y;
+MOV R1.z, c[0].w;
+CMP R2.z, R2.y, c[1].x, R1;
+MUL R1.w, R2.z, R1;
+CMP R1.z, -R1.w, c[1].x, R2;
 CMP R2.x, R2.y, fragment.texcoord[1], R2;
-POW R1.y, c[2].x, R1.y;
+POW R1.y, c[1].w, R1.y;
 MUL R2.z, R2, R1;
-SLT R1.x, R1, c[1].w;
+SLT R1.x, R1, c[1].z;
 MUL R1.x, R2.z, R1;
-CMP R1.z, -R1.x, c[1].y, R1;
+CMP R1.z, -R1.x, c[1].x, R1;
 CMP R1.w, -R1, fragment.texcoord[1].y, R2.x;
 RCP R1.y, R1.y;
 MUL R1.z, R2, R1;
@@ -1239,10 +1239,9 @@ FLR R1.x, R1;
 MUL R1.y, R1.x, c[0];
 ABS R1.y, R1;
 FRC R1.y, R1;
-MUL R1.y, R1, c[2].x;
+MUL R1.y, R1, c[1].w;
 CMP R1.x, R1, -R1.y, R1.y;
-ADD R1.x, R1, c[1].z;
-MUL R1.x, R1, c[0].z;
+MUL R1.x, R1, c[0].y;
 TEX R0, R0, texture[0], 2D;
 MUL R0, R0, fragment.color.primary.z;
 MUL result.color, R0, R1.x;
@@ -1255,11 +1254,11 @@ SubProgram "d3d9 " {
 Keywords { }
 SetTexture 0 [_BlockTex] 2D
 "ps_2_0
-; 42 ALU, 1 TEX
+; 41 ALU, 1 TEX
 dcl_2d s0
 def c0, 0.25000000, 4.00000000, -1.00000000, -2.00000000
 def c1, 1.00000000, 0.00000000, -3.00000000, 8.00000000
-def c2, 0.12500000, 2.00000000, 0.11111111, 0
+def c2, 0.12500000, 0, 0, 0
 dcl v0.xyz
 dcl t0.xy
 dcl t1
@@ -1298,8 +1297,7 @@ abs r1.x, r1
 frc r1.x, r1
 mul r1.x, r1, c1.w
 cmp r0.x, r0, r1, -r1
-add_pp r0.x, r0, c2.y
-mul_pp r0.x, r0, c2.z
+mul_pp r0.x, r0, c2
 texld r2, r2, s0
 mul r1, r2, v0.z
 mul r0, r1, r0.x
@@ -1323,7 +1321,7 @@ SetTexture 0 [_BlockTex] 2D
 "agal_ps
 c0 0.25 4.0 -1.0 -2.0
 c1 1.0 0.0 -3.0 8.0
-c2 0.125 2.0 0.111111 0.0
+c2 0.125 0.0 0.0 0.0
 [bc]
 aiaaaaaaabaaadacaaaaaaoeaeaaaaaaaaaaaaaaaaaaaaaa frc r1.xy, v0
 adaaaaaaacaaadacabaaaafeacaaaaaaaaaaaaaaabaaaaaa mul r2.xy, r1.xyyy, c0.x
@@ -1335,51 +1333,51 @@ beaaaaaaadaaadacadaaaafeacaaaaaaaaaaaaaaaaaaaaaa abs r3.xy, r3.xyyy
 aiaaaaaaadaaadacadaaaafeacaaaaaaaaaaaaaaaaaaaaaa frc r3.xy, r3.xyyy
 adaaaaaaadaaadacadaaaafeacaaaaaaaaaaaaffabaaaaaa mul r3.xy, r3.xyyy, c0.y
 bfaaaaaaaaaaadacadaaaafeacaaaaaaaaaaaaaaaaaaaaaa neg r0.xy, r3.xyyy
-ckaaaaaaadaaamacabaaaafeacaaaaaaacaaaappabaaaaaa slt r3.zw, r1.xyyy, c2.w
+ckaaaaaaadaaamacabaaaafeacaaaaaaacaaaaffabaaaaaa slt r3.zw, r1.xyyy, c2.y
 acaaaaaaaeaaadacaaaaaafeacaaaaaaadaaaafeacaaaaaa sub r4.xy, r0.xyyy, r3.xyyy
 adaaaaaaabaaadacaeaaaafeacaaaaaaadaaaapoacaaaaaa mul r1.xy, r4.xyyy, r3.zwww
 abaaaaaaabaaadacabaaaafeacaaaaaaadaaaafeacaaaaaa add r1.xy, r1.xyyy, r3.xyyy
 abaaaaaaaeaaabacabaaaaaaacaaaaaaaaaaaakkabaaaaaa add r4.x, r1.x, c0.z
 abaaaaaaadaaabacabaaaaaaacaaaaaaaaaaaappabaaaaaa add r3.x, r1.x, c0.w
 abaaaaaaabaaabacabaaaaaaacaaaaaaabaaaakkabaaaaaa add r1.x, r1.x, c1.z
-cjaaaaaaaeaaaeacaeaaaaaaacaaaaaaacaaaappabaaaaaa sge r4.z, r4.x, c2.w
+cjaaaaaaaeaaaeacaeaaaaaaacaaaaaaacaaaaffabaaaaaa sge r4.z, r4.x, c2.y
 adaaaaaaafaaabacaaaaaakkabaaaaaaaeaaaakkacaaaaaa mul r5.x, c0.z, r4.z
 abaaaaaaafaaabacafaaaaaaacaaaaaaabaaaaoeabaaaaaa add r5.x, r5.x, c1
-ckaaaaaaadaaabacadaaaaaaacaaaaaaacaaaappabaaaaaa slt r3.x, r3.x, c2.w
+ckaaaaaaadaaabacadaaaaaaacaaaaaaacaaaaffabaaaaaa slt r3.x, r3.x, c2.y
 adaaaaaaadaaabacafaaaaaaacaaaaaaadaaaaaaacaaaaaa mul r3.x, r5.x, r3.x
 bfaaaaaaafaaacacadaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r5.y, r3.x
-ckaaaaaaafaaacacafaaaaffacaaaaaaacaaaappabaaaaaa slt r5.y, r5.y, c2.w
+ckaaaaaaafaaacacafaaaaffacaaaaaaacaaaaffabaaaaaa slt r5.y, r5.y, c2.y
 acaaaaaaagaaabacabaaaaffabaaaaaaafaaaaaaacaaaaaa sub r6.x, c1.y, r5.x
 adaaaaaaagaaabacagaaaaaaacaaaaaaafaaaaffacaaaaaa mul r6.x, r6.x, r5.y
 abaaaaaaagaaabacagaaaaaaacaaaaaaafaaaaaaacaaaaaa add r6.x, r6.x, r5.x
-ckaaaaaaaeaaabacaeaaaaaaacaaaaaaacaaaappabaaaaaa slt r4.x, r4.x, c2.w
+ckaaaaaaaeaaabacaeaaaaaaacaaaaaaacaaaaffabaaaaaa slt r4.x, r4.x, c2.y
 acaaaaaaagaaacacabaaaaoeaeaaaaaaaaaaaaaaacaaaaaa sub r6.y, v1, r0.x
 adaaaaaaagaaacacagaaaaffacaaaaaaaeaaaaaaacaaaaaa mul r6.y, r6.y, r4.x
 abaaaaaaaaaaabacagaaaaffacaaaaaaaaaaaaaaacaaaaaa add r0.x, r6.y, r0.x
 adaaaaaaafaaabacafaaaaaaacaaaaaaagaaaaaaacaaaaaa mul r5.x, r5.x, r6.x
-ckaaaaaaabaaabacabaaaaaaacaaaaaaacaaaappabaaaaaa slt r1.x, r1.x, c2.w
+ckaaaaaaabaaabacabaaaaaaacaaaaaaacaaaaffabaaaaaa slt r1.x, r1.x, c2.y
 adaaaaaaabaaabacafaaaaaaacaaaaaaabaaaaaaacaaaaaa mul r1.x, r5.x, r1.x
 bfaaaaaaaeaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r4.x, r1.x
-ckaaaaaaaeaaabacaeaaaaaaacaaaaaaacaaaappabaaaaaa slt r4.x, r4.x, c2.w
+ckaaaaaaaeaaabacaeaaaaaaacaaaaaaacaaaaffabaaaaaa slt r4.x, r4.x, c2.y
 acaaaaaaahaaacacabaaaaffabaaaaaaagaaaaaaacaaaaaa sub r7.y, c1.y, r6.x
 adaaaaaaahaaacacahaaaaffacaaaaaaaeaaaaaaacaaaaaa mul r7.y, r7.y, r4.x
 abaaaaaaagaaabacahaaaaffacaaaaaaagaaaaaaacaaaaaa add r6.x, r7.y, r6.x
 adaaaaaaafaaabacafaaaaaaacaaaaaaagaaaaaaacaaaaaa mul r5.x, r5.x, r6.x
 alaaaaaaagaaapacabaaaappabaaaaaaabaaaaffacaaaaaa pow r6, c1.w, r1.y
 bfaaaaaaahaaacacadaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.y, r3.x
-ckaaaaaaahaaacacahaaaaffacaaaaaaacaaaappabaaaaaa slt r7.y, r7.y, c2.w
+ckaaaaaaahaaacacahaaaaffacaaaaaaacaaaaffabaaaaaa slt r7.y, r7.y, c2.y
 acaaaaaaahaaabacabaaaaffaeaaaaaaaaaaaaaaacaaaaaa sub r7.x, v1.y, r0.x
 adaaaaaaahaaabacahaaaaaaacaaaaaaahaaaaffacaaaaaa mul r7.x, r7.x, r7.y
 abaaaaaaaaaaabacahaaaaaaacaaaaaaaaaaaaaaacaaaaaa add r0.x, r7.x, r0.x
 bfaaaaaaahaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.x, r1.x
-ckaaaaaaahaaabacahaaaaaaacaaaaaaacaaaappabaaaaaa slt r7.x, r7.x, c2.w
+ckaaaaaaahaaabacahaaaaaaacaaaaaaacaaaaffabaaaaaa slt r7.x, r7.x, c2.y
 acaaaaaaaeaaabacabaaaakkaeaaaaaaaaaaaaaaacaaaaaa sub r4.x, v1.z, r0.x
 adaaaaaaaeaaabacaeaaaaaaacaaaaaaahaaaaaaacaaaaaa mul r4.x, r4.x, r7.x
 abaaaaaaaaaaabacaeaaaaaaacaaaaaaaaaaaaaaacaaaaaa add r0.x, r4.x, r0.x
 aaaaaaaaadaaabacagaaaaaaacaaaaaaaaaaaaaaaaaaaaaa mov r3.x, r6.x
 afaaaaaaabaaabacadaaaaaaacaaaaaaaaaaaaaaaaaaaaaa rcp r1.x, r3.x
 bfaaaaaaahaaabacafaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.x, r5.x
-ckaaaaaaahaaabacahaaaaaaacaaaaaaacaaaappabaaaaaa slt r7.x, r7.x, c2.w
+ckaaaaaaahaaabacahaaaaaaacaaaaaaacaaaaffabaaaaaa slt r7.x, r7.x, c2.y
 acaaaaaaadaaabacabaaaappaeaaaaaaaaaaaaaaacaaaaaa sub r3.x, v1.w, r0.x
 adaaaaaaadaaabacadaaaaaaacaaaaaaahaaaaaaacaaaaaa mul r3.x, r3.x, r7.x
 abaaaaaaaaaaabacadaaaaaaacaaaaaaaaaaaaaaacaaaaaa add r0.x, r3.x, r0.x
@@ -1391,12 +1389,11 @@ beaaaaaaabaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa abs r1.x, r1.x
 aiaaaaaaabaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa frc r1.x, r1.x
 adaaaaaaabaaabacabaaaaaaacaaaaaaabaaaappabaaaaaa mul r1.x, r1.x, c1.w
 bfaaaaaaahaaabacabaaaaaaacaaaaaaaaaaaaaaaaaaaaaa neg r7.x, r1.x
-ckaaaaaaadaaabacaaaaaaaaacaaaaaaacaaaappabaaaaaa slt r3.x, r0.x, c2.w
+ckaaaaaaadaaabacaaaaaaaaacaaaaaaacaaaaffabaaaaaa slt r3.x, r0.x, c2.y
 acaaaaaaahaaabacahaaaaaaacaaaaaaabaaaaaaacaaaaaa sub r7.x, r7.x, r1.x
 adaaaaaaaaaaabacahaaaaaaacaaaaaaadaaaaaaacaaaaaa mul r0.x, r7.x, r3.x
 abaaaaaaaaaaabacaaaaaaaaacaaaaaaabaaaaaaacaaaaaa add r0.x, r0.x, r1.x
-abaaaaaaaaaaabacaaaaaaaaacaaaaaaacaaaaffabaaaaaa add r0.x, r0.x, c2.y
-adaaaaaaaaaaabacaaaaaaaaacaaaaaaacaaaakkabaaaaaa mul r0.x, r0.x, c2.z
+adaaaaaaaaaaabacaaaaaaaaacaaaaaaacaaaaoeabaaaaaa mul r0.x, r0.x, c2
 ciaaaaaaacaaapacacaaaafeacaaaaaaaaaaaaaaafaababb tex r2, r2.xyyy, s0 <2d wrap linear point>
 adaaaaaaabaaapacacaaaaoeacaaaaaaahaaaakkaeaaaaaa mul r1, r2, v7.z
 adaaaaaaaaaaapacabaaaaoeacaaaaaaaaaaaaaaacaaaaaa mul r0, r1, r0.x
@@ -1411,7 +1408,7 @@ Keywords { }
 
 }
 
-#LINE 322
+#LINE 323
 
     }
     

@@ -162,7 +162,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		otherConstructorStuff ();
 	}
 
-	private void otherConstructorStuff() {
+	private void otherConstructorStuff() 
+	{
 		savedBlocks = new List<SavableBlock> ();
 
 //		blocks = new Block[patchDimensions.x, patchDimensions.y, patchDimensions.z];
@@ -170,7 +171,6 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 
 		BLOCKSPERPATCHLENGTH = patchDimensions.x;
 		
-//		m_windowMap = new WindowMap(this);
 		m_lightColumnCalculator = new LightColumnCalculator(this);
 	}
 	
@@ -566,8 +566,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 			return m_chunkManager.ligtValueAtPatchRelativeCoordNoiseCoord(relCo, this.coord, dir);
 		}
 		
-		return m_lightColumnCalculator.ligtValueAtPatchRelativeCoord(relCo);
-//		return m_windowMap.ligtValueAtPatchRelativeCoord(relCo, dir);	
+		return m_lightColumnCalculator.lightValueAtPatchRelativeCoord(relCo);
+//		return m_windowMap.lightValueAtPatchRelativeCoord(relCo, dir);	
 	}
 	
 	#endregion
@@ -604,10 +604,35 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		List<Range1D> heights = rangesAtWorldCoord(woco);
 		
 		if (heights == null)
-			return -1234574;
+			return -123;
+		
+		//TEST MAYBE
+//		return highestAmoungRanges(heights);
 		
 		Range1D last = heights[heights.Count - 1];
 		return last.extent();
+	}
+	
+	private int highestAmoungRanges(List<Range1D> hRanges)
+	{
+		int highest = 0;
+		int rex = 0;
+		foreach(Range1D r in hRanges)
+		{
+			rex = r.extent();
+			if (rex > highest)
+				highest = rex;
+		}
+		return highest;
+	}
+	
+	private static void AssertRangesOrderedLowestToHighest(List<Range1D> ranges)
+	{
+		int highest = 0;
+		foreach(Range1D r in ranges)
+		{
+			AssertUtil.Assert(highest < r.extent(), "low to high test failed");
+		}
 	}
 	
 	private Range1D lastRangeAtRelativeCoordUnsafe(Coord unsafeCoord)
@@ -624,15 +649,23 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		return ranges[ranges.Count -1];
 	}
 	
+	public int highestPointAtPatchRelativeCoord(PTwo relCo)
+	{
+		return highestPointAtPatchRelativeCoord(PTwo.CoordFromPTwoWithY(relCo, 0));
+	}
+	
 	public int highestPointAtPatchRelativeCoord(Coord relCo)
 	{
 		if (relCo.isIndexSafe(patchDimensions))
 		{
+			//TEST MAYBE
+//			List<Range1D> hs = heightMap[relCo.x * patchDimensions.x + relCo.z ];
+//			return highestAmoungRanges(hs);
+			
 			return lastRangeAtRelativeCoordUnsafe(relCo).extent();
 		}
 		
-		Coord woco = patchWorldCoord() + relCo;
-		return highestPointAtWorldCoord(woco);
+		return highestPointAtWorldCoord(patchWorldCoord() + relCo);
 	}
 	
 	public SurroundingSurfaceValues surfaceValuesSurrounding(PTwo point)
@@ -1053,8 +1086,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		return (int)(noise_val * elevationRange + elevationRange + baseElevation);
 	}
 	
-	private static bool aTreeIsHere(int xx, int zz, int surfaceHeight, float noise_val) {
-		
+	private static bool aTreeIsHere(int xx, int zz, int surfaceHeight, float noise_val) 
+	{
+//		return false;
 		// TODO turn the test 90 degrees.
 		if ((xx == patchDimensions.x - 1) && (zz == 1 || zz == 8 || zz == 24 )) return true; //TEST
 		return false;//TEST
@@ -1161,22 +1195,14 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 			{
 				int overhang = noiseAsWorldHeight - (concave_start + concave_range);
 				
-				
 				Range1D topRange = new Range1D(concave_start + concave_range, overhang - 1);
 				Range1D topRangeSod = new Range1D(concave_start + concave_range + overhang - 1, 1, BlockType.Grass);
-				
 				
 #if NO_SOD
 #else
 				if (overhang > 1)
 					result.Add(topRange );
 				result.Add(topRangeSod);
-#endif
-				
-#if LIGHT_HACK
-				thereWasAnOverhang = true;
-			} else {
-				thereWasAnOverhang = false;	
 #endif
 			}
 			
@@ -1305,12 +1331,19 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 				if (xx == 0 || zz == 0)
 				{
 					
-//					Range1D topRange = heightRanges[heightRanges.Count - 1];
+					Range1D topRange = heightRanges[heightRanges.Count - 1];
 //					if (this.coord.isCoordZero())
 //						ChunkManager.debugLinesAssistant.addUnitCubeAt(new Coord(xx, topRange.extent(), zz));
 					
-//					topRange.blockType = BlockType.Sand;
-//					heightRanges[heightRanges.Count - 1] = topRange;
+					topRange.blockType = BlockType.Sand;
+					heightRanges[heightRanges.Count - 1] = topRange;
+					
+					if (heightRanges.Count > 1)
+					{
+						Range1D secondH = heightRanges[heightRanges.Count - 2 ];
+						secondH.blockType = BlockType.Stucco;
+						heightRanges[heightRanges.Count - 2 ] = secondH;
+					}
 				}
 				
 
@@ -1371,9 +1404,21 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 //				heightRanges.Add(zero_ToSurface_range);
 				
 				PTwo patchRelCo = new PTwo(xx, zz);
+				
+
+//				if (xx == 5 && zz == 4) //PLINTH
+//				if ( xx == 0 && zz % 24 == 0)
+				if (aTreeIsHere(xx, zz - 4, highestLevel, noise_val))
+				{
+					Plinth pl = new Plinth(patchRelCo, highestLevel, noise_val + 5f); // silliness
+					structurz.Add(pl);
+					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
+				}
+				
+				
 #if FLAT_TOO
 #else
-				if (aTreeIsHere(xx, zz, highestLevel, noise_val))
+				if (false && aTreeIsHere(xx, zz, highestLevel, noise_val))
 				{
 					Tree tree = new Tree(patchRelCo, highestLevel, noise_val * 4.23f);
 					structurz.Add(tree);	
@@ -1382,14 +1427,6 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 					addTreeForNeighborPatches(tree);
 				}
 #endif
-				// add a structure on the surface maybe
-				// fake test...
-				if (xx == 5 && zz == 4)
-				{
-					Plinth pl = new Plinth(patchRelCo, highestLevel, noise_val + 5f); // silliness
-					structurz.Add(pl);
-					//					addPlinthForNeighborPatches(pl, xx, zz, noise_val);
-				}
 				
 				
 				heightMap[xx * patchDimensions.x + zz] = heightRanges;
@@ -1527,23 +1564,23 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// (make this an option in this func.)
 		addStructuresToHeightMap(structurz, false); 
 		
-		populateWindowMap(); 
-		
 		//any structures for me from neighbors?
 		getDataFromNeighbors(); 
 		//TURN ON STRUCTURES really means shared structures
 		//are there any neighbors who generated already and need structures?
 		dropOffDataForNeighbors(); 
+
 #endif
 		
 		tradeDataWithFourNeighbors();
 		
-//		m_windowMap.calculateLightAdd();
+		populateWindowMap(); 
+
 		m_lightColumnCalculator.calculateLight(); // calls columns all patch update
+
 		//TEST
 //		m_chunkManager.assertNoChunksActiveInNoiseCoord(this.coord);
 		
-
 		generatedBlockAlready = true;
 	}
 	
@@ -1622,17 +1659,65 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	private SurroundingSurfaceValues valuesSurrounding(Coord relCo)
 	{
 		SurroundingSurfaceValues result = SurroundingSurfaceValues.MakeNew();
-
+		int dbgHighest = 0;
+		int dbgLowest = 258;
 		foreach(Direction dir in DirectionUtil.TheDirectionsXZ())
 		{
 			int height = highestPointAtPatchRelativeCoord(relCo + DirectionUtil.NudgeCoordForDirection(dir));
-			if (height > 0)
+			
+			if (height > dbgHighest && height > 0)
 			{
-				result.setValueForDirection(height, dir);
+				dbgHighest = height;
 			}
+			if(height < dbgLowest && height > 0)
+			{
+				dbgLowest = height;
+			}
+			
+			
+			result.setValueForDirection(height, dir);
+//			if (height > 0)
+//			{
+//			}
 		}
 		
+//		if (dbgHighest - dbgLowest > 15 && relCo.x == 0)
+//		{
+//			debugIfCoordNear00("dif highest lowest gr than 15. low val: " + result.lowestValue() + ". " + result.toString() + " at coord: " + relCo.toString());
+//			debugAddUnitCubesForIfNoiseCoordNear00(result, relCo);
+//		}
+		
 		return result;
+	}
+	
+	public void debugAddUnitCubesForIfNoiseCoordNear00(SurroundingSurfaceValues ssvs, Coord centerXZ)
+	{
+		b.bug("dbuging");
+		int absx = Mathf.Abs(this.coord.x);
+		int absz = Mathf.Abs(this.coord.z);
+		
+		if (absx < 3 && absz < 3)
+		{
+			foreach(Direction dir in DirectionUtil.TheDirectionsXZ())
+			{
+				int h = ssvs.valueForDirection(dir);
+				Coord c = centerXZ + DirectionUtil.NudgeCoordForDirection(dir);
+				c += CoordUtil.WorldCoordFromNoiseCoord(this.coord);
+				c.y = h;
+				ChunkManager.debugLinesAssistant.addUnitCubeAt(c);
+			}
+		}
+	}
+	
+	private void debugIfCoordNear00(string str)
+	{
+		int absx = Mathf.Abs(this.coord.x);
+		int absz = Mathf.Abs(this.coord.z);
+		
+		if (absx < 2 && absz < 2)
+		{
+			b.bug(str);
+		}
 	}
 	
 	#endregion
@@ -1749,15 +1834,16 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 					{
 						exchangeHappend = true;
 						// exchange the data ....
-						this.getSurfaceHeightDataFromNeighborInDirection(neighborPatch, ndir);
-						neighborPatch.getSurfaceHeightDataFromNeighborInDirection(this, NeighborDirectionUtils.oppositeNeighborDirection(ndir));
+						this.getSurfaceHeightDataFromNeighborInDirection( ndir);
+						neighborPatch.getSurfaceHeightDataFromNeighborInDirection(NeighborDirectionUtils.oppositeNeighborDirection(ndir));
 						
-						introduceAdjacentWindowsWithNeighborInDirection(neighborPatch, ndir);
+						introduceAdjacentWindowsWithNeighborInDirection(ndir);
 						
 						exchangedTerrainDataAlready.setBooleanForDirection(ndir, true);
 						neighborPatch.finishTradingTerrainDataWithNeighborFromDirection(ndir);
 						
 						//TEST
+						//CONSIDER: update light data for chunks??
 						m_chunkManager.updateAllActiveChunksInNoiseCoord(neighborPatch.coord);
 						m_chunkManager.updateAllActiveChunksInNoiseCoord(this.coord);
 					}
@@ -1780,9 +1866,12 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		exchangedTerrainDataAlready.setBooleanForDirection(opposite, true);
 	}
 	
-	private void getSurfaceHeightDataFromNeighborInDirection(NoisePatch neighborPatch, NeighborDirection ndir)
+	private void getSurfaceHeightDataFromNeighborInDirection(NeighborDirection ndir)
 	{
-		byte[] edgeHeights = neighborPatch.giveFlushSurfaceHeightDataForNeighborFromDirection(ndir);
+//		byte[] edgeHeights = neighborPatch.giveFlushSurfaceHeightDataForNeighborFromDirection(ndir);
+		
+		m_lightColumnCalculator.updateWithSurfaceHeightAtNeighborBorderInDirection(
+			NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir));
 		
 		// ... pass data to windowMap and tell it which edge...
 //		m_windowMap.updateWindowsFlushWithEdgeInNeighborDirection(edgeHeights, ndir);
@@ -1790,10 +1879,14 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		// TODO: update calc with this?
 	}
 	
-	private void introduceAdjacentWindowsWithNeighborInDirection(NoisePatch neighborPatch, NeighborDirection ndir)
+	private void introduceAdjacentWindowsWithNeighborInDirection(NeighborDirection ndir)
 	{
 //		this.m_windowMap.introduceFlushWindowsWithWindowInNeighborDirection(neighborPatch.windowMap, ndir);	
 		// TODO need calc to deal with this?
+		
+		//CONSIDER: we could wait until the chunk wants to build. then do all light.
+		// by this time, supposedly and in our experience!, the neighborpatch has built...
+		this.m_lightColumnCalculator.updateWithColumnsOfNoisePatchInDirection( NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir) );
 	}
 	
 	private byte[] giveFlushSurfaceHeightDataForNeighborFromDirection(NeighborDirection fromNDir)
@@ -2034,7 +2127,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 				}
 			}
 			
-			
+			/*
 			// DO LIGHT AT THE END
 			for(j = 0; j < dims.s; ++j)
 			{
@@ -2043,11 +2136,14 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 					offset =  new PTwo(j, k);
 					lookup = origin + offset;
 					
-//					List<Range1D> str_ranges = structure[offset];
 					range_l = heightMap[ lookup.s * patchDimensions.x + lookup.t];
 					addDiscontinuityToWindowMapWithRanges(range_l, lookup.s, lookup.t);
+
+//					NoisePatch.AssertRangesOrderedLowestToHighest(range_l); // passed
 				}
 			}
+			*/ //TEST WANT ish
+			
 		}
 	}
 	

@@ -4,18 +4,23 @@ using System.Collections.Generic;
 using System;
 
 
-public class TestRunner : MonoBehaviour {
+public class TestRunner : MonoBehaviour 
+{
+	public static CoRange WorldLimits = new CoRange(new Coord (-1, 0, -1), new Coord(2, 1, 2));
 	
 //	private static bool dontRunGame = true;
 	private static bool dontRunGame = false;
+	
 //	public const bool DontRunDoTerrainTestInstead = true;
 	public const bool DontRunDoTerrainTestInstead = false;
+	
 //	public const bool RunGameOnlyOneNoisePatch = true;
 	public const bool RunGameOnlyOneNoisePatch = false;	
+	
 //	public const bool RunGameOnlyNoisPatchesWithinWorldLimits = true;
 	public const bool RunGameOnlyNoisPatchesWithinWorldLimits = false;
 	
-	public static CoRange WorldLimits = new CoRange(new Coord (-1, 0, -1), new Coord(3, 1, 3));
+	
 	
 	private bool doRunTest = true;
 	
@@ -34,6 +39,21 @@ public class TestRunner : MonoBehaviour {
 			FaceAggregatorTest fat = new FaceAggregatorTest();
 			meshSets = fat.getMeshResults();
 		}
+	}
+	
+	public static bool NoiseCoordWithinTestLimits(NoiseCoord nco)
+	{
+		if (TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
+		{
+			int xstart, zstart, xend, zend;
+			xstart = TestRunner.WorldLimits.start.x;
+			xend = TestRunner.WorldLimits.outerLimit().x;
+			zstart = TestRunner.WorldLimits.start.z;
+			zend = TestRunner.WorldLimits.outerLimit().z;
+			
+			return xstart < nco.x && xend > nco.x && zstart < nco.z && zend > nco.z;
+		}
+		return true;
 	}
 	
 	public static bool DontRunGame()

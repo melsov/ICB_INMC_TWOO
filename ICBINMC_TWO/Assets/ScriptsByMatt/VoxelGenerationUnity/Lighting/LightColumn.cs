@@ -124,6 +124,10 @@ public class LightColumn : iRange, IEquatable<LightColumn>
 		return "Light Colm: start: " + startP + " range: " + rangeP + " coord: " + coord.toString() + " lightlev: " + lightLevel;
 	}
 	
+	public bool heightIsBelowExtent(int surfaceHeight)
+	{
+		return this.extent() > surfaceHeight;
+	}
 	
 	#endregion
 	

@@ -262,7 +262,7 @@ public class Plinth : StructureBase
 {
 	public Plinth(PTwo _patchRelOrigin, int y_height, float seed)// : base(_patchRelativePlot)
 	{
-		Coord dims = new Coord(6, 10, 6); // fake
+		Coord dims = new Coord(1, 10, 6); // fake
 		
 		Quad _prplot = new Quad(_patchRelOrigin, PTwo.PTwoXZFromCoord(dims) );
 		
@@ -274,17 +274,18 @@ public class Plinth : StructureBase
 		
 		for (; i < this.plot.dimensions.s; ++i)
 		{
-			j = 0;
-			for (; j < this.plot.dimensions.t; ++j)
+			for (j = 0; j < this.plot.dimensions.t; ++j)
 			{
 				List<Range1D> rangs = new List<Range1D>();
-				if ( i == 0 || i == plot.dimensions.s -1 || j == 0 || j == plot.dimensions.t - 1)
+//				if ( i == 0 || i == plot.dimensions.s -1 || j == 0 || j == plot.dimensions.t - 1)
+				if (i == plot.dimensions.s /2 && j == plot.dimensions.t/2)
 				{
 					Range1D column = new Range1D(0, dims.y, BlockType.Sand);
 					rangs.Add(column);
 					ranges[i,j] = rangs; // TODO: convert to range table
 				}
-				else {
+				else
+				{
 					Range1D floor = new Range1D(0, 1, BlockType.Sand);
 //					Range1D mezzo = new Range1D(dims.y/2, 1, BlockType.Sand);
 					Range1D ceil = new Range1D(dims.y - 1, 1, BlockType.Sand);

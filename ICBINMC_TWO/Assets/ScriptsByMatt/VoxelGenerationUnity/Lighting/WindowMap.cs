@@ -54,11 +54,48 @@ public struct SurroundingSurfaceValues {
 		return 258;
 	}
 	
+	public int[] toArray()
+	{
+		return new int[]{xneg, xpos, zneg, zpos};
+	}
+	
 	public int lowestValue()
 	{
-		int lowest = xneg < xpos ? xneg : xpos;
-		lowest = lowest < zneg ? lowest : zneg;
-		return lowest < zpos ? lowest : zpos;
+		int lowest = 258;
+		foreach(int i in this.toArray())
+		{
+			if (i > 0 && i < lowest)
+				lowest = i;
+		}
+		
+		return lowest;
+		
+//		int lowest = (xneg < xpos && xneg >= 1) ? xneg : xpos;
+//		if (lowest < 1)
+//			lowest = zpos;
+//		lowest = (lowest > zneg && zneg >= 1)  ?  zneg : lowest;
+//		lowest = (lowest > zpos && zpos >= 1) ? zpos : lowest; //just don't allow neg values...
+//		if (lowest >= 1)
+//			return lowest;
+//		return 257;
+	}
+	
+	public void debugAssertLowestNonNegFound()
+	{
+		int lowest = this.lowestValue();
+		
+		foreach(int i in this.toArray())
+		{
+			if (i > 0)
+			{
+				AssertUtil.Assert(i >= lowest, "what? i is: " + i + " lowest : " + lowest);
+			}
+		}
+	}
+	
+	public string toString()
+	{
+		return "SSVs xneg: " + xneg + " xpos: " + xpos + " zneg: " + zneg  + " zpos: " + zpos;
 	}
 }
 

@@ -207,7 +207,7 @@ public class ChunkManager : MonoBehaviour
 			return null;
 		}	
 		
-		if (!blocks.noisePatchExistsAtWorldCoord(woco) )
+		if ( !blocks.noisePatchAtNoiseCoordHasBuiltAtleastOnce(CoordUtil.NoiseCoordForWorldCoord(woco)) ) // !blocks.noisePatchExistsAtWorldCoord(woco) )
 		{
 //			bug ("(Rs at woco): trying to get a block from woco coord: " + woco.toString() + "\n for which we don't have a noise patch coord at woco: ");
 			return null;
@@ -1433,13 +1433,16 @@ public class ChunkManager : MonoBehaviour
 
 	IEnumerator updateSetupPatchesListI()
 	{
+		bool testRunnerApproves = false;
 		while (true) 
 		{
 			NoiseCoord currentNoiseCo = noiseCoordContainingWorldCoord (new Coord (playerCameraTransform.position));
 			
 			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
 			
-			if (!NoiseCoord.Equal(nco, NoiseCoord.TheErsatzNullNoiseCoord()) ) //  !NoiseCoord.Equal (currentNoiseCo, lastPlayerNoiseCoord)) 
+			testRunnerApproves = TestRunner.NoiseCoordWithinTestLimits(nco);
+			
+			if (testRunnerApproves && !NoiseCoord.Equal(nco, NoiseCoord.TheErsatzNullNoiseCoord()) ) //  !NoiseCoord.Equal (currentNoiseCo, lastPlayerNoiseCoord)) 
 			{
 				currentTargetedForCreationNoiseCo = nco;
 
@@ -1880,7 +1883,7 @@ public class ChunkManager : MonoBehaviour
 		
 		if (TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
 		{
-			int xstart, zstart, xend,zend;
+			int xstart, zstart, xend, zend;
 			xstart = TestRunner.WorldLimits.start.x;
 			xend = TestRunner.WorldLimits.outerLimit().x;
 			zstart = TestRunner.WorldLimits.start.z;
@@ -1990,27 +1993,6 @@ public class ChunkManager : MonoBehaviour
 
 		buildMapAtRange (nearbyCoRa);
 		
-		if (TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
-		{
-			int xstart, zstart, xend,zend;
-			xstart = TestRunner.WorldLimits.start.x;
-			xend = TestRunner.WorldLimits.outerLimit().x;
-			zstart = TestRunner.WorldLimits.start.z;
-			zend = TestRunner.WorldLimits.outerLimit().z;
-			
-			for(int x = xstart; x < xend ; ++x)
-			{
-				for(int z = zstart; z < zend ; ++z) 
-				{
-					NoiseCoord nco = new NoiseCoord(x,z);
-					Coord start = new Coord(x * NoisePatch.CHUNKDIMENSION, 0, z * NoisePatch.CHUNKDIMENSION);
-					Coord range = new Coord(NoisePatch.CHUNKDIMENSION, 1, NoisePatch.CHUNKDIMENSION);
-					CoRange noisePatchCoRange = new CoRange(start, range); //   nearbyChunkRangeInitialForNoisePatch(blocks.noisePatches[nco]);
-					buildMapAtRange(noisePatchCoRange);
-				}
-			}
-		}
-		
 		placePlayerAtSpawnPoint ();
 
 
@@ -2018,17 +2000,14 @@ public class ChunkManager : MonoBehaviour
 		{
 			StartCoroutine (createAndDestroyChunksFromLists ());
 			
-			if (!TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
-			{
-				StartCoroutine (setupPatchesFromPatchesList ());
-				StartCoroutine (updateSetupPatchesListI ());
-				StartCoroutine (checkAsyncPatchesDone ());
-				
-//				StartCoroutine(destroyFarAwayNoisePatches()); //crash city! TODO: investigate
-				
-				StartCoroutine (updateChunkLists ());
-				StartCoroutine (checkAsyncChunksList ());
-			}
+			StartCoroutine (setupPatchesFromPatchesList ());
+			StartCoroutine (updateSetupPatchesListI ());
+			StartCoroutine (checkAsyncPatchesDone ());
+			
+//				StartCoroutine(destroyFarAwayNoisePatches()); //crash! TODO: investigate
+			
+			StartCoroutine (updateChunkLists ());
+			StartCoroutine (checkAsyncChunksList ());
 			
 //				StartCoroutine(updatePlayerPositionInShader());
 		}

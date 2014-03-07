@@ -15,9 +15,10 @@ public class LightColumnWorldMap
 	
 	//get the light columns at any woco that exists...
 	
-	public DiscreteDomainRangeList<LightColumn> lightColumnsAtWoco(int x, int z)
+	public DiscreteDomainRangeList<LightColumn> lightColumnsAtWoco(int x, int z, NoiseCoord _noiseCoord)
 	{
-		NoiseCoord nco = CoordUtil.NoiseCoordForWorldCoord(new Coord(x,0,z));
+		Coord woconoco = CoordUtil.WorldCoordFromNoiseCoord(_noiseCoord);
+		NoiseCoord nco = CoordUtil.NoiseCoordForWorldCoord(new Coord(x,0,z) + woconoco);
 		NoisePatch npatch = m_chunkManager.blocks.noisePatchAtNoiseCoord(nco);
 		if (npatch == null)
 		{

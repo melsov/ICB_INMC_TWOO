@@ -16,6 +16,11 @@ public static class CoordUtil
 		return new Coord(nCo.x, 0, nCo.z) * NoisePatch.patchDimensions;
 	}
 	
+	public static Coord WorldCoordFromNoiseCoordAndPatchRelativeOffset(NoiseCoord nco, Coord offset)
+	{
+		return CoordUtil.WorldCoordFromNoiseCoord(nco) + offset;
+	}
+	
 	public static Coord PatchRelativeCoordWithWorldChunkCoordOffset(Coord chCoord, Coord offset)
 	{
 //		chCoord = PatchRelativeChunkCoordForChunkCoord(chCoord);

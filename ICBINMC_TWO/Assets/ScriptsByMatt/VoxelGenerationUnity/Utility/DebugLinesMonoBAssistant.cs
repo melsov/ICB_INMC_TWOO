@@ -8,10 +8,11 @@ public struct Column : IEquatable<Column>
 	public SimpleRange range;
 	public PTwo xz;
 	public int handyInteger;
+	public NoiseCoord noiseCoord;
 	
 	public bool Equals(Column other)
 	{
-		return this.range.start == other.range.start && this.range.range == other.range.range && PTwo.Equal(this.xz, other.xz);
+		return this.range.start == other.range.start && this.range.range == other.range.range && PTwo.Equal(this.xz, other.xz) && NoiseCoord.Equal(this.noiseCoord, other.noiseCoord);
 	}
 }
 
@@ -45,15 +46,18 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 //			columns.Add(column);
 	}
 	
-	public void addColumn(Column column, int handyInt)
+	public void addColumn(Column column, int handyInt, NoiseCoord nco)
 	{
 		int index = columns.IndexOf(column);
 		if (index >= 0)
 		{
 			Column col = columns[index];
 			col.handyInteger = handyInt; // column.handyInteger;
+			col.noiseCoord = nco;
 			columns[index] = col;
 		} else {
+			column.noiseCoord = nco;
+			column.handyInteger = handyInt;
 			columns.Add(column);
 		}
 //		if (!columns.Contains(column))

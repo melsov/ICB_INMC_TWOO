@@ -16,7 +16,7 @@ public enum ChangeOfLightStatus
 
 public class LightColumnCalculator 
 {
-	private LightColumnMap m_lightColumnMap = new LightColumnMap();
+	private LightColumnMap m_lightColumnMap; // = new LightColumnMap();
 	
 	private static Coord NoisePatchDims = NoisePatch.patchDimensions;
 	private static PTwo NoisePatchDimxz = PTwo.PTwoXZFromCoord(NoisePatchDims);
@@ -24,7 +24,15 @@ public class LightColumnCalculator
 	
 	private NoisePatch m_noisePatch;
 	
+	public NoiseCoord noiseCoord {
+		get {
+			return this.m_noisePatch.coord;
+		}
+	}
+	
 	private int debugTimeDrewDebugColm = 0;
+	
+	private NoiseCoord debugOrigNoiseCoord;
 	
 	public LightColumnMap lightColumnMap {
 		get {
@@ -35,21 +43,25 @@ public class LightColumnCalculator
 	public LightColumnCalculator(NoisePatch npatch)
 	{
 		m_noisePatch = npatch;
+		debugOrigNoiseCoord = m_noisePatch.coord;
+		this.m_lightColumnMap = new LightColumnMap(this);
 	}
 	
 	private List<LightColumn> surfaceExposedColumns = new List<LightColumn>();
 	
 	#region query
 
-	public float ligtValueAtPatchRelativeCoord(Coord relCo)
+	public float lightValueAtPatchRelativeCoord(Coord relCo)
 	{
 		LightColumn lilc = m_lightColumnMap.columnContaining(relCo);
-		
 		
 		if (lilc == null) {
 			return 0f; // Window.LIGHT_LEVEL_MAX; //TEST// 0f;
 		}
-		addColumnIfNoiseCoordOO(lilc); //DBG
+//		addColumnIfNoiseCoordOO(lilc); //DBG
+		
+//		if (lilc.lightLevel > 17f)
+//			this.addDebugColumnIfNoiseCoZIsNeg(lilc, (int)(lilc.lightLevel / 3f));
 
 		return (float) lilc.lightLevel; //WANT
 	}
@@ -110,29 +122,40 @@ public class LightColumnCalculator
 		//add new discons
 		int lowestSurroundingSurfaceHeight = ssvs.lowestValue();
 		
+		ssvs.debugAssertLowestNonNegFound(); //DBG
+		
+//		AssertUtil.Assert(lowestSurroundingSurfaceHeight > 0, "weird. lowest sur value is: " + lowestSurroundingSurfaceHeight);
+		
+//		AssertUtil.Assert(NoiseCoord.Equal(this.debugOrigNoiseCoord, m_noisePatch.coord ), "not equal? nco " 
+//			+ m_noisePatch.coord.toString() + " and orig??" + debugOrigNoiseCoord.toString()); //fails
+		
 		List<SimpleRange> discons = discontinuitiesFromHeightRanges(heightRanges);
 		
 		int light = 0;
 		
+		LightColumn col = null;
+		bool exposedLightColumn = false;
+		int countDisCon = discons.Count; //DBG
 		foreach(SimpleRange discon in discons)
 		{
-			light = discon.extent() > lowestSurroundingSurfaceHeight ? (int) Window.LIGHT_LEVEL_MAX_BYTE : 0;
-			LightColumn col = new LightColumn(new PTwo(x,z), (byte) light, discon);
-			if (light > 0)
+			exposedLightColumn = discon.extent() > lowestSurroundingSurfaceHeight;
+			light = 0; // discon.extent() > lowestSurroundingSurfaceHeight ? (int) Window.LIGHT_LEVEL_MAX_BYTE : 0;
+			col = new LightColumn(new PTwo(x,z), (byte) light, discon);
+			if (exposedLightColumn)
 			{
+				//DBG
+//				if (countDisCon > 1) {
+//					bugIf0Neg1( " discon extent: " + discon.extent() + " lowest Sur Height: " + lowestSurroundingSurfaceHeight + " x: " + x + " z: " + z);
+//				}
+				
 				surfaceExposedColumns.Add(col);
+				
+//				this.addDebugColumnIfNoiseCoZIsNeg(col, 4);
 			}
 			m_lightColumnMap.addColumnAt(col, x,z);
 		}
 	}
-	
-	private void bugIf00(string stir)
-	{
-		if (this.m_noisePatch.coord.x == 0 && m_noisePatch.coord.z == 0)
-		{
-			b.bug(stir);
-		}
-	}
+
 	
 	#endregion
 	
@@ -547,6 +570,8 @@ public class LightColumnCalculator
 	
 	public void calculateLight()
 	{
+	
+		
 		updateAllNoisePatchColumns();
 	}
 	
@@ -676,7 +701,6 @@ public class LightColumnCalculator
 	// this func. represnts our muddled strategy unfortuntly.
 	private void checkSurfaceStatusAt(int newHeight, int xx, int zz, ref ChangeOfLightStatus lightChangeStatus, ref List<LightColumn> needUpdateCols)	
 	{
-		AssertUtil.Assert(false, "this happens?");
 		foreach(PTwo neighborPoint in DirectionUtil.SurroundingPTwoCoordsFromPTwo(new PTwo(xx,zz)))
 		{
 			//inefficient?
@@ -731,8 +755,9 @@ public class LightColumnCalculator
 	{
 		//maybe faster if we do these first?
 		updateColumnsWithin(area, surfaceExposedColumns);
-		
+		///*
 		updateWithPerimeterSurrounding(area);
+		//*/ //WANT
 	}
 	
 	private void resetLightColumnsWithin(Quad area)
@@ -757,48 +782,141 @@ public class LightColumnCalculator
 		}
 	}
 	
+	public void updateWithColumnsOfNoisePatchInDirection(Direction dir)
+	{
+		updateQuadBorderInDirection( LightColumnCalculator.PatchQuad , dir );
+	}
+	
 	// make all cols OUTSIDE of a perimeter 'meet up' with all cols
 	// INSIDE a perimeter described by @param area
 	private void updateWithPerimeterSurrounding(Quad area)
 	{
 		foreach(Direction dir in DirectionUtil.TheDirectionsXZ())
 		{
-			PTwo nudge = DirectionUtil.NudgeCoordForDirectionPTwo(dir);
-			Axis axis = DirectionUtil.AxisForDirection(dir);
-			PTwo startPoint = area.origin;
-			if (DirectionUtil.IsPosDirection(dir) )
+			this.updateQuadBorderInDirection(area, dir);
+		}
+	}
+	
+	private void updateQuadBorderInDirection(Quad area, Direction dir)
+	{
+		PTwo nudge = DirectionUtil.NudgeCoordForDirectionPTwo(dir);
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		PTwo startPoint = area.origin;
+		if (DirectionUtil.IsPosDirection(dir) )
+		{
+			if (axis == Axis.X) 
+				startPoint.t += area.dimensions.t;
+			else 
+				startPoint.s += area.dimensions.s;
+		}
+		PTwo iterNudge = PTwo.Abs(nudge).flipSAndT();
+		int length = axis == Axis.X ? area.dimensions.t : area.dimensions.s;
+		PTwo cursorPoint = startPoint;
+		for(int i = 0; i < length; ++i)
+		{
+			DiscreteDomainRangeList<LightColumn> licols = m_lightColumnMap[cursorPoint + nudge];
+			if (licols == null)
+				continue;
+			DiscreteDomainRangeList<LightColumn> insideCols = m_lightColumnMap[cursorPoint];
+			if (insideCols == null)
+				continue;
+			
+			for(int j = 0; j < licols.Count; ++j)
 			{
-				if (axis == Axis.X) 
-					startPoint.t += area.dimensions.t;
-				else 
-					startPoint.s += area.dimensions.s;
-			}
-			PTwo iterNudge = PTwo.Abs(nudge).flipSAndT();
-			int length = axis == Axis.X ? area.dimensions.t : area.dimensions.s;
-			PTwo cursorPoint = startPoint;
-			for(int i = 0; i < length; ++i)
-			{
-				DiscreteDomainRangeList<LightColumn> licols = m_lightColumnMap[cursorPoint + nudge];
-				if (licols == null)
-					continue;
-				DiscreteDomainRangeList<LightColumn> insideCols = m_lightColumnMap[cursorPoint];
-				if (insideCols == null)
-					continue;
-				
-				for(int j = 0; j < licols.Count; ++j)
+				LightColumn outsideCol = licols[j];
+				for(int k = 0; k < insideCols.Count; ++k)
 				{
-					LightColumn outsideCol = licols[j];
-					for(int k = 0; k < insideCols.Count; ++k)
-					{
-						LightColumn insideCol = insideCols[k];
-						updateColumnAt(insideCol, insideCol.coord, outsideCol, area);
-					}
+					LightColumn insideCol = insideCols[k];
+					updateColumnAt(insideCol, insideCol.coord, outsideCol, area);
 				}
-				
-				cursorPoint += iterNudge;
 			}
 			
+			cursorPoint += iterNudge;
 		}
+	}
+	
+	public void updateWithSurfaceHeightAtNeighborBorderInDirection(Direction dir)
+	{
+		updateSurfaceHeightsInDirection(PatchQuad, dir);
+	}
+	
+	//COPY PASTE OF ABOVE FUNC.!
+	private void updateSurfaceHeightsInDirection(Quad area, Direction dir)
+	{
+//		return;
+		
+		PTwo nudge = DirectionUtil.NudgeCoordForDirectionPTwo(dir);
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		PTwo startPoint = area.origin;
+		if (DirectionUtil.IsPosDirection(dir) )
+		{
+			if (axis == Axis.X) 
+				startPoint.t += area.dimensions.t;
+			else 
+				startPoint.s += area.dimensions.s;
+		}
+		PTwo iterNudge = PTwo.Abs(nudge).flipSAndT();
+		int length = axis == Axis.X ? area.dimensions.t : area.dimensions.s;
+		PTwo cursorPoint = startPoint;
+		
+		List<LightColumn> needUpdateColumns = new List<LightColumn>();
+		
+		for(int i = 0; i < length; ++i)
+		{
+//			DiscreteDomainRangeList<LightColumn> licols = m_lightColumnMap[cursorPoint + nudge];
+//			if (licols == null)
+//				continue;
+			DiscreteDomainRangeList<LightColumn> insideCols = m_lightColumnMap[cursorPoint];
+			if (insideCols == null)
+				continue;
+			
+			int surfaceHeightJustBeyondBorder = this.m_noisePatch.highestPointAtPatchRelativeCoord(cursorPoint + nudge);
+			
+			for(int j = 0; j < insideCols.Count; ++j)
+			{
+				LightColumn insideCol = insideCols[j];
+				if (insideCol.heightIsBelowExtent(surfaceHeightJustBeyondBorder) )
+				{
+					addToSurfaceExposedColumnIfNotContains(insideCol);
+					needUpdateColumns.Add(insideCol );
+				}
+			}
+			
+			cursorPoint += iterNudge;
+		}
+
+		foreach(LightColumn col in needUpdateColumns)		
+		{
+			updateColumnAt(col, col.coord, null, PatchQuad);
+		}
+		
+	}
+	
+	//COPY PASTE OF ABOVE FUNC.!
+	private void updateSurfaceHeightsInDirection(Quad area, Direction dir)
+	{
+		PTwo nudge = DirectionUtil.NudgeCoordForDirectionPTwo(dir);
+		Axis axis = DirectionUtil.AxisForDirection(dir);
+		PTwo startPoint = area.origin;
+		if (DirectionUtil.IsPosDirection(dir) )
+		{
+			if (axis == Axis.X) 
+				startPoint.t += area.dimensions.t;
+			else 
+				startPoint.s += area.dimensions.s;
+		}
+		PTwo iterNudge = PTwo.Abs(nudge).flipSAndT();
+		int length = axis == Axis.X ? area.dimensions.t : area.dimensions.s;
+		PTwo cursorPoint = startPoint;
+
+		List<PTwo> result = new List<PTwo>();
+		for(int i = 0; i < length; ++i)
+		{
+			result.Add(cursorPoint + nudge);
+			
+			cursorPoint += iterNudge;
+		}
+
 	}
 	
 	private void updateColumnsWithin(Quad area, List<LightColumn> surafceLitColumns)
@@ -817,12 +935,17 @@ public class LightColumnCalculator
 		bool tookInfluence = false;
 		if (influencerColumn == null)
 		{
+//			addColumnIfNoiseCoordOO(lightcol); //DBG
 			lightcol.setLightLevelToMax();
 			tookInfluence = true;
 		} else {
 			tookInfluence = lightcol.takeInfluenceFromColumn(influencerColumn);
+//			if (tookInfluence) //DEBUG!!!
+//			{
+//				this.addDebugColumnIfNoiseCoZIsNeg(lightcol, 4);
+//				this.addDebugColumnIfNoiseCoZIsNeg(influencerColumn, 1);
+//			}
 		}
-		
 		if (!tookInfluence)
 			return;
 		
@@ -877,9 +1000,35 @@ public class LightColumnCalculator
 	
 	void addColumnIfNoiseCoordOO(LightColumn lcol)
 	{
-		if(NoiseCoord.Equal (this.m_noisePatch.coord, NoiseCoord.NoiseCoordZer() ))
+		if(NoiseCoord.Equal (this.m_noisePatch.coord, new NoiseCoord(0,0) ))
 		{
-			ChunkManager.debugLinesAssistant.addColumn(lcol.toColumnDebug(), this.debugTimeDrewDebugColm++ );
+			ChunkManager.debugLinesAssistant.addColumn(lcol.toColumnDebug(), this.debugTimeDrewDebugColm++, m_noisePatch.coord );
+		}
+	}
+	
+		
+	private void addDebugColumnIfNoiseCoZIsNeg(LightColumn col, int handyI)
+	{
+		if (this.m_noisePatch.coord.z < 0)
+		{
+			int handyInt = handyI;
+			ChunkManager.debugLinesAssistant.addColumn(col.toColumnDebug(), handyInt, this.m_noisePatch.coord);
+		}
+	}
+	
+	private void bugIf00(string stir)
+	{
+		if (this.m_noisePatch.coord.x == 0 && m_noisePatch.coord.z == 0)
+		{
+			b.bug(stir);
+		}
+	}
+	
+	private void bugIf0Neg1(string stir)
+	{
+		if (this.m_noisePatch.coord.x == 0 && m_noisePatch.coord.z == -1)
+		{
+			b.bug(stir);
 		}
 	}
 	
