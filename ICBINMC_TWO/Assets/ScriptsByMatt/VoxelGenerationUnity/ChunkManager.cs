@@ -1436,9 +1436,7 @@ public class ChunkManager : MonoBehaviour
 		bool testRunnerApproves = false;
 		while (true) 
 		{
-			NoiseCoord currentNoiseCo = noiseCoordContainingWorldCoord (new Coord (playerCameraTransform.position));
-			
-			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
+			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(1);
 			
 			testRunnerApproves = TestRunner.NoiseCoordWithinTestLimits(nco);
 			
@@ -1521,18 +1519,50 @@ public class ChunkManager : MonoBehaviour
 		}
 	}
 	
+	private bool noiseCoordIsInsideDontDestoryRealm(NoiseCoord nco)
+	{
+		Coord chunkCo = CoordUtil.WorldRelativeChunkCoordForNoiseCoord(nco);
+		Quad dontDestroyKwad = Quad.QuadFromCoRange(this.m_dontDestroyRealm);
+		
+		if (dontDestroyKwad.dimensions.s == 0)
+			return true;
+		
+		return dontDestroyKwad.contains(PTwo.PTwoXZFromNoiseCoord(nco));
+	}
+	
 	IEnumerator destroyFarAwayNoisePatches()
 	{
 		while(true)
 		{
 			List<NoiseCoord> furthestNCos = blocks.furthestNoiseCoords();
+//			List<NoiseCoord> furthestNCos = new List<NoiseCoord>();
 			
-			foreach(NoiseCoord nco in furthestNCos) 
+			if (furthestNCos.Count > 0)
 			{
-				if (!m_destroyNoisePatchesOutsideOfRealm.contains(PTwo.PTwoXZFromNoiseCoord(nco)))
+				
+				NoiseCoord farAwayNCo = furthestNCos[0];
+//				if (!m_destroyNoisePatchesOutsideOfRealm.contains(PTwo.PTwoXZFromNoiseCoord(farAwayNCo)))
+				if (!noiseCoordIsInsideDontDestoryRealm(farAwayNCo))
 				{
-					blocks.destroyPatchAt(nco);
+					NoisePatch npatch = blocks.noisePatchAtNoiseCoord(farAwayNCo);
+					if (npatch.IsDone) {
+						setupThesePatches.Remove(npatch);
+						blocks.destroyPatchAt(farAwayNCo);
+					}
+					else { 
+						b.bug("noispatch is building now " + farAwayNCo.toString());
+					}
 				}
+				
+
+				
+//				foreach(NoiseCoord nco in furthestNCos) 
+//				{
+//					if (!m_destroyNoisePatchesOutsideOfRealm.contains(PTwo.PTwoXZFromNoiseCoord(nco)))
+//					{
+//						blocks.destroyPatchAt(nco);
+//					}
+//				}
 			}
 			
 			yield return new WaitForSeconds(1f);
@@ -2004,7 +2034,7 @@ public class ChunkManager : MonoBehaviour
 			StartCoroutine (updateSetupPatchesListI ());
 			StartCoroutine (checkAsyncPatchesDone ());
 			
-//				StartCoroutine(destroyFarAwayNoisePatches()); //crash! TODO: investigate
+				StartCoroutine(destroyFarAwayNoisePatches()); //crash! TODO: investigate
 			
 			StartCoroutine (updateChunkLists ());
 			StartCoroutine (checkAsyncChunksList ());
@@ -2043,8 +2073,8 @@ public class ChunkManager : MonoBehaviour
 //		#endif
 		//**want
 		
-//		DebugLinesUtil.drawDebugCubesForAllCreatedNoisePatches(currentTargetedForCreationNoiseCo, blocks.noisePatches);
-//		DebugLinesUtil.drawDebugCubesForNoisePatchesList(setupThesePatches, Color.yellow, 6);
+		DebugLinesUtil.drawDebugCubesForAllCreatedNoisePatches(currentTargetedForCreationNoiseCo, blocks.noisePatches);
+		DebugLinesUtil.drawDebugCubesForNoisePatchesList(setupThesePatches, Color.yellow, 6);
 //		DebugLinesUtil.drawDebugCubesForNoisePatchesList(checkDoneForThesePatches, Color.magenta, 2);
 //		DebugLinesUtil.drawDebugCubesForNoiseCoordList(bugNoiseCoordsThatDidntExist, Color.red, 1);
 //		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));

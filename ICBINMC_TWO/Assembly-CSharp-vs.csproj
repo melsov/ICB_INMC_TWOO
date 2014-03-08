@@ -76,6 +76,7 @@
      <Compile Include="Assets\ScriptsByMatt\PowerCollections\Strings.cs" />
      <Compile Include="Assets\ScriptsByMatt\PowerCollections\Triple.cs" />
      <Compile Include="Assets\ScriptsByMatt\PowerCollections\Util.cs" />
+     <Compile Include="Assets\ScriptsByMatt\Tester\BlockCollectionTest.cs" />
      <Compile Include="Assets\ScriptsByMatt\Tester\TestRunner.cs" />
      <Compile Include="Assets\ScriptsByMatt\TetraMesh.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Block.cs" />

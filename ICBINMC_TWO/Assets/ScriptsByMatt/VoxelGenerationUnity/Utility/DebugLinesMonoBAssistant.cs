@@ -23,6 +23,8 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 	private List<Window> windows = new List<Window>();
 	private List<Column> columns = new List<Column>();
 	
+	public Quad debugQuad = Quad.theErsatzNullQuad();
+	
 	public void addUnitCubeAt(Coord woco)
 	{
 		if (!unitCubes.Contains(woco))
@@ -111,7 +113,8 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 //		drawUnitCubes();
 //		drawTestLines();
 //		drawWindows();
-		drawColumns();
+//		drawColumns();
+		drawNoiseCoordQuad();
 	}
 	
 	void drawUnitCubes()
@@ -145,6 +148,14 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 		{
 			Column colm = columns[i];
 			DebugLinesUtil.DrawDebugColumn(colm);
+		}
+	}
+	
+	void drawNoiseCoordQuad()
+	{
+		if (!this.debugQuad.isErsatzNull())
+		{
+			DebugLinesUtil.drawDebugQuad(this.debugQuad, Color.red);
 		}
 	}
 }

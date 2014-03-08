@@ -70,7 +70,9 @@ public struct FaceInfo
 	}
 	
 	public FaceInfo(Coord _coord, Range1D _range, Direction _dir, ILightDataProvider _lightDataProvider) {
-		coord = _coord; lightLevel = _range.top_light_level; direction = _dir;
+		coord = _coord; 
+		lightLevel = 0; // _range.top_light_level; 
+		direction = _dir;
 		blockType = _range.blockType; // arg.. duplications...
 		range = _range;
 		lightDataProvider = _lightDataProvider;
@@ -507,7 +509,8 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 								b = m_noisePatch.blockAtChunkCoordOffset (chunkCoord, blockCoord);
 								if (b != null) 
 								{
-									addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type, this.lightDataProvider));
+//									addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, h_range.bottom_light_level, Direction.yneg, b.type, this.lightDataProvider));
+									addCoordToFaceAggregorAtIndex(new FaceInfo(blockCoord, 0, Direction.yneg, b.type, this.lightDataProvider));
 								}
 							}
 						}
@@ -519,7 +522,8 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 						if (!aSolidRangeAboveIsFlushWithRangeAtIndex(heights, j))
 						{
 							if (b != null)
-								addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord, h_range.top_light_level, Direction.ypos, b.type, this.lightDataProvider));
+								addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord,  0, Direction.ypos, b.type, this.lightDataProvider));
+//								addCoordToFaceAggregorAtIndex(new FaceInfo(extentBlockCoord,  h_range.top_light_level, Direction.ypos, b.type, this.lightDataProvider));
 						}
 						
 						//XPOS
@@ -738,8 +742,8 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 				if (_range.contains(belowAdj))
 				{
 #if LIGHT_BY_RANGE
-					belowAdj.bottom_light_level =  adjacentRange.bottom_light_level; //side ranges borrow adj light lvel
-					belowAdj.top_light_level = adjacentRange.bottom_light_level;
+//					belowAdj.bottom_light_level =  adjacentRange.bottom_light_level; //side ranges borrow adj light lvel
+//					belowAdj.top_light_level = adjacentRange.bottom_light_level;
 #endif
 					nonOverlappingRanges.Add(belowAdj);
 				}
@@ -753,7 +757,7 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 			}
 			
 			remainderRange = remainderRange.subRangeAboveRange(adjacentRange);
-			remainderRange.bottom_light_level = remainderRange.top_light_level = adjacentRange.top_light_level;
+//			remainderRange.bottom_light_level = remainderRange.top_light_level = adjacentRange.top_light_level;
 			
 			// no hope of finding more ranges?
 			if (adjacentRange.extentMinusOne() >= remainderRange.extentMinusOne())
@@ -775,8 +779,8 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 			{
 #if LIGHT_BY_RANGE
 //				if (adjacentRangeReallyAssigned) {
-					remainderRange.bottom_light_level =  _range.top_light_level; // the last adjacent range.
-					remainderRange.top_light_level = _range.top_light_level;
+//					remainderRange.bottom_light_level =  _range.top_light_level; // the last adjacent range.
+//					remainderRange.top_light_level = _range.top_light_level;
 //				}
 #endif
 				nonOverlappingRanges.Add(remainderRange);

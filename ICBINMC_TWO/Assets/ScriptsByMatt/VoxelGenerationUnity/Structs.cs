@@ -266,7 +266,43 @@ public struct VertexTwo
 
 public struct IndexSet
 {
-	public int upperLeft, upperRight, lowerLeft, lowerRight;
+	public short upperLeftS, upperRightS, lowerLeftS, lowerRightS;
+	
+	public int upperLeft {
+		get {
+			return (short) upperLeftS;
+		}
+		set {
+			upperLeftS = (short) value;
+		}
+	}
+	
+	public int upperRight {
+		get {
+			return (short) upperRightS;
+		}
+		set {
+			upperRightS = (short) value;
+		}
+	}
+	
+	public int lowerLeft {
+		get {
+			return (short) lowerLeftS;
+		}
+		set {
+			lowerLeftS = (short) value;
+		}
+	}
+	
+	public int lowerRight {
+		get {
+			return (short) lowerRightS;
+		}
+		set {
+			lowerRightS = (short) value;
+		}
+	}
 	
 	public IndexSet(int ul, int ur, int ll, int lr) 
 	{
@@ -274,7 +310,7 @@ public struct IndexSet
 	}
 	
 	public static IndexSet theErsatzNullIndexSet() {
-		return new IndexSet(-444, -321, -987554, -33);	
+		return new IndexSet(-444, -321, -9875, -33);	
 	}
 }
 
@@ -290,6 +326,11 @@ public struct LightCorners
 		oo = _oo; mo = _mo; om = _om; mm = _mm;
 	}
 	
+//	public LightCorners(byte nothing)
+//	{
+//		this = new LightCorners(nothing,nothing,nothing,nothing);
+//	}
+	
 	public LightCorners(byte _all_values)
 	{
 		this = new LightCorners(_all_values,_all_values,_all_values,_all_values);
@@ -302,7 +343,8 @@ public struct LightCorners
 	
 	public static LightCorners LightCornersFromRangeTopBottom( Range1D _range) 
 	{
-		return new LightCorners(_range.top_light_level, _range.bottom_light_level);
+//		return new LightCorners(_range.top_light_level, _range.bottom_light_level);
+		return new LightCorners(0, 0);
 	}
 	
 	public static LightCorners CombineHorizontally(LightCorners left, LightCorners right) {
@@ -311,14 +353,14 @@ public struct LightCorners
 	
 	public void setRightCornersWithRange(Range1D right_side_range)
 	{
-		this.mo = right_side_range.top_light_level;
-		this.mm = right_side_range.bottom_light_level;
+		this.mo = 0; //right_side_range.top_light_level;
+		this.mm = 0; //right_side_range.bottom_light_level;
 	}
 	
 	public void setLeftCornersWithRange(Range1D right_side_range)
 	{
-		this.oo = right_side_range.top_light_level;
-		this.om = right_side_range.bottom_light_level;
+		this.oo = 0; //right_side_range.top_light_level;
+		this.om = 0; //right_side_range.bottom_light_level;
 	}
 	
 	public static LightCorners MaxLightLightCorners() {
@@ -329,10 +371,11 @@ public struct LightCorners
 public struct LitQuad
 {
 	public Quad quad;
-	public LightCorners lightCorners;
+//	public LightCorners lightCorners;
 	
 	public LitQuad(Quad _quad, LightCorners _lightCorners) {
-		quad = _quad; lightCorners = _lightCorners;
+		quad = _quad; 
+//		lightCorners = _lightCorners;
 	}
 	
 	public LitQuad(Quad _quad) {
@@ -371,6 +414,11 @@ public struct Quad
 	
 	public static Quad QuadDimensionsAndExtent(PTwo dims, PTwo extent) {
 		return Quad.QuadWithOriginAndExtent(extent - dims, extent);	
+	}
+	
+	public static Quad QuadFromCoRange(CoRange coRange)
+	{
+		return new Quad(PTwo.PTwoXZFromCoord(coRange.start), PTwo.PTwoXZFromCoord(coRange.range));
 	}
 	
 	public string toString() {
@@ -480,9 +528,24 @@ public struct Strip
 {
 	public Range1D range;
 	public IndexSet indexSet;
-	public int width;
+	public byte widthB;
+	public short quadIndexS;
 	
-	public int quadIndex;
+	public int width{
+		get {
+			return (int) widthB;
+		} set {
+			widthB = (byte) value;
+		}
+	}
+	
+	public int quadIndex {
+		get {
+			return (int) quadIndexS;
+		} set {
+			quadIndexS = (short) value;
+		}
+	}
 	
 	private static int QUAD_INDEX_DEFAULT = -1;
 	

@@ -49,7 +49,23 @@ public static class OverLapUtil
 
 public struct AlignedCoord
 {
-	public int across, up;
+	public short acrossS, upS;
+	
+	public int across {
+		get {
+			return (int) acrossS;
+		} set {
+			acrossS = (short) value;
+		}
+	}
+	
+	public int up {
+		get {
+			return (int) upS;
+		} set {
+			upS = (short) value;
+		}
+	}
 	
 	public AlignedCoord(int _ac, int _up) {
 		across = _ac;
@@ -105,7 +121,23 @@ public struct AlignedCoord
 [Serializable]
 public struct SimpleRange : IEquatable<SimpleRange>, iRange
 {
-	public int start, range; // TODO: convert to short?
+	public short startShort, rangeShort; // TODO: convert to short?
+	
+	public int start {
+		get {
+			return (int) startShort;
+		} set {
+			startShort = (short) value;
+		}
+	}
+	
+	public int range {
+		get {
+			return (int) rangeShort;
+		} set {
+			rangeShort = (short) value;
+		}
+	}
 	
 	#region iRange
 	public int startP{
@@ -358,23 +390,47 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 [Serializable]
 public struct Range1D
 {
-	public int start, range; // TODO: convert to byte?
+	public short startShort, rangeShort; // TODO: convert to byte?
+//	public int start, range; // TODO: convert to byte?
+	
+	public int start {
+		get {
+			return (int) startShort;
+		} set {
+			startShort = (short) value;
+		}
+	}
+	
+	public int range {
+		get {
+			return (int) rangeShort;
+		} set {
+			rangeShort = (short) value;
+		}
+	}
+	
+		
+	public static Range1D theErsatzNullRange() {
+		return new Range1D(-999123, -1);
+	}
 	
 	public BlockType blockType;
-	public byte top_light_level; // todo: get rid of these horrible add-ons
-	public byte bottom_light_level;
+	
+//	public byte top_light_level; // todo: get rid of these horrible add-ons
+//	public byte bottom_light_level;
 
 	//TODO: move the above accounting variables to another struct
 	//that owns a range1d——and replace a bunch of code so that it deals with this new struct
 	
-	public Range1D(int _start, int _range, BlockType btype, byte light_level_, byte bottom_light_level_) 
-	{
-		start = _start; range = _range;	blockType = btype; top_light_level = light_level_; bottom_light_level = bottom_light_level_;
-	}
+//	public Range1D(int _start, int _range, BlockType btype, byte light_level_, byte bottom_light_level_) 
+//	{
+//		start = _start; range = _range;	blockType = btype; top_light_level = light_level_; bottom_light_level = bottom_light_level_;
+//	}
 	
 	public Range1D(int _start, int _range, BlockType btype) 
 	{
-		this = new Range1D(_start, _range, btype, Block.MAX_LIGHT_LEVEL, Block.MAX_LIGHT_LEVEL); 
+		start = _start; range = _range;	blockType = btype;
+//		this = new Range1D(_start, _range, btype, Block.MAX_LIGHT_LEVEL, Block.MAX_LIGHT_LEVEL); 
 	}
 	
 	public Range1D(int _start, int _range) 
@@ -399,10 +455,7 @@ public struct Range1D
 	public int extentMinusOne() {
 		return this.extent() - 1;
 	}
-	
-	public static Range1D theErsatzNullRange() {
-		return new Range1D(-999123, -1);
-	}
+
 	
 	public static bool Equal(Range1D aa, Range1D bb) {
 		return (aa.start == bb.start && aa.range == bb.range);	
@@ -446,7 +499,7 @@ public struct Range1D
 	}
 	
 	public static Range1D Copy(Range1D copyMe) {
-		return new Range1D(copyMe.start, copyMe.range, copyMe.blockType, copyMe.top_light_level, copyMe.bottom_light_level );	
+		return new Range1D(copyMe.start, copyMe.range, copyMe.blockType); //, copyMe.top_light_level, copyMe.bottom_light_level );	
 	}
 	// set funcs.
 	
@@ -462,7 +515,7 @@ public struct Range1D
 		if (newRange <= 0)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(level + 1, newRange, this.blockType, this.top_light_level, this.bottom_light_level);
+		return new Range1D(level + 1, newRange, this.blockType); //, this.top_light_level, this.bottom_light_level);
 	}
 	
 	public Range1D setRangeStartTo(int level) {
@@ -471,7 +524,7 @@ public struct Range1D
 		if (newRange <= 0)
 			return Range1D.theErsatzNullRange();
 		
-		return new Range1D(level + 1, newRange, this.blockType, this.top_light_level, this.bottom_light_level);
+		return new Range1D(level + 1, newRange, this.blockType); //, this.top_light_level, this.bottom_light_level);
 	}
 	
 	public Range1D subRangeBelowRange(Range1D other) 
@@ -485,11 +538,11 @@ public struct Range1D
 		
 		int min = Mathf.Min(this.extent(), level);
 		
-		return new Range1D(this.start, min - this.start, this.blockType, this.top_light_level, this.bottom_light_level);
+		return new Range1D(this.start, min - this.start, this.blockType); //, this.top_light_level, this.bottom_light_level);
 	}
 	
 	public Range1D extendRangeByOne() {
-		return new Range1D(this.start, this.range + 1, this.blockType, this.top_light_level, this.bottom_light_level);
+		return new Range1D(this.start, this.range + 1, this.blockType); //, this.top_light_level, this.bottom_light_level);
 	}	
 	
 	public Range1D subtractOneFromStart() {
@@ -497,11 +550,11 @@ public struct Range1D
 	}
 	
 	public Range1D adjustStartBy(int adjustBy) {
-		return new Range1D(this.start + adjustBy, this.range - adjustBy, this.blockType, this.top_light_level, this.bottom_light_level);	
+		return new Range1D(this.start + adjustBy, this.range - adjustBy, this.blockType); //, this.top_light_level, this.bottom_light_level);	
 	}
 	
 	public Range1D extendRangeToInclude(Range1D extender) {
-		return new Range1D(this.start, extender.extent() - this.start, this.blockType, this.top_light_level, this.bottom_light_level);	
+		return new Range1D(this.start, extender.extent() - this.start, this.blockType); //, this.top_light_level, this.bottom_light_level);	
 	}
 	
 	public static bool RangesIntersect(Range1D raa, Range1D rbb)
@@ -566,7 +619,7 @@ public struct Range1D
 	
 	public static Range1D[] splitRangeIntoTopAndRemainder(Range1D splitMe, BlockType remainderType) {
 		Range1D[] result = new Range1D[2];
-		Range1D top = new Range1D(splitMe.extentMinusOne(), 1, remainderType, splitMe.top_light_level, splitMe.top_light_level);
+		Range1D top = new Range1D(splitMe.extentMinusOne(), 1, remainderType); //, splitMe.top_light_level, splitMe.top_light_level);
 		splitMe.range--;
 		result[0] = top;
 		result[1] = splitMe;

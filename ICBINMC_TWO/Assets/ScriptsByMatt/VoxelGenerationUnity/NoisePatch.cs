@@ -1855,28 +1855,34 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	private void finishTradingTerrainDataWithNeighborFromDirection(NeighborDirection fromDirection)
 	{
-		//I just got an update an presumably won't be prompted to recalc light later...
+		//NoisePatch just got an update an presumably won't be prompted to recalc light later...
 		//CONSIDER: this is not bad, but it would be nice to be able to only recalc
 		// light for windows that changed.
 		// e.g. any windows that are flush with this edge, presumably...
 		// also, any windows flush with those windows (which can happen within nPatch we think)
-//		m_windowMap.calculateLightAdd();
+		
+		/*
 		m_lightColumnCalculator.calculateLight();
 		NeighborDirection opposite = NeighborDirectionUtils.oppositeNeighborDirection(fromDirection);
-		exchangedTerrainDataAlready.setBooleanForDirection(opposite, true);
+		*/ // MAYBE WANT 
+		
+		exchangedTerrainDataAlready.setBooleanForDirection(NeighborDirectionUtils.oppositeNeighborDirection(fromDirection), true);
 	}
 	
 	private void getSurfaceHeightDataFromNeighborInDirection(NeighborDirection ndir)
 	{
 //		byte[] edgeHeights = neighborPatch.giveFlushSurfaceHeightDataForNeighborFromDirection(ndir);
 		
+		
+		/*
 		m_lightColumnCalculator.updateWithSurfaceHeightAtNeighborBorderInDirection(
 			NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir));
+		*/ // MAYBE WANT
 		
+		
+		//DON'T WANT
 		// ... pass data to windowMap and tell it which edge...
 //		m_windowMap.updateWindowsFlushWithEdgeInNeighborDirection(edgeHeights, ndir);
-		
-		// TODO: update calc with this?
 	}
 	
 	private void introduceAdjacentWindowsWithNeighborInDirection(NeighborDirection ndir)
@@ -1886,7 +1892,10 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		
 		//CONSIDER: we could wait until the chunk wants to build. then do all light.
 		// by this time, supposedly and in our experience!, the neighborpatch has built...
+		
+		/*
 		this.m_lightColumnCalculator.updateWithColumnsOfNoisePatchInDirection( NeighborDirectionUtils.DirecionFourForNeighborDirection(ndir) );
+		*/ //MAYBE WANT
 	}
 	
 	private byte[] giveFlushSurfaceHeightDataForNeighborFromDirection(NeighborDirection fromNDir)

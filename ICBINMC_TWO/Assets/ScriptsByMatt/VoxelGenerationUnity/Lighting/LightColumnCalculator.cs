@@ -893,7 +893,7 @@ public class LightColumnCalculator
 	}
 	
 	//COPY PASTE OF ABOVE FUNC.!
-	private void updateSurfaceHeightsInDirection(Quad area, Direction dir)
+	private List<PTwo> coordsXZOnInsideEdgeInDirection(Quad area, Direction dir)
 	{
 		PTwo nudge = DirectionUtil.NudgeCoordForDirectionPTwo(dir);
 		Axis axis = DirectionUtil.AxisForDirection(dir);
@@ -916,6 +916,8 @@ public class LightColumnCalculator
 			
 			cursorPoint += iterNudge;
 		}
+		
+		return result;
 
 	}
 	

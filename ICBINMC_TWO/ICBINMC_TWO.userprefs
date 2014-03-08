@@ -1,15 +1,6 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs">
-    <Files>
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightColumnMap.cs" Line="60" Column="83" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/NoisePatch.cs" Line="654" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Lighting/LightColumnCalculator.cs" Line="898" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesMonoBAssistant.cs" Line="60" Column="35" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Utility/DebugLinesUtil.cs" Line="215" Column="1" />
-      <File FileName="Assets/ScriptsByMatt/VoxelGenerationUnity/Structures/StructureBase.cs" Line="291" Column="64" />
-    </Files>
-  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workbench />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>

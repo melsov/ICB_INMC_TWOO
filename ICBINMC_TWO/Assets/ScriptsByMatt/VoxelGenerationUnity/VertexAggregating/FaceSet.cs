@@ -345,7 +345,7 @@ public class FaceSet
 		{
 			
 #if LIGHT_BY_RANGE
-			Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType, lightLevel, lightLevel));
+			Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType)); //, lightLevel, lightLevel));
 #else
 			Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType));
 #endif
@@ -375,7 +375,7 @@ public class FaceSet
 			{
 				str.range.range++; 
 				
-				byte bottom_light_level = lightLevel;
+//				byte bottom_light_level = lightLevel;
 				// can we combine with a next range?
 				if (i < strips.Count - 1) 
 				{
@@ -384,14 +384,14 @@ public class FaceSet
 					{
 						str.range = str.range.extendRangeToInclude(nextStrip.range);
 #if LIGHT_BY_RANGE
-						bottom_light_level = nextStrip.range.bottom_light_level;
+//						bottom_light_level = nextStrip.range.bottom_light_level;
 #endif
 						strips.RemoveAt(i+1);
 					}
 				}
 				
 #if LIGHT_BY_RANGE
-				str.range.bottom_light_level = bottom_light_level;
+//				str.range.bottom_light_level = bottom_light_level;
 #endif
 
 				strips[i] = str; //put it back 
@@ -401,7 +401,7 @@ public class FaceSet
 			if (str.range.isOneBelowStart(addAtHeight) ) 
 			{	
 #if LIGHT_BY_RANGE
-				str.range.top_light_level = lightLevel;
+//				str.range.top_light_level = lightLevel;
 #endif
 				str.range.start--;
 				str.range.range++;
@@ -413,7 +413,7 @@ public class FaceSet
 			if (i == strips.Count - 1) //still didn't find anything? make new
 			{
 #if LIGHT_BY_RANGE
-				Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType, lightLevel, lightLevel));
+				Strip newStrip = new Strip(new Range1D(addAtHeight, 1, this.blockType)); //, lightLevel, lightLevel));
 #else	
 				Strip newStrip = new Strip(new Range1D(addAtHeight, 1));
 #endif
@@ -468,7 +468,7 @@ public class FaceSet
 	
 	public Range1D addRangeAtAcrossReturnAddedRange(Range1D rangeToAdd, int acrossIndex)
 	{
-		Range1D originalRange = rangeToAdd;
+//		Range1D originalRange = rangeToAdd;
 		// get the intersection of the range and possible (pos/neg) MAX DIM T RANGE
 		Range1D limitedRangeToAdd = usableRangeFromRange(rangeToAdd); // Range1D.IntersectingRange(rangeToAdd, this.maxDomain.tRange()); 
 		rangeToAdd.start = limitedRangeToAdd.start; 
@@ -777,7 +777,7 @@ public class FaceSet
 							}
 							
 							qua.quad.dimensions.s++;
-							qua.lightCorners.setRightCornersWithRange(stp.range);
+//							qua.lightCorners.setRightCornersWithRange(stp.range);
 							
 							if (lstp.quadIndex < 0)
 								bug ("the quad index less than zero: " + lstp.quadIndex + " strip is: " + lstp.toString() + "else from lstp qI == -1" + "\n BTW: the shift number is: " + FaceSet.SPECIAL_QUAD_LOOKUP_NUMBER);
@@ -790,7 +790,7 @@ public class FaceSet
 							//* make a new quad with these two 
 							Quad doubleWidthqq = Quad.QuadFromStrip(lstp, horizontalDim - 1);
 							doubleWidthqq.dimensions.s = 2;
-							LightCorners lightCorners = new LightCorners(lstp.range.top_light_level, stp.range.top_light_level, lstp.range.bottom_light_level, stp.range.bottom_light_level);
+							LightCorners lightCorners = new LightCorners(0); // new LightCorners(lstp.range.top_light_level, stp.range.top_light_level, lstp.range.bottom_light_level, stp.range.bottom_light_level);
 							LitQuad litdoubleWidthQuad = new LitQuad(doubleWidthqq, lightCorners);
 							
 							lstp.quadIndex = addNewQuadAtCoord(litdoubleWidthQuad, new PTwo(horizontalDim - 1, lstp.range.start) );
@@ -850,7 +850,7 @@ public class FaceSet
 		
 		TestRunner.bug("quads count after optimize strips: " + quads.Count );
 		
-		int t_offset = faceSetLimits.origin.t;
+//		int t_offset = faceSetLimits.origin.t;
 		
 		int curTriIndex = 0;
 		
@@ -869,7 +869,7 @@ public class FaceSet
 		List<int> returnTriIndices = new List<int>();
 		List<Vector3> returnVecs = new List<Vector3>();
 		
-		List<Vector2> returnColors = new List<Vector2>();
+//		List<Vector2> returnColors = new List<Vector2>();
 		List<Color32> returnCol32s = new List<Color32>();
 		
 		List<Vector4> returnTangents = new List<Vector4>();

@@ -60,8 +60,26 @@ public class BlockCollection
 			//Create a memory stream with the data
 			var m = new MemoryStream(Convert.FromBase64String(data));
 			noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
-
+			
+			updateDomain();
 		} 
+	}
+	
+	private void updateDomain()
+	{
+		foreach(KeyValuePair<NoiseCoord,NoisePatch> keyVal in noisePatches)
+		{
+			NoiseCoord nco = keyVal.Key;
+			if (domain.isErsatzNull())
+			{
+				domain = Quad.UnitQuadWithPoint(PTwo.PTwoXZFromNoiseCoord(nco));
+			} else {
+				domain.expandedToContainPoint(PTwo.PTwoXZFromNoiseCoord(nco));
+			}
+		}
+		
+		//debug
+		ChunkManager.debugLinesAssistant.debugQuad = domain;
 	}
 
 	public void saveNoisePatchesToPlayerPrefs() 
@@ -216,7 +234,8 @@ public class BlockCollection
 //		return new NoiseCoord (woco / BLOCKSPERNOISEPATCH);
 	}
 	
-	public void destroyPatchAt(NoiseCoord nco) {
+	public void destroyPatchAt(NoiseCoord nco) 
+	{
 		if (noisePatches.ContainsKey(nco)) {
 			NoisePatch npToDestroy = noisePatches[nco];
 			if (npToDestroy.hasStarted || !npToDestroy.IsDone)
@@ -258,13 +277,16 @@ public class BlockCollection
 		} else {
 			domain = domain.expandedToContainPoint(new PTwo(nco.x, nco.z));	
 		}
+		
+		ChunkManager.debugLinesAssistant.debugQuad = domain;
 	}
 	
+	// TODO: rewrite to return just one far away nco?
 	public List<NoiseCoord> furthestNoiseCoords() {
 		
 		List<NoiseCoord> result = new List<NoiseCoord>();
 		
-		if (domain.dimensions.s < 2 || domain.dimensions.t < 2)
+		if (domain.dimensions.s < 3 || domain.dimensions.t < 3)
 			return result;
 		
 		NoiseCoord xnudge = new NoiseCoord(1,0);
@@ -291,7 +313,7 @@ public class BlockCollection
 				}
 			}
 			NoiseCoord zminx = NoiseCoord.NoiseCoordWithPTwo(domain.origin);
-			while (xminz.z < domain.extent().s)
+			while (zminx.x < domain.extent().s)
 			{
 				zminx += xnudge;
 				if (noisePatches.ContainsKey(zminx)) {
@@ -327,7 +349,7 @@ public class BlockCollection
 			}
 			
 			NoiseCoord zmaxx = extentCoord;
-			while(zmaxx.z >= domain.origin.t)
+			while(zmaxx.x >= domain.origin.s)
 			{
 				zmaxx -= xnudge;
 				if (noisePatches.ContainsKey(zmaxx)) {

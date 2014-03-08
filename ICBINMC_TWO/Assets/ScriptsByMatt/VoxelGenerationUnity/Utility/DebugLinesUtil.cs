@@ -255,6 +255,22 @@ public static class DebugLinesUtil
 //		drawDebugCubeJustDiagonal(start, dims, col);
 	}
 	
+	
+	public static void drawDebugQuad(Quad quad, Color col)
+	{
+
+		Coord start = CoordUtil.WorldCoordFromNoiseCoord(NoiseCoord.NoiseCoordWithPTwo(quad.origin));
+		Coord outer = CoordUtil.WorldCoordFromNoiseCoord(NoiseCoord.NoiseCoordWithPTwo(quad.extent()));
+		
+
+		//lower box
+		debugLine (start, new Coord (start.x, start.y, outer.z), col );
+		debugLine (start, new Coord (outer.x , start.y, start.z), col );
+		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (start.x, start.y, outer.z), col );
+		debugLine (new Coord (outer.x, start.y, outer.z), new Coord (outer.x , start.y, start.z), col );
+	}
+	
+	
 	static void drawDebugCube(Coord start, Coord dims, Color col)
 	{
 //		int length = drawBlock ? 1 : (int) CHUNKLENGTH;

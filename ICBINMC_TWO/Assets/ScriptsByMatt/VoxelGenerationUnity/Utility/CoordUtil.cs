@@ -108,4 +108,22 @@ public static class CoordUtil
 	{
 		return (worldBlockCoord + worldBlockCoord.booleanNegative() ) % Chunk.DIMENSIONSINBLOCKS + worldBlockCoord.booleanNegative() * (Chunk.DIMENSIONSINBLOCKS - 1);
 	}	
+	
+	public static List<NoiseCoord> NoiseCoordsWithingQuad(Quad area)
+	{
+		SimpleRange sRange = area.sSimpleRange();
+		SimpleRange tRange = area.tSimpleRange();
+		List<NoiseCoord> result = new List<NoiseCoord>();
+		
+		for(int i = sRange.start; i < sRange.extent() ; ++i)
+		{
+			for(int j = tRange.start; j < tRange.extent() ; ++j)
+			{
+				result.Add(new NoiseCoord(i,j));
+			}			
+		}
+		
+		return result;
+		
+	}
 }

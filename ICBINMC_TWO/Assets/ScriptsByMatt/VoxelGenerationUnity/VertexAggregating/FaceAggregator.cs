@@ -173,7 +173,8 @@ public class FaceAggregator
 		int fsIndex = indexOfFaceSetAtCoord(startAlco, dir);
 		
 		if (!indexRepresentsAnOccupiedCoord(fsIndex))
-			newFaceSetAtCoord(startAlco, addRange.blockType, dir, addRange.bottom_light_level, finfo.lightDataProvider);
+			newFaceSetAtCoord(startAlco, addRange.blockType, dir, 0, finfo.lightDataProvider);
+//			newFaceSetAtCoord(startAlco, addRange.blockType, dir, addRange.bottom_light_level, finfo.lightDataProvider);
 		
 		FaceSet justAddedFS = faceSetAt(startAlco, dir);
 		

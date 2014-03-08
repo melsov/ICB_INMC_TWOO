@@ -20,6 +20,8 @@ public class TestRunner : MonoBehaviour
 //	public const bool RunGameOnlyNoisPatchesWithinWorldLimits = true;
 	public const bool RunGameOnlyNoisPatchesWithinWorldLimits = false;
 	
+//	public const bool DontRunGameDoBlockCollectionTest = true;
+	public const bool DontRunGameDoBlockCollectionTest = false;
 	
 	
 	private bool doRunTest = true;
@@ -58,7 +60,7 @@ public class TestRunner : MonoBehaviour
 	
 	public static bool DontRunGame()
 	{
-		return dontRunGame;	
+		return dontRunGame || DontRunGameDoBlockCollectionTest;	
 	}
 	
 	// Update is called once per frame
