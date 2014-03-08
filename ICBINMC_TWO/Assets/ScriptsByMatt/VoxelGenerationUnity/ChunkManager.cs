@@ -2034,7 +2034,7 @@ public class ChunkManager : MonoBehaviour
 			StartCoroutine (updateSetupPatchesListI ());
 			StartCoroutine (checkAsyncPatchesDone ());
 			
-				StartCoroutine(destroyFarAwayNoisePatches()); //crash! TODO: investigate
+			StartCoroutine(destroyFarAwayNoisePatches()); 
 			
 			StartCoroutine (updateChunkLists ());
 			StartCoroutine (checkAsyncChunksList ());
