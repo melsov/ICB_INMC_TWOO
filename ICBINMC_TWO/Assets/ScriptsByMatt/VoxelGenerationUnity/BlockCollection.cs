@@ -24,7 +24,14 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 public class BlockCollection
 {
-	public Dictionary<NoiseCoord, NoisePatch> noisePatches = new Dictionary<NoiseCoord, NoisePatch>();
+	private Dictionary<NoiseCoord, NoisePatch> m_noisePatches = new Dictionary<NoiseCoord, NoisePatch>();
+	
+	public Dictionary<NoiseCoord, NoisePatch> noisePatches{
+		get {
+			return m_noisePatches;
+		}
+	}
+	
 	public static Coord BLOCKSPERNOISEPATCH = NoisePatch.PATCHDIMENSIONSCHUNKS * new Coord((int)ChunkManager.CHUNKLENGTH, 
 	                                                                                                   (int) ChunkManager.CHUNKHEIGHT, 
 	                                                                                                   (int)ChunkManager.CHUNKLENGTH);
@@ -59,7 +66,7 @@ public class BlockCollection
 			var b = new BinaryFormatter();
 			//Create a memory stream with the data
 			var m = new MemoryStream(Convert.FromBase64String(data));
-			noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
+			m_noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
 			
 			updateDomain();
 		} 
@@ -67,7 +74,7 @@ public class BlockCollection
 	
 	private void updateDomain()
 	{
-		foreach(KeyValuePair<NoiseCoord,NoisePatch> keyVal in noisePatches)
+		foreach(KeyValuePair<NoiseCoord,NoisePatch> keyVal in m_noisePatches)
 		{
 			NoiseCoord nco = keyVal.Key;
 			if (domain.isErsatzNull())
@@ -86,7 +93,7 @@ public class BlockCollection
 	{
 		var b = new BinaryFormatter();
 		var m = new MemoryStream();
-		b.Serialize(m, noisePatches);
+		b.Serialize(m, m_noisePatches);
 
 		PlayerPrefs.SetString(NOISE_PATCHES_SAVE_NAME, 
 			Convert.ToBase64String(
@@ -113,17 +120,17 @@ public class BlockCollection
 		get 
 		{
 			NoiseCoord nco = noiseCoordForWorldCoord (woco);
-			if (!noisePatches.ContainsKey(nco))
+			if (!m_noisePatches.ContainsKey(nco))
 			{
 				return null;
 			}
-			NoisePatch np = noisePatches [nco];
+			NoisePatch np = m_noisePatches [nco];
 
 			return np.blockAtWorldBlockCoord (woco);
 		}
 		set
 		{
-			NoisePatch np = noisePatches [noiseCoordForWorldCoord (woco)];
+			NoisePatch np = m_noisePatches [noiseCoordForWorldCoord (woco)];
 			np.setBlockAtWorldCoord (value, woco);
 		}
 	}
@@ -203,24 +210,24 @@ public class BlockCollection
 
 	public NoisePatch noisePatchAtWorldCoord (Coord woco) {
 		NoiseCoord nco = noiseCoordForWorldCoord (woco);
-		if (!noisePatches.ContainsKey(nco)) 
+		if (!m_noisePatches.ContainsKey(nco)) 
 			return null;
 		return noisePatches [nco];
 	}
 	
 	public NoisePatch noisePatchAtNoiseCoord (NoiseCoord nco) {
-		if (!noisePatches.ContainsKey(nco)) 
+		if (!m_noisePatches.ContainsKey(nco)) 
 			return null;
 		return noisePatches [nco];
 	}
 	
 	public bool noisePatchExistsAtNoiseCoord(NoiseCoord nco) {
-		return noisePatches.ContainsKey(nco);
+		return m_noisePatches.ContainsKey(nco);
 	}
 	
 	public bool noisePatchExistsAtWorldCoord(Coord woco) {
 		NoiseCoord nco = noiseCoordForWorldCoord(woco);
-		return noisePatches.ContainsKey(nco);
+		return m_noisePatches.ContainsKey(nco);
 	}
 	
 	public NoiseCoord noiseCoordContainingWorldCoord(Coord woco) {
@@ -236,12 +243,12 @@ public class BlockCollection
 	
 	public void destroyPatchAt(NoiseCoord nco) 
 	{
-		if (noisePatches.ContainsKey(nco)) {
-			NoisePatch npToDestroy = noisePatches[nco];
+		if (m_noisePatches.ContainsKey(nco)) {
+			NoisePatch npToDestroy = m_noisePatches[nco];
 			if (npToDestroy.hasStarted || !npToDestroy.IsDone)
 				return;
 
-			bool destroyed = noisePatches.Remove(nco);	
+			bool destroyed = m_noisePatches.Remove(nco);	
 			if (!destroyed) {
 				throw new Exception("failed to destroy..." + nco.toString());
 			}	
@@ -254,12 +261,12 @@ public class BlockCollection
 #if NEW_PATCH_READY
 		if (noisePatchAtNoiseCoordHasBuiltAtleastOnce(nco))
 		{
-			return noisePatches[nco].neighborsHaveAllBuiltAtLeastOnce;	
+			return m_noisePatches[nco].neighborsHaveAllBuiltAtLeastOnce;	
 		}
 		return false;
 #endif
 		
-		if (!noisePatches.ContainsKey(nco))
+		if (!m_noisePatches.ContainsKey(nco))
 			return false;
 #if NEW_PATCH_READY
 		
@@ -269,7 +276,7 @@ public class BlockCollection
 	}
 	
 	public void addNoisePatchAt(NoiseCoord nco, NoisePatch _npatch) {
-		noisePatches.Add(nco, _npatch);
+		m_noisePatches.Add(nco, _npatch);
 		//domain limits
 		if (Quad.Equal(this.domain, Quad.theErsatzNullQuad())) {
 			//first time
@@ -293,7 +300,7 @@ public class BlockCollection
 		NoiseCoord znudge = new NoiseCoord(0,1);
 		
 		//mins (traverse min edge of domain on the z and x sides until we find a coord contained in noisePatches)
-		if (noisePatches.ContainsKey(NoiseCoord.NoiseCoordWithPTwo(domain.origin)))
+		if (m_noisePatches.ContainsKey(NoiseCoord.NoiseCoordWithPTwo(domain.origin)))
 		{	
 			result.Add(NoiseCoord.NoiseCoordWithPTwo(domain.origin));
 		} else {
@@ -302,7 +309,7 @@ public class BlockCollection
 			while (xminz.z < domain.extent().t)
 			{
 				xminz += znudge;
-				if (noisePatches.ContainsKey(xminz)) {
+				if (m_noisePatches.ContainsKey(xminz)) {
 					result.Add(xminz);
 					break;
 				}
@@ -316,7 +323,7 @@ public class BlockCollection
 			while (zminx.x < domain.extent().s)
 			{
 				zminx += xnudge;
-				if (noisePatches.ContainsKey(zminx)) {
+				if (m_noisePatches.ContainsKey(zminx)) {
 					result.Add(zminx);
 					break;
 				}
@@ -330,7 +337,7 @@ public class BlockCollection
 		
 		//maxes
 		NoiseCoord extentCoord = NoiseCoord.NoiseCoordWithPTwo(domain.extent());
-		if (noisePatches.ContainsKey(extentCoord))
+		if (m_noisePatches.ContainsKey(extentCoord))
 		{
 			result.Add(extentCoord);	
 		} else {
@@ -339,7 +346,7 @@ public class BlockCollection
 			while(xmaxz.z >= domain.origin.t)
 			{
 				xmaxz -= znudge;
-				if (noisePatches.ContainsKey(xmaxz)) {
+				if (m_noisePatches.ContainsKey(xmaxz)) {
 					result.Add(xmaxz);
 					break;
 				}
@@ -352,7 +359,7 @@ public class BlockCollection
 			while(zmaxx.x >= domain.origin.s)
 			{
 				zmaxx -= xnudge;
-				if (noisePatches.ContainsKey(zmaxx)) {
+				if (m_noisePatches.ContainsKey(zmaxx)) {
 					result.Add(zmaxx);
 					break;
 				}
@@ -366,17 +373,17 @@ public class BlockCollection
 	}
 	
 	public bool noisePatchAtNoiseCoordHasBuiltAtleastOnce(NoiseCoord nco) {
-		if (!noisePatches.ContainsKey(nco))
+		if (!m_noisePatches.ContainsKey(nco))
 			return false;
 
-		return (!noisePatches[nco].hasStarted && noisePatches[nco].IsDone);
+		return (!m_noisePatches[nco].hasStarted && noisePatches[nco].IsDone);
 	}
 	
 	public bool noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(NoiseCoord nco) {
-		if (!noisePatches.ContainsKey(nco))
+		if (!m_noisePatches.ContainsKey(nco))
 			return false;
 
-		return (noisePatches[nco].hasStarted || noisePatches[nco].IsDone);
+		return (m_noisePatches[nco].hasStarted || m_noisePatches[nco].IsDone);
 	}
 	
 	public List<Range1D> heightsListAtWorldCoord(Coord woco) {

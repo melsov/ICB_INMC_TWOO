@@ -1,5 +1,6 @@
 ﻿#define NO_CAVES
 #define STRUCTURES_WIN
+#define NO_LIGHT_COLS_TEST
 //#define FLAT_TOO
 
 //#define NO_SOD
@@ -560,7 +561,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	public float lightValueAtPatchRelativeCoord(Coord relCo, Direction dir)
 	{
-
+#if NO_LIGHT_COLS_TEST
+		return Window.LIGHT_LEVEL_MAX;	
+#endif
 		if (!relCo.isIndexSafe(patchDimensions) )
 		{
 			return m_chunkManager.ligtValueAtPatchRelativeCoordNoiseCoord(relCo, this.coord, dir);
@@ -1590,6 +1593,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	
 	private void populateWindowMap()
 	{
+#if NO_LIGHT_COLS_TEST
+		return;	
+#endif
 		int xx = 0;
 		int zz = 0;
 
@@ -1605,6 +1611,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	// * obviated ??
 	private void updateWindowMapWithNewSurfaceHeight(int newHeight, int xx, int zz, bool isAirBlock)
 	{
+#if NO_LIGHT_COLS_TEST
+		return;
+#endif
 		// clear windows at this x,z
 		
 		// window map deal with this...	
@@ -1623,6 +1632,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	//* UPDATE (DON'T ADD TO) WINDOW MAP
 	private void updateDiscontinuityInWindowMapWithRanges(List<Range1D> heightRanges, Coord blockChangedCoord, bool solidBlockRemoved)
 	{
+#if NO_LIGHT_COLS_TEST
+		return;
+#endif		
 //		m_windowMap.updateWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx, 0, zz)));
 		m_lightColumnCalculator.updateLightWith(heightRanges, 
 			blockChangedCoord, 
@@ -1639,6 +1651,9 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	//* ADD TO (DON'T UPDATE) WINDOW MAP
 	private void addDiscontinuityToWindowMapWithRanges(List<Range1D> heightRanges, int xx, int zz)
 	{
+#if NO_LIGHT_COLS_TEST
+		return;
+#endif		
 //		m_windowMap.addDiscontinuityToWindowsWithHeightRanges(heightRanges, xx, zz, valuesSurrounding(new Coord(xx,0,zz)));
 		m_lightColumnCalculator.replaceColumnsWithHeightRanges(heightRanges,xx,zz,valuesSurrounding(new Coord(xx,0,zz)));
 	}

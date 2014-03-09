@@ -67,9 +67,10 @@ public struct AlignedCoord
 		}
 	}
 	
-	public AlignedCoord(int _ac, int _up) {
-		across = _ac;
-		up = _up;
+	public AlignedCoord(int _ac, int _up) 
+	{
+		acrossS = (short) _ac;
+		upS = (short) _up;
 	}
 	
 	public AlignedCoord acrossMinusOne() {
@@ -121,21 +122,21 @@ public struct AlignedCoord
 [Serializable]
 public struct SimpleRange : IEquatable<SimpleRange>, iRange
 {
-	public short startShort, rangeShort; // TODO: convert to short?
+	public short startS, rangeS; // TODO: convert to short?
 	
 	public int start {
 		get {
-			return (int) startShort;
+			return (int) startS;
 		} set {
-			startShort = (short) value;
+			startS = (short) value;
 		}
 	}
 	
 	public int range {
 		get {
-			return (int) rangeShort;
+			return (int) rangeS;
 		} set {
-			rangeShort = (short) value;
+			rangeS = (short) value;
 		}
 	}
 	
@@ -181,7 +182,7 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 	
 	public SimpleRange (int _start, int _range) 
 	{
-		start = _start; range = _range;
+		startS = (short)_start; rangeS = (short)_range;
 	}
 	
 	public Range1D convertToRange1D() {
@@ -390,31 +391,38 @@ public struct SimpleRange : IEquatable<SimpleRange>, iRange
 [Serializable]
 public struct Range1D
 {
-	public short startShort, rangeShort; // TODO: convert to byte?
-//	public int start, range; // TODO: convert to byte?
+	public short startS, rangeS; 
+	public byte blockTypeB;
 	
 	public int start {
 		get {
-			return (int) startShort;
+			return (int) startS;
 		} set {
-			startShort = (short) value;
+			startS = (short) value;
 		}
 	}
 	
 	public int range {
 		get {
-			return (int) rangeShort;
+			return (int) rangeS;
 		} set {
-			rangeShort = (short) value;
+			rangeS = (short) value;
 		}
 	}
 	
+	public BlockType blockType {
+		get {
+			return (BlockType) blockTypeB;
+		} set {
+			blockTypeB = (byte) value;
+		}
+	}
 		
 	public static Range1D theErsatzNullRange() {
-		return new Range1D(-999123, -1);
+		return new Range1D(-9923, -1);
 	}
 	
-	public BlockType blockType;
+	
 	
 //	public byte top_light_level; // todo: get rid of these horrible add-ons
 //	public byte bottom_light_level;
@@ -429,7 +437,7 @@ public struct Range1D
 	
 	public Range1D(int _start, int _range, BlockType btype) 
 	{
-		start = _start; range = _range;	blockType = btype;
+		startS = (short) _start; rangeS = (short) _range;	blockTypeB = (byte) btype;
 //		this = new Range1D(_start, _range, btype, Block.MAX_LIGHT_LEVEL, Block.MAX_LIGHT_LEVEL); 
 	}
 	
