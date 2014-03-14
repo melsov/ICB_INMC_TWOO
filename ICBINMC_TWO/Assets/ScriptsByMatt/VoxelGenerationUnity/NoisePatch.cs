@@ -1,6 +1,6 @@
 ﻿#define NO_CAVES
 #define STRUCTURES_WIN
-#define NO_LIGHT_COLS_TEST
+//#define NO_LIGHT_COLS_TEST
 //#define FLAT_TOO
 
 //#define NO_SOD
@@ -364,9 +364,6 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 		
 		if (tradeDataWithFourNeighbors())
 			m_lightColumnCalculator.calculateLight();
-//			m_windowMap.calculateLightAdd();
-		
-		
 		
 //		m_chunkManager.noisePatchFinishedSetup (this);
 		

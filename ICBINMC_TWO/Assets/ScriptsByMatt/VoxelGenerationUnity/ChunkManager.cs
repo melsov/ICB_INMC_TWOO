@@ -1,25 +1,10 @@
 #define TEST_LIBNOISENET
 #define FAST_BLOCK_REPLACE
 #define NEIGH_CHUNKS
-#define NO_ASYNC_CHUNK
+#define NO_SAVING_RECOVERING_DATA
+//#define NO_ASYNC_CHUNK
 //#define LIMITED_WORLD
 
-
-
-using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-
-using System.IO;
-using System;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Cryptography;
-using System.Runtime.ConstrainedExecution;
-using System.Diagnostics;
-
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Runtime.Serialization;
 
 
 /*
@@ -38,18 +23,36 @@ using System.Runtime.Serialization;
  */
 
 /*
-*BUGS:
-*sometimes, (esp. when moving quickly) entire chunks (or other large sections) will be missing from the world. This seemed to happen
-* more frequently when we startred making chunks on a separate thread.
+ *BUGS:
+ *sometimes, (esp. when moving quickly) entire chunks (or other large sections) will be missing from the world. This seemed to happen
+ * more frequently when we startred making chunks on a separate thread.
 
-*sometimes, chunks won't be able to know the blocks adjacent to them,right on their borders in neighbor chunks—probably because the noise for this chunk has
-* yet to be generated. Result is a wall of missing chunks—which at this writing are just patched with a face: i.e. if the block at the edge is null
-	*assume that it is air and add a face.
-*/
+ *sometimes, chunks won't be able to know the blocks adjacent to them,right on their borders in neighbor chunks—probably because the noise for this chunk has
+ * yet to be generated. Result is a wall of missing chunks—which at this writing are just patched with a face: i.e. if the block at the edge is null
+ *assume that it is air and add a face.
+ */
+
+
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
+using System.IO;
+using System;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography;
+using System.Runtime.ConstrainedExecution;
+using System.Diagnostics;
+
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
 using System.ComponentModel;
 using System.Threading;
 using System.Collections.Specialized;
 using System.Runtime.InteropServices;
+
+using Wintellect.PowerCollections;
 
 
 public class ChunkManager : MonoBehaviour 
@@ -75,16 +78,17 @@ public class ChunkManager : MonoBehaviour
 	public Transform playerCameraTransform; 
 	private AudioSource audioSourceCamera; 
 
-	private List<Chunk> activeChunks;
-	private List<Chunk> createTheseChunks;
-	private List<Coord> createTheseVeryCloseAndInFrontChunks;
-	private List<Chunk> checkTheseAsyncChunksDoneCalculating;
-	private List<Chunk> createTheseFurtherAwayChunks;
+	private List<Chunk> activeChunks = new List<Chunk> ();
+	private List<Coord> createTheseChunks = new List<Coord>();
+	private List<Chunk> checkTheseAsyncChunksDoneCalculating = new List<Chunk>();
 	private List<Chunk> destroyTheseChunks;
 	
 	private List<Coord> bugCoordsThatWaitedForAdjacentNPatches = new List<Coord>();
 	
 	private List<Coord> rebuildChunkChunkCoordList = new List<Coord>();
+	
+	private const float PATCH_UPDATE_WAIT_SECONDS = .1f;
+	
 //	private List<Coord> hasEverBeenDestroyedDebugList = new List<Coord>();
 	private Quad m_destroyNoisePatchesOutsideOfRealm = new Quad(new PTwo(-9999,-9999), new PTwo(9999999, 9999999));
 
@@ -92,7 +96,8 @@ public class ChunkManager : MonoBehaviour
 	private CoRange m_veryCloseAndInFrontRealm;
 	private CoRange m_dontDestroyRealm;
 
-	private	List<NoisePatch> setupThesePatches;
+//	private	List<NoisePatch> setupThesePatches = new List<NoisePatch>();
+	private	Set<NoiseCoord> setupThesePatches = new Set<NoiseCoord>(); //TODO....
 	private List<NoisePatch> checkDoneForThesePatches = new List<NoisePatch>();
 	private List<NoiseCoord> bugNoiseCoordsThatDidntExist  = new List<NoiseCoord>();
 
@@ -132,7 +137,7 @@ public class ChunkManager : MonoBehaviour
 	
 	public LibNoiseNetHandler m_libnoiseNetHandler;
 	
-	private NoiseCoord currentTargetedForCreationNoiseCo;
+	private NoiseCoord currentTargetedForCreationNoiseCoDebug;
 	
 	public Transform cursorBlock;
 
@@ -145,13 +150,12 @@ public class ChunkManager : MonoBehaviour
 
 		m_blocks = new BlockCollection (); // (NoisePatch.PATCHDIMENSIONSCHUNKS * CHUNKLENGTH));
 
-		activeChunks = new List<Chunk> ();
-		createTheseVeryCloseAndInFrontChunks = new List<Coord> ();
-		checkTheseAsyncChunksDoneCalculating = new List<Chunk> ();
-		createTheseChunks = new List<Chunk> ();
+//		activeChunks = new List<Chunk> ();
+//		createTheseChunks = new List<Coord> ();
+//		checkTheseAsyncChunksDoneCalculating = new List<Chunk> ();
+//		createTheseChunks = new List<Chunk> ();
 		destroyTheseChunks = new List<Chunk> ();
 
-		setupThesePatches = new List<NoisePatch> ();
 
 	}
 	
@@ -406,7 +410,7 @@ public class ChunkManager : MonoBehaviour
 		
 		if (checkTheseAsyncChunksDoneCalculating.Contains(ch))
 		{
-			throw new Exception("trying to make a chunk that is already on check async list??");
+//			throw new Exception("trying to make a chunk that is already on check async list??");
 			return;
 		}
 		
@@ -543,9 +547,9 @@ public class ChunkManager : MonoBehaviour
 		{
 			Chunk chunk = chunkMap.chunkAt(chCo);
 			
-			if (chunk != null && !createTheseVeryCloseAndInFrontChunks.Contains(chCo))
+			if (chunk != null && !createTheseChunks.Contains(chCo))
 			{
-				createTheseVeryCloseAndInFrontChunks.Insert(0,chCo);
+				createTheseChunks.Insert(0,chCo);
 			}
 //			AssertUtil.Assert( chunk == null || !chunk.isActive , "this chunk shouldn't be ready yet??" + chCo.toString());	
 		}
@@ -582,8 +586,8 @@ public class ChunkManager : MonoBehaviour
 				//END T Violence
 				
 			
-				if (!createTheseVeryCloseAndInFrontChunks.Contains(chunkCoord))
-					createTheseVeryCloseAndInFrontChunks.Add(chunkCoord);
+				if (!createTheseChunks.Contains(chunkCoord))
+					createTheseChunks.Add(chunkCoord);
 			}
 			
 //			rebuildChunkChunkCoordList.Add(chunkCoord); //WANT?
@@ -669,7 +673,7 @@ public class ChunkManager : MonoBehaviour
 		
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "chckASync Cnt:" + checkTheseAsyncChunksDoneCalculating.Count );
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 240, 150, 40), "desThsChs Cnt:" + destroyTheseChunks.Count );
-		GUI.Box (new Rect (Screen.width - 170, Screen.height - 280, 150, 40), "verCls Cnt:" + createTheseVeryCloseAndInFrontChunks.Count );
+		GUI.Box (new Rect (Screen.width - 170, Screen.height - 280, 150, 40), "verCls Cnt:" + createTheseChunks.Count );
 		
 		Coord playerCoord = new Coord (playerCameraTransform.position);
 		Coord chChoord = CoordUtil.ChunkCoordContainingBlockCoord (playerCoord);
@@ -679,7 +683,7 @@ public class ChunkManager : MonoBehaviour
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 80, 150, 40), "plyr chunk co: \n" + chChoord.toString() );
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 120, 150, 40), "" + npatchCo.toString() );
 		GUI.Box (new Rect (Screen.width - 170, Screen.height - 160, 150, 40), "actv chs:" + activeChunks.Count + "chldn:" + transform.childCount );
-		GUI.Box (new Rect (Screen.width - 170, Screen.height - 200, 150, 40), "creThsChs Cnt:" + createTheseChunks.Count );
+//		GUI.Box (new Rect (Screen.width - 170, Screen.height - 200, 150, 40), "creThsChs Cnt:" + createTheseChunks.Count );
 
 		if (GUI.Button (new Rect (Screen.width - 170, Screen.height - 320, 150, 40), "SAVE" ))
 		{
@@ -1046,13 +1050,18 @@ public class ChunkManager : MonoBehaviour
 		return resultList;
 	}
 	
+	private int playerCameraAngleDegrees() {
+		return (int)(playerCameraTransform.eulerAngles.y);
+	}
+	
 	private int playerCameraAngleToPizzaAngle() 
 	{
-		int unityangle = (int)((playerCameraTransform.eulerAngles.y + 22.0f) / 45);
-		int angle = unityangle;
+		int angle = (int)((playerCameraAngleDegrees() + 22.0f) / 45);
+
 		angle = angle == 8 ? 0 : angle;
 		
-		// Unity angles start at z pos and go clock-wise (pizza starts at x pox and go CCW)
+		// From a bird's eye view
+		// Unity euler angles y start at z pos and go clock-wise (pizza starts at x pox and go CCW)
 		angle = 8 - angle; 
 		angle += 2;
 		angle = angle % 8;
@@ -1130,7 +1139,7 @@ public class ChunkManager : MonoBehaviour
 				}
 
 //				
-				// pizza chunks
+				// pizza angle chunks
 				int cameraPizzaAngle = playerCameraAngleToPizzaAngle();
 				addToCreateTheseChunksWithDistanceFromPlayer(1, cameraPizzaAngle);
 				addToCreateTheseChunksWithDistanceFromPlayer(2, cameraPizzaAngle);
@@ -1140,6 +1149,8 @@ public class ChunkManager : MonoBehaviour
 				addToCreateTheseChunksWithDistanceFromPlayer(4, cameraPizzaAngle);
 				
 				updateCreateTheseChunksList (wantActiveRealm);
+				
+//				createTheseChunks.Clear(); // TEST!!!
 			}
 			yield return new WaitForSeconds (.88f);
 		}
@@ -1170,6 +1181,9 @@ public class ChunkManager : MonoBehaviour
 	private void prepareCandidateChunkAtCoord(Coord chco)
 	{
 		Chunk chh = chunkMap.chunkAtOrNullIfUnready (chco); 
+		
+		if(chh != null && createTheseChunks.Contains(chh.chunkCoord))
+			return; 
 		
 		if(checkTheseAsyncChunksDoneCalculating.Contains(chh))
 			return; // be paranoid?
@@ -1206,8 +1220,8 @@ public class ChunkManager : MonoBehaviour
 
 			chh.isActive = true;
 			
-			if (!createTheseVeryCloseAndInFrontChunks.Contains(chh.chunkCoord))
-				createTheseVeryCloseAndInFrontChunks.Add (chh.chunkCoord);
+//			if (!createTheseChunks.Contains(chh.chunkCoord))
+			createTheseChunks.Add (chh.chunkCoord);
 
 		}
 	}
@@ -1304,17 +1318,16 @@ public class ChunkManager : MonoBehaviour
 		{
 			if (shouldBeCreatingChunksNow ()) 
 			{
-				Chunk chunk = null; // = createTheseVeryCloseAndInFrontChunks [0];
+				Chunk chunk = null; // = createTheseChunks [0];
 
-				if (createTheseVeryCloseAndInFrontChunks.Count > 0)
+				if (createTheseChunks.Count > 0)
 				{
 					
-					Coord chco = getChunkCoordWithinDontDestroyRealmFromList(createTheseVeryCloseAndInFrontChunks);
+					Coord chco = getChunkCoordWithinDontDestroyRealmFromList(createTheseChunks);
 					if (!chco.equalTo(Coord.TheErsatzNullCoord()))
 					{
 						chunk = chunkMap.chunkAt(chco);
-						if (chunk == null)
-							throw new Exception("surprising chunk was in v close list but not on chunk map!");
+						AssertUtil.Assert(chunk!= null, "surprising chunk was in v close list but not on chunk map!");
 					}
 					
 					if (chunk != null)
@@ -1325,9 +1338,9 @@ public class ChunkManager : MonoBehaviour
 #else
 						makeChunksFromOnSepThreadAtCoord(chunk.chunkCoord);
 #endif
-						createTheseVeryCloseAndInFrontChunks.Remove(chunk.chunkCoord); // isn't that better??
+						createTheseChunks.Remove(chunk.chunkCoord); // isn't that better??
 					} else {
-						cullVeryCloseList(createTheseVeryCloseAndInFrontChunks);
+						cullVeryCloseList(createTheseChunks);
 					}
 				}
 				else if (!TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
@@ -1338,7 +1351,7 @@ public class ChunkManager : MonoBehaviour
 						
 						if (chunk != null) 
 						{
-							if (!createTheseVeryCloseAndInFrontChunks.Contains(chunk.chunkCoord)) 
+							if (!createTheseChunks.Contains(chunk.chunkCoord)) 
 							{
 								chunkMap.destroyChunkAt (chunk.chunkCoord);
 								activeChunks.Remove(chunk);
@@ -1434,40 +1447,70 @@ public class ChunkManager : MonoBehaviour
 	IEnumerator updateSetupPatchesListI()
 	{
 		bool testRunnerApproves = false;
+		int i = 0;
+		NoiseCoord nco;
+		NoisePatch np;
+		NoiseCoord neico;
+		NoisePatch neipatch;
+		List<NoiseCoord> neighborsToStart;
+		
 		while (true) 
 		{
-			NoiseCoord nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(1);
+			nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
 			
 			testRunnerApproves = TestRunner.NoiseCoordWithinTestLimits(nco);
 			
-			if (testRunnerApproves && !NoiseCoord.Equal(nco, NoiseCoord.TheErsatzNullNoiseCoord()) ) //  !NoiseCoord.Equal (currentNoiseCo, lastPlayerNoiseCoord)) 
+			if (testRunnerApproves && !nco.isErsatzNull() ) //  !NoiseCoord.Equal (currentNoiseCo, lastPlayerNoiseCoord)) 
 			{
-				currentTargetedForCreationNoiseCo = nco;
+				currentTargetedForCreationNoiseCoDebug = nco;
 
-				NoisePatch np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet(nco);//  blocks.noisePatches [nco];
+				np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet(nco);//  blocks.noisePatches [nco];
 				
 				if (!setupThesePatches.Contains(np))
 				{
 					setupThesePatches.Add (np);
 				}
 #if NEIGH_CHUNKS
+				
 				//NEIGHBORS
-				List<NoiseCoord> neighborsToStart = np.neighborCoordsWhoHaveNotStartedSetup();
-				foreach(NoiseCoord neico in neighborsToStart) 
+				neighborsToStart = np.neighborCoordsWhoHaveNotStartedSetup();
+				for(i = 0; i < neighborsToStart.Count; ++i)
 				{
-					NoisePatch neipatch = makeNoisePatchIfNotExistsAtNoiseCoordAndGet(neico);
-					if (!setupThesePatches.Contains(neipatch))
+					neico = neighborsToStart[i];
+					neipatch = makeNoisePatchIfNotExistsAtNoiseCoordAndGet(neico);
+					if (!setupThesePatches.Contains(neipatch)) 
 						setupThesePatches.Add(neipatch);
+					
+					yield return new WaitForSeconds(PATCH_UPDATE_WAIT_SECONDS); 
 				}
 				//END NEIGHBORS
 #endif
-				
-
 			}
 			yield return new WaitForSeconds (.1f); //null; // 
 		}
 	}
-
+	
+	private NoisePatch noisePatchClosestToPlayerFromSet(Set<NoisePatch> npatchSet)
+	{
+		return null;
+	}
+	
+	NoisePatch patchClosestToPlayerViewFromSetupPatchesSet()
+	{
+		int squareRadius = 1;
+		int camAngle = playerCameraAngleDegrees();
+		List<int> angles = CrudeTrig.SquareAnglesForRadiusAndAngle(squareRadius, camAngle );
+		NoiseCoord playerNco = playerNoiseCoord();
+		
+		foreach(int ang in angles)
+		{
+			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
+			NoiseCoord nco = new NoiseCoord(nudge) + playerNco;
+//			if (setupThesePatches.Contains())
+		}
+		
+		return null;
+	}
 
 	
 	IEnumerator setupPatchesFromPatchesList()
@@ -1477,7 +1520,7 @@ public class ChunkManager : MonoBehaviour
 		{
 			if (setupThesePatches.Count > 0) 
 			{	
-				NoisePatch np = setupThesePatches [0];
+				NoisePatch np =  patchClosestToPlayerViewFromSetupPatchesSet(); // setupThesePatches [0];
 
 				if (np != null) 
 				{
@@ -1530,31 +1573,58 @@ public class ChunkManager : MonoBehaviour
 		return dontDestroyKwad.contains(PTwo.PTwoXZFromNoiseCoord(nco));
 	}
 	
+	NoiseCoord getFurthestFromPlayer(List<NoiseCoord> ncos)
+	{
+		NoiseCoord playerNoiseCoord = CoordUtil.NoiseCoordForWorldCoord(playerPosCoord());
+		int ncosCount = ncos.Count;
+		int distance = 0;
+		NoiseCoord result = NoiseCoord.TheErsatzNullNoiseCoord();
+		
+		foreach(NoiseCoord nco in ncos)
+		{
+			int nextDistance = (nco - playerNoiseCoord).Abs().SumOfComponents();
+			if (nextDistance > distance)
+			{
+				distance = nextDistance;
+				result = nco;
+			}
+		}
+		
+		return result;
+	}
+	
+	private bool shouldDestroyNoisePatchesNow()
+	{
+		return blocks.noisePatches.Count > 9; //TEST AMOUNT REALLY SHOULD BE GREATER 
+	}
+	
 	IEnumerator destroyFarAwayNoisePatches()
 	{
+		List<NoiseCoord> furthestNCos = null;
 		while(true)
 		{
-			List<NoiseCoord> furthestNCos = blocks.furthestNoiseCoords();
-//			List<NoiseCoord> furthestNCos = new List<NoiseCoord>();
-			
-			if (furthestNCos.Count > 0)
+			if (shouldDestroyNoisePatchesNow())
 			{
-				
-				NoiseCoord farAwayNCo = furthestNCos[0];
-//				if (!m_destroyNoisePatchesOutsideOfRealm.contains(PTwo.PTwoXZFromNoiseCoord(farAwayNCo)))
-				if (!noiseCoordIsInsideDontDestoryRealm(farAwayNCo))
+				furthestNCos = blocks.furthestNoiseCoords();
+				if (furthestNCos.Count > 0)
 				{
-					NoisePatch npatch = blocks.noisePatchAtNoiseCoord(farAwayNCo);
-					if (npatch.IsDone) {
-						setupThesePatches.Remove(npatch);
-						blocks.destroyPatchAt(farAwayNCo);
-					}
-					else { 
-						b.bug("noispatch is building now " + farAwayNCo.toString());
+					NoiseCoord farAwayNCo = getFurthestFromPlayer(furthestNCos); //  furthestNCos[0];
+	//				if (!m_destroyNoisePatchesOutsideOfRealm.contains(PTwo.PTwoXZFromNoiseCoord(farAwayNCo)))
+					if (!farAwayNCo.isErsatzNull() && !noiseCoordIsInsideDontDestoryRealm(farAwayNCo))
+					{
+						NoisePatch npatch = blocks.noisePatchAtNoiseCoord(farAwayNCo);
+						//TODO: check that this noise patch doesn't contain any chunks maybe?
+						
+						if (npatch.IsDone) {
+							setupThesePatches.Remove(npatch);
+							blocks.destroyPatchAt(farAwayNCo);
+						}
+						else { 
+							b.bug("noispatch is building now " + farAwayNCo.toString()); // patches appear to get stuck building
+							// unclear if related to axync chunking...
+						}
 					}
 				}
-				
-
 				
 //				foreach(NoiseCoord nco in furthestNCos) 
 //				{
@@ -1565,7 +1635,7 @@ public class ChunkManager : MonoBehaviour
 //				}
 			}
 			
-			yield return new WaitForSeconds(1f);
+			yield return new WaitForSeconds(.1f);
 		}
 	}
 
@@ -1602,10 +1672,16 @@ public class ChunkManager : MonoBehaviour
 		return noiseCoordClosestToPlayer(RadiusLimit, true);
 	}
 	
-	NoiseCoord noiseCoordClosestToPlayer(int RadiusLimit, bool wantNotSetUp)
+	NoiseCoord playerNoiseCoord()
 	{
 		Coord playerCoord = playerPosCoord();
-		NoiseCoord playerNCo = noiseCoordContainingWorldCoord(playerCoord);
+		return noiseCoordContainingWorldCoord(playerCoord);
+	}
+	
+	NoiseCoord noiseCoordClosestToPlayer(int RadiusLimit, bool wantNotSetUp)
+	{
+//		Coord playerCoord = playerPosCoord();
+		NoiseCoord playerNCo = playerNoiseCoord();//  noiseCoordContainingWorldCoord(playerCoord);
 				
 		Coord currentNCoWoco = worldCoordForNoiseCoord(playerNCo);
 		
@@ -1621,8 +1697,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1631,8 +1706,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1641,8 +1715,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1651,8 +1724,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1661,8 +1733,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1671,8 +1742,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1681,8 +1751,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1691,8 +1760,7 @@ public class ChunkManager : MonoBehaviour
 			if (!blocks.noisePatchExistsAtNoiseCoord(nextNoiseCo))
 				return nextNoiseCo;
 			else if (wantNotSetUp) {
-//				NoisePatch np = blocks.noisePatches[nextNoiseCo];
-//				if (!np.hasStarted)
+
 				if (!blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nextNoiseCo))
 					return nextNoiseCo;
 			}
@@ -1706,8 +1774,8 @@ public class ChunkManager : MonoBehaviour
 	}
 	
 	//only returns 0, 2, 4 or 6 (0 == 3 oclock, 2 == 12 o'clock, 4 == 9 o'clock, 6 == 6 o'clock)
-	int closestPizzaAngleForRelativeCoord(Coord relCoord, Coord zoneDimension) {
-		
+	private static int closestPizzaAngleForRelativeCoord(Coord relCoord, Coord zoneDimension) 
+	{
 		if (relCoord.x > relCoord.z) { //lower right half triangle
 			
 			// this point is also inside the lower left half triangle so must be 6 o'clock
@@ -1724,26 +1792,26 @@ public class ChunkManager : MonoBehaviour
 		return 2; 
 	}
 	
-	static Coord blockyRadar(int pizzaSliceCount) {
+	private static Coord blockyRadar(int pizzaSliceAngle) {
 		// the pos x axis bisects the slice at sliceCount = 0
 		
-		pizzaSliceCount = pizzaSliceCount % 8;
+		pizzaSliceAngle = pizzaSliceAngle % 8;
 		
-		if (pizzaSliceCount < 0) {
-			pizzaSliceCount = 8 - pizzaSliceCount;
+		if (pizzaSliceAngle < 0) {
+			pizzaSliceAngle = 8 - pizzaSliceAngle;
 		}
 		
 		int x = 0; int z = 0;
 		
-		if (pizzaSliceCount == 7 || pizzaSliceCount <= 1) {
+		if (pizzaSliceAngle == 7 || pizzaSliceAngle <= 1) {
 			x = 1;	
-		} else if (pizzaSliceCount < 6 && pizzaSliceCount > 2) {
+		} else if (pizzaSliceAngle < 6 && pizzaSliceAngle > 2) {
 			x = -1;
 		}
 		
-		if (pizzaSliceCount > 0 && pizzaSliceCount < 4) {
+		if (pizzaSliceAngle > 0 && pizzaSliceAngle < 4) {
 			z = 1;
-		} else if (pizzaSliceCount > 4) {
+		} else if (pizzaSliceAngle > 4) {
 			z = -1;
 		}
 		
@@ -1871,6 +1939,8 @@ public class ChunkManager : MonoBehaviour
 		moveToCo.y += 5;
 		playerCameraTransform.parent.transform.position = moveToCo.toVector3 ();
 	}
+	
+	
 
 	// Use this for initialization
 	void Start () 
@@ -1887,10 +1957,11 @@ public class ChunkManager : MonoBehaviour
 		chunkMap = new ChunkMap (); //new Coord (WORLD_XLENGTH_CHUNKS, WORLD_HEIGHT_CHUNKS, WORLD_ZLENGTH_CHUNKS));
 		
 		lightColumnWorldMap = new LightColumnWorldMap(this);
-		
-		blocks.getSavedNoisePatches (); // from player prefs, if any...
-		
+
+#if NO_SAVING_RECOVERING_DATA
+#else
 		// REFRESH SAVED NOISEPATCHES
+		blocks.getSavedNoisePatches (); // from player prefs, if any...
 		foreach(KeyValuePair<NoiseCoord, NoisePatch> npatch in blocks.noisePatches)
 		{
 			NoisePatch np = (NoisePatch)npatch.Value;
@@ -1900,6 +1971,7 @@ public class ChunkManager : MonoBehaviour
 			// TODO: if noisepatch is within the 'init' zone, make it regen its blocks
 			// or are we already doing this?? (but are saved np's being 'lazy' somehow?)
 		}
+#endif
 
 		lastPlayerNoiseCoord = new NoiseCoord (100000000, -100000003);
 		setNoiseHandlerResolution ();
@@ -2008,12 +2080,15 @@ public class ChunkManager : MonoBehaviour
 //		while (!firstNoisePatch.Update()) {
 //			bug ("noise patch one still not done");
 //		}
-
+		
+	
+		
 		finishStartSetup ();
 
 	}
 
-	private void finishStartSetup() {
+	private void finishStartSetup() 
+	{
 		Coord spawnPAtChunkCoord  = CoordUtil.ChunkCoordContainingBlockCoord (spawnPlayerAtCoord);
 
 		//		CoRange nearbyCoRa = corangeFromNoiseCoord (initalNoiseCoord);
@@ -2025,7 +2100,9 @@ public class ChunkManager : MonoBehaviour
 		
 		placePlayerAtSpawnPoint ();
 
-
+		
+		
+		
 		if (!TestRunner.RunGameOnlyOneNoisePatch) 
 		{
 			StartCoroutine (createAndDestroyChunksFromLists ());
@@ -2034,9 +2111,9 @@ public class ChunkManager : MonoBehaviour
 			StartCoroutine (updateSetupPatchesListI ());
 			StartCoroutine (checkAsyncPatchesDone ());
 			
-			StartCoroutine(destroyFarAwayNoisePatches()); 
+			StartCoroutine(destroyFarAwayNoisePatches());
 			
-			StartCoroutine (updateChunkLists ());
+			StartCoroutine (updateChunkLists ()); 
 			StartCoroutine (checkAsyncChunksList ());
 			
 //				StartCoroutine(updatePlayerPositionInShader());
@@ -2073,17 +2150,18 @@ public class ChunkManager : MonoBehaviour
 //		#endif
 		//**want
 		
-		DebugLinesUtil.drawDebugCubesForAllCreatedNoisePatches(currentTargetedForCreationNoiseCo, blocks.noisePatches);
-		DebugLinesUtil.drawDebugCubesForNoisePatchesList(setupThesePatches, Color.yellow, 6);
+		DebugLinesUtil.drawDebugCubesForAllCreatedNoisePatches(currentTargetedForCreationNoiseCoDebug, blocks.noisePatches);
+//		DebugLinesUtil.drawDebugCubesForNoisePatchesList(setupThesePatches, Color.yellow, 6);
+		
 //		DebugLinesUtil.drawDebugCubesForNoisePatchesList(checkDoneForThesePatches, Color.magenta, 2);
 //		DebugLinesUtil.drawDebugCubesForNoiseCoordList(bugNoiseCoordsThatDidntExist, Color.red, 1);
 //		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));
 		
-//		DebugLinesUtil.drawDebugCubesForAllUncreatedChunks(createTheseVeryCloseAndInFrontChunks);
+//		DebugLinesUtil.drawDebugCubesForAllUncreatedChunks(createTheseChunks);
 //		DebugLinesUtil.drawDebugCubesForChunkCoordList(bugCoordsThatWaitedForAdjacentNPatches, new Color(.1f,.7f,.4f,1f), new Coord(-2,0,2));
 //		DebugLinesUtil.drawDebugCubesForChunksOnDestroyList(destroyTheseChunks);
 //		DebugLinesUtil.drawDebugCubesForChunksOnCheckASyncList(checkTheseAsyncChunksDoneCalculating);
-//		DebugLinesUtil.drawDebugCubesForChunkList(activeChunks, new Color(.9f,.4f,.4f,1.0f), new Coord(1,0,4));
+		DebugLinesUtil.drawDebugCubesForChunkList(activeChunks, new Color(.9f,.4f,.4f,1.0f), new Coord(1,0,4));
 //		drawDebugCubesForEverBeenDestroyedList();
 
 

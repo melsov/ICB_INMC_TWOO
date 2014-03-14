@@ -33,15 +33,24 @@ public class TestRunner : MonoBehaviour
 	static Color orthoZColor = new Color(.4f, .5f, .1f, 1f);
 	static Color diagColor = new Color(.5f, .2f, .8f, 1f);	
 	
+	private int testCrudeTrigeRadius = 1;
+	private List<Coord> testTrigCoords = new List<Coord>();
+	private Coord currentTestTrigCoord;
+	
 	void Start () 
 	{
 		if (dontRunGame)
 		{
 //			FaceSetTest fst = new FaceSetTest();
-			FaceAggregatorTest fat = new FaceAggregatorTest();
-			meshSets = fat.getMeshResults();
+			
+//			FaceAggregatorTest fat = new FaceAggregatorTest();
+//			meshSets = fat.getMeshResults();
+			
+			StartCoroutine(	testTrig());
 		}
 	}
+	
+
 	
 	public static bool NoiseCoordWithinTestLimits(NoiseCoord nco)
 	{
@@ -65,8 +74,59 @@ public class TestRunner : MonoBehaviour
 	
 	// Update is called once per frame
 	void Update () {
-		if (doRunTest && dontRunGame)
+		if (false && doRunTest && dontRunGame)
 			drawMeshSets();
+		else {
+			
+			drawTrigCoords();
+		}
+	}
+	
+	private IEnumerator testTrig()
+	{
+		int testAng = 35;
+		while(true)
+		{
+//			int radTwo = testCrudeTrigeRadius * 2;
+//			int angleCount = (radTwo + 1) * (radTwo + 1) - (radTwo - 1) * (radTwo - 1); //square count also
+//			int angIncr = (int)(360/(angleCount));
+			
+//			if (testCrudeTrigeRadius > 3)
+//			{
+//				angIncr = 2;
+//			}
+
+//			b.bug("ang incr: " + angIncr);
+			
+//			List<int> angs = CrudeTrig.SquareAnglesForRadiusAndAngle(testCrudeTrigeRadius, testAng);
+			List<int> angs = CrudeTrig.SquareAnglesForFullPerimeter(testCrudeTrigeRadius, testAng);
+			
+//			for(int angDegrees = 0;angDegrees < 360 ;angDegrees += angIncr )
+			foreach(int angDegrees in angs )
+			{
+//				int angDegrees = 0;
+				Coord nudgeCo = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(angDegrees, testCrudeTrigeRadius);
+				currentTestTrigCoord = nudgeCo;
+				testTrigCoords.Add(nudgeCo);
+				yield return new WaitForSeconds(.05f);
+			}
+			
+			testCrudeTrigeRadius ++;
+			
+			if (testCrudeTrigeRadius > 5)
+			{
+				testCrudeTrigeRadius = 1;
+				testAng -= 90;
+			}
+			
+//			return true;
+		}
+	}
+	
+	private void drawTrigCoords()
+	{
+		DebugLinesUtil.DrawDebugCubesForChunksCoords(testTrigCoords);
+		DebugLinesUtil.DrawDebugForChunkCoord(currentTestTrigCoord, new Color(.2f,.7f,.7f,1f ));
 	}
 	
 	void drawMeshSets()

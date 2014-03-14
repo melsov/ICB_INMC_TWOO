@@ -3,6 +3,18 @@ using System.Collections;
 
 using System.Collections.Generic;
 
+public interface iXZPoint
+{
+	int x {
+		get; set;
+	}
+	
+	int z {
+		get; set;
+	}
+	
+	PTwo toPTwo();
+}
 
 public struct NeighborChunks
 {
@@ -98,7 +110,7 @@ public struct MeshSet
 //	}
 //}
 
-public struct PTwo
+public struct PTwo : iXZPoint
 {
 	public int s, t;
 	
@@ -129,6 +141,28 @@ public struct PTwo
 	public PTwo(int st) {
 		this = new PTwo(st,st);
 	}
+	
+	#region iXZPoint
+	
+	public int x {
+		get {
+			return s;
+		} set {
+			s = value;
+		}
+	}
+	
+	public int z {
+		get {
+			return t;
+		} set {
+			t = value;
+		}
+	}
+	
+	public PTwo toPTwo() { return this; }
+	
+	#endregion
 	
 	public PTwo plusOne() {
 		return new PTwo(this.s + 1, this.t + 1);	

@@ -124,6 +124,45 @@ public static class CoordUtil
 		}
 		
 		return result;
+	}
+	
+	public static List<PTwo> PointsJustInsideBorderOfQuad(Quad area)
+	{
+		return PointsInsideBorderOfQuad(area, 0);
+	}
+	
+	public static List<PTwo> PointsInsideBorderOfQuad(Quad area, int inset)
+	{
+		List<PTwo> result = new List<PTwo>();
+		SimpleRange sRange = area.sSimpleRange();
+		SimpleRange tRange = area.tSimpleRange();
+		
+		if (inset > sRange.range/2 || inset > tRange.range/2)
+			return result;
+		
+		int outerNudge = inset + 1;
+		
+		int start = sRange.start + inset;
+		int otherDim = tRange.start + inset;
+		int otherDimOuter = tRange.extent() - outerNudge;
+		
+		for(int i = start; i < sRange.extent() - outerNudge; ++i)
+		{
+			result.Add(new PTwo(i, otherDim));
+			result.Add(new PTwo(i, otherDimOuter));
+		}
+		
+		start = tRange.start + inset + 1;
+		otherDim = sRange.start + inset;
+		otherDimOuter = sRange.extent() - outerNudge;
+		
+		for(int i = start; i < tRange.extent() - outerNudge - 1; ++i)
+		{
+			result.Add(new PTwo(otherDim, i));
+			result.Add(new PTwo(otherDimOuter, i));
+		}
+		
+		return result;
 		
 	}
 }

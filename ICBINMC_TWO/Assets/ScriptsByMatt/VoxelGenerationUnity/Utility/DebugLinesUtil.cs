@@ -91,6 +91,15 @@ public static class DebugLinesUtil
 		}
 	}
 	
+	public static void DrawDebugCubesForChunksCoords(List<Coord> chunkCos)
+	{
+		Coord nudge = new Coord(3, 0, 3); // avoid occluding create very close lines
+		foreach(Coord co in chunkCos)
+		{
+			drawDebugForChunkCoord(co, Color.red, nudge);
+		}
+	}
+	
 	public static void drawDebugCubesForChunksOnCheckASyncList(List<Chunk> checkTheseAsyncChunksDoneCalculating)
 	{
 		Coord nudge = new Coord(-3, 0, -3); // avoid occluding create very close lines
@@ -128,6 +137,11 @@ public static class DebugLinesUtil
 	}
 	
 	static void drawDebugForChunkCoord(Coord chunkCo, Color color_)
+	{
+		drawDebugForChunkCoord(chunkCo, color_, Coord.coordZero());
+	}
+	
+	public static void DrawDebugForChunkCoord(Coord chunkCo, Color color_)
 	{
 		drawDebugForChunkCoord(chunkCo, color_, Coord.coordZero());
 	}

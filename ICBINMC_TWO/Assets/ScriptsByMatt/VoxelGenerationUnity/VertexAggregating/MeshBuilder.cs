@@ -209,6 +209,11 @@ public class MeshBuilder
 	public void addDataToMesh(GameObject _gameObj) 
 	{
 		
+		if (_gameObj == null)
+		{
+			throw new Exception("got _gameObj null in mesh builder");
+		}
+		
 		_gameObj.GetComponent<MeshFilter>().mesh.Clear();
 		
 		CombineInstance[] combines = combineInstancesFromAxisMeshSets();
@@ -530,9 +535,10 @@ public class MeshBuilder
 		{
 			fa = faceAggs[i];
 			
+			
 			if (fa != null)
 			{
-
+				
 				MeshSet mset;
 				if (wantToRecalculate)
 					mset = fa.getFaceGeometry(i);

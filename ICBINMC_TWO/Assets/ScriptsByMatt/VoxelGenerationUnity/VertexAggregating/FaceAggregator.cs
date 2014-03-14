@@ -551,6 +551,7 @@ public class FaceAggregator
 			resCol32s.AddRange(mset.color32s);
 			resV4s.AddRange(mset.tangents);
 		}
+		
 
 		MeshSet ret_mset = new MeshSet( new GeometrySet(resTriIndices, resVecs), resUVs, resCol32s, resV4s);
 		this.meshSet = ret_mset;

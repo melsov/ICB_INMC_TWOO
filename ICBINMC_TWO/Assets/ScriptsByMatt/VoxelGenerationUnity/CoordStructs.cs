@@ -422,8 +422,6 @@ public struct Range1D
 		return new Range1D(-9923, -1);
 	}
 	
-	
-	
 //	public byte top_light_level; // todo: get rid of these horrible add-ons
 //	public byte bottom_light_level;
 
@@ -1067,6 +1065,10 @@ public struct NoiseCoord : IEquatable<NoiseCoord>
 		return new NoiseCoord(-99999, 9994);
 	}
 	
+	public bool isErsatzNull() {
+		return NoiseCoord.Equal(this, NoiseCoord.TheErsatzNullNoiseCoord());
+	}
+	
 	public static NoiseCoord NoiseCoordWithPTwo(PTwo ptwo) {
 		return new NoiseCoord(ptwo.s, ptwo.t);	
 	}
@@ -1101,6 +1103,14 @@ public struct NoiseCoord : IEquatable<NoiseCoord>
 	
 	public static NoiseCoord operator * (NoiseCoord aa, int bb) {
 		return new NoiseCoord(aa.x * bb, aa.z * bb); 
+	}
+	
+	public NoiseCoord Abs() {
+		return new NoiseCoord(Mathf.Abs(x), Mathf.Abs(z));
+	}
+	
+	public int SumOfComponents() {
+		return x + z;
 	}
 }
 

@@ -68,11 +68,11 @@ public class BlockCollection
 			var m = new MemoryStream(Convert.FromBase64String(data));
 			m_noisePatches = (Dictionary<NoiseCoord, NoisePatch>)b.Deserialize(m);
 			
-			updateDomain();
+			enlargeDomain();
 		} 
 	}
 	
-	private void updateDomain()
+	private void enlargeDomain()
 	{
 		foreach(KeyValuePair<NoiseCoord,NoisePatch> keyVal in m_noisePatches)
 		{
@@ -88,7 +88,13 @@ public class BlockCollection
 		//debug
 		ChunkManager.debugLinesAssistant.debugQuad = domain;
 	}
-
+	
+	// TODO: change saving system so that noisepatches
+	// save before being destroyed.
+	// may mean having a dictionary of saved patches.
+	// saving that dictionary
+	// and saving the paches under separate keys.
+	// dictionary or list.
 	public void saveNoisePatchesToPlayerPrefs() 
 	{
 		var b = new BinaryFormatter();
@@ -249,6 +255,7 @@ public class BlockCollection
 				return;
 
 			bool destroyed = m_noisePatches.Remove(nco);	
+			
 			if (!destroyed) {
 				throw new Exception("failed to destroy..." + nco.toString());
 			}	
@@ -295,6 +302,28 @@ public class BlockCollection
 		
 		if (domain.dimensions.s < 3 || domain.dimensions.t < 3)
 			return result;
+		
+		List<PTwo> pCoords = CoordUtil.PointsJustInsideBorderOfQuad(this.domain);
+		NoiseCoord nco;
+		foreach(PTwo point in pCoords)
+		{
+			nco = NoiseCoord.NoiseCoordWithPTwo(point);
+			if (m_noisePatches.ContainsKey(nco))
+			{
+				result.Add(nco);
+			}
+		}
+		
+		if (result.Count == 0)
+		{
+			//trim
+			domain.origin += new PTwo(1);
+			domain.dimensions -= new PTwo(1);
+		}
+		
+		return result;
+		
+		//// *********** //// *********** //// *********** //// *********** 
 		
 		NoiseCoord xnudge = new NoiseCoord(1,0);
 		NoiseCoord znudge = new NoiseCoord(0,1);

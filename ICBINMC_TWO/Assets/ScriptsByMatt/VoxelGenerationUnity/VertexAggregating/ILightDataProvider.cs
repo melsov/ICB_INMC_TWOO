@@ -37,11 +37,12 @@ public class LightDataProvider : ILightDataProvider
 	public Vector4 lightDataForQuadFloat(Quad quad, Direction dir, int normalOffset)
 	{
 		
-		if (debugLinesAssistant == null)
-			debugLinesAssistant = ChunkManager.debugLinesAssistant;
+//		if (debugLinesAssistant == null)
+//			debugLinesAssistant = ChunkManager.debugLinesAssistant; //BUG ON SEP THREAD // CompareBaseObjectsInternal can only be called from the main thread
 		
 		if (m_noisePatch == null)
 			m_noisePatch = m_chunk.m_noisePatch;
+		
 		
 //		AssertUtil.Assert(m_noisePatch != null, "what? noisepatch still null?");
 		
@@ -94,8 +95,8 @@ public class LightDataProvider : ILightDataProvider
 	
 	public Color32 lightDataForQuad(Quad quad, Direction dir, int normalOffset)
 	{
-		if (debugLinesAssistant == null)
-			debugLinesAssistant = ChunkManager.debugLinesAssistant;
+//		if (debugLinesAssistant == null)
+//			debugLinesAssistant = ChunkManager.debugLinesAssistant;
 		
 		if (m_noisePatch == null)
 			m_noisePatch = m_chunk.m_noisePatch;
@@ -208,11 +209,11 @@ public class LightDataProvider : ILightDataProvider
 			
 			if (surfaceStatus == CoordSurfaceStatus.ABOVE_SURFACE || surfaceStatus == CoordSurfaceStatus.BELOW_SURFACE_SOLID)
 			{
-				if (surfaceStatus == CoordSurfaceStatus.BELOW_SURFACE_SOLID) //TEST
-				{
-					testLine.end = CoordUtil.WorldCoordForChunkCoord(chunkCo) +  totalOffset;
-					debugLinesAssistant.addCoordLine(testLine.start, testLine.end); //TEST
-				}
+//				if (surfaceStatus == CoordSurfaceStatus.BELOW_SURFACE_SOLID) //TEST
+//				{
+//					testLine.end = CoordUtil.WorldCoordForChunkCoord(chunkCo) +  totalOffset;
+//					debugLinesAssistant.addCoordLine(testLine.start, testLine.end); //TEST
+//				}
 				return surfaceStatus;
 			}
 		}

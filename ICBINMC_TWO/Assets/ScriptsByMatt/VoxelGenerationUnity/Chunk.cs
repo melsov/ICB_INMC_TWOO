@@ -133,16 +133,18 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 	
 	public void editBlockAtCoord(Coord relCo, BlockType btype) 
 	{
-		MeshSet mset;
+//		MeshSet mset;
 		if (btype == BlockType.Air)
 		{
-			mset = meshBuilder.newMeshSetByRemovingBlockAtCoord(relCo);
+//			mset = 
+			meshBuilder.newMeshSetByRemovingBlockAtCoord(relCo);
 			// TODO: is the block just below a dirt block (that now has air above it?)
 			// if so remove this block as well and add a grass block.
 		}
 		else 
 		{
-			mset = meshBuilder.newMeshSetByAddingBlockAtCoord(relCo, btype);
+//			mset = 
+			meshBuilder.newMeshSetByAddingBlockAtCoord(relCo, btype);
 		}
 		
 		//TODO: now that mesh builder actually builds the mesh anyway
@@ -590,6 +592,7 @@ public class Chunk : ThreadedJob, IEquatable<Chunk>
 		} // end for xx
 		
 		addAggregatedFaceGeomToMesh(starting_tri_index);	
+		
 	}
 	
 	private static bool aSolidRangeBelowIsFlushWithRangeAtIndex(List<Range1D> heights, int currentIndex) {

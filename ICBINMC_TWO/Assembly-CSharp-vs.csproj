@@ -148,7 +148,9 @@
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Structures\StructureBase.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Tests\WindowMapTest.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\AssertUtil.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\CoordRadarUtil.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\CoordUtil.cs" />
+     <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\CrudeTrig.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\DebugLinesMonoBAssistant.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\DebugLinesUtil.cs" />
      <Compile Include="Assets\ScriptsByMatt\VoxelGenerationUnity\Utility\DirectionUtil.cs" />

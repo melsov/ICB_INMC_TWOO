@@ -23,6 +23,8 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 	private List<Window> windows = new List<Window>();
 	private List<Column> columns = new List<Column>();
 	
+	private List<Coord> everGotDestroyChunkCos = new List<Coord>();
+	
 	public Quad debugQuad = Quad.theErsatzNullQuad();
 	
 	public void addUnitCubeAt(Coord woco)
@@ -64,6 +66,12 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 		}
 //		if (!columns.Contains(column))
 //			columns.Add(column);
+	}
+	
+	public void addDestroyedChunkCoord(Coord chco)
+	{
+		if (!everGotDestroyChunkCos.Contains(chco))
+			everGotDestroyChunkCos.Add(chco);
 	}
 	
 	public void addColumn(SimpleRange range, PTwo _xz, int debugInteger)
@@ -115,6 +123,12 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 //		drawWindows();
 //		drawColumns();
 		drawNoiseCoordQuad();
+	}
+	
+	void drawDestroyedChunkCoords()
+	{
+
+		DebugLinesUtil.DrawDebugCubesForChunksCoords(everGotDestroyChunkCos);
 	}
 	
 	void drawUnitCubes()
