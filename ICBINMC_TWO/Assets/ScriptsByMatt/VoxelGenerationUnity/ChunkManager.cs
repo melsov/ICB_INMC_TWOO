@@ -79,7 +79,8 @@ public class ChunkManager : MonoBehaviour
 	private AudioSource audioSourceCamera; 
 
 	private List<Chunk> activeChunks = new List<Chunk> ();
-	private List<Coord> createTheseChunks = new List<Coord>();
+	private Set<Coord> createTheseChunks = new Set<Coord>();
+//	private List<Coord> createTheseChunks = new List<Coord>();
 	private List<Chunk> checkTheseAsyncChunksDoneCalculating = new List<Chunk>();
 	private List<Chunk> destroyTheseChunks;
 	
@@ -549,7 +550,8 @@ public class ChunkManager : MonoBehaviour
 			
 			if (chunk != null && !createTheseChunks.Contains(chCo))
 			{
-				createTheseChunks.Insert(0,chCo);
+//				createTheseChunks.Insert(0,chCo);
+				createTheseChunks.Add(chCo);
 			}
 //			AssertUtil.Assert( chunk == null || !chunk.isActive , "this chunk shouldn't be ready yet??" + chCo.toString());	
 		}
@@ -1191,7 +1193,7 @@ public class ChunkManager : MonoBehaviour
 		if (chh == null || !chh.isActive) 
 		{
 #if NEIGH_CHUNKS
-			//TEST WANT!!
+			
 			NoiseCoord nco = noiseCoordContainingChunkCoord(chco);	
 			
 			NoisePatch npatch = blocks.noisePatchAtNoiseCoord(nco);
@@ -1274,17 +1276,68 @@ public class ChunkManager : MonoBehaviour
 		}
 		return null;
 	}
-
-	private Coord getChunkCoordWithinDontDestroyRealmFromList(List<Coord> chunkCoordList) {
+	
+	private Coord getChunkCoordCloseToCameraViewFromCreateChunkSet() 
+	{
+		return getChunkCoordCloseToCameraView(true);
+	}
+	
+	private Coord getChunkCoordCloseToCameraView(bool wantChunkFromSet) 
+	{
+		Coord playerChCo = playerLocatedAtChunkCoord();
+		int camAngle = playerCameraAngleDegrees();
+		int squareRadius = 1;
 		
-		for (int i = 0; i < chunkCoordList.Count; ++i)
-		{
-			Coord chco = chunkCoordList[i];
-//			if (chco.isInsideOfRange(m_dontDestroyRealm)) //TEST //much better without!
-				return chco;
-
+		List<int> angles = CrudeTrig.SquareAnglesForRadiusAndAngle(squareRadius, camAngle);
+		
+		foreach(int ang in angles) {
+			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
+			if (chunkCondition(playerChCo + nudge, wantChunkFromSet))
+				return playerChCo + nudge;
 		}
+
+		angles = CrudeTrig.SquareAnglesForRadiusAndAngle(squareRadius, camAngle + 180);
+		
+		foreach(int ang in angles) {
+			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
+			if (chunkCondition(playerChCo + nudge, wantChunkFromSet))
+				return playerChCo + nudge;
+		}
+		
+		angles = CrudeTrig.SquareAnglesForRadiusAndAngle(++squareRadius, camAngle);
+		
+		foreach(int ang in angles) {
+			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
+			if (chunkCondition(playerChCo + nudge, wantChunkFromSet))
+				return playerChCo + nudge;
+		}
+		
+		angles = CrudeTrig.SquareAnglesForRadiusAndAngle(squareRadius, camAngle + 180);
+		
+		foreach(int ang in angles) {
+			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
+			if (chunkCondition(playerChCo + nudge, wantChunkFromSet))
+				return playerChCo + nudge;
+		}
+		
+		
+//		for (int i = 0; i < chunkCoordList.Count; ++i)
+//		{
+//			Coord chco = chunkCoordList[i];
+////			if (chco.isInsideOfRange(m_dontDestroyRealm)) //TEST //much better without!
+//				return chco;
+//
+//		}
 		return Coord.TheErsatzNullCoord();
+	}
+	
+	private bool chunkCondition(Coord chco, bool wantChunkFromSet)
+	{
+		if (wantChunkFromSet) {
+			return (createTheseChunks.Contains(chco));
+		} else { //doesn't exist yet
+			return false; //not in use //TODO: put to use
+		}
 	}
 	
 	private Coord getChunkCoordWithinVeryCloseRealmFromList(List<Coord> chunkCoordList) {
@@ -1299,17 +1352,19 @@ public class ChunkManager : MonoBehaviour
 		return Coord.TheErsatzNullCoord();
 	}
 	
-	private void cullVeryCloseList(List<Coord> chunkCoordList) {
-		
-		for (int i = 0; i < chunkCoordList.Count; ++i)
-		{
-			Coord chco = chunkCoordList[i];
-			if (!chco.isInsideOfRange(m_veryCloseAndInFrontRealm))
-			{
-				chunkCoordList.RemoveAt(i);
-				i--;
-			}
-		}
+//	private void cullVeryCloseList(List<Coord> chunkCoordList) {
+	private void cullVeryCloseList() 
+	{
+		//TODO: cull the set...
+//		for (int i = 0; i < chunkCoordList.Count; ++i)
+//		{
+//			Coord chco = chunkCoordList[i];
+//			if (!chco.isInsideOfRange(m_veryCloseAndInFrontRealm))
+//			{
+//				chunkCoordList.RemoveAt(i);
+//				i--;
+//			}
+//		}
 	}
 
 	IEnumerator createAndDestroyChunksFromLists()
@@ -1323,7 +1378,7 @@ public class ChunkManager : MonoBehaviour
 				if (createTheseChunks.Count > 0)
 				{
 					
-					Coord chco = getChunkCoordWithinDontDestroyRealmFromList(createTheseChunks);
+					Coord chco = getChunkCoordCloseToCameraViewFromCreateChunkSet();
 					if (!chco.equalTo(Coord.TheErsatzNullCoord()))
 					{
 						chunk = chunkMap.chunkAt(chco);
@@ -1340,7 +1395,7 @@ public class ChunkManager : MonoBehaviour
 #endif
 						createTheseChunks.Remove(chunk.chunkCoord); // isn't that better??
 					} else {
-						cullVeryCloseList(createTheseChunks);
+						cullVeryCloseList();
 					}
 				}
 				else if (!TestRunner.RunGameOnlyNoisPatchesWithinWorldLimits)
@@ -1456,7 +1511,7 @@ public class ChunkManager : MonoBehaviour
 		
 		while (true) 
 		{
-			nco = noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
+			nco = patchCoordClosestToPlayerNotStartedSetup(); // noiseCoordClosestToPlayerThatHasNotStartedSetup(2);
 			
 			testRunnerApproves = TestRunner.NoiseCoordWithinTestLimits(nco);
 			
@@ -1466,9 +1521,9 @@ public class ChunkManager : MonoBehaviour
 
 				np = makeNoisePatchIfNotExistsAtNoiseCoordAndGet(nco);//  blocks.noisePatches [nco];
 				
-				if (!setupThesePatches.Contains(np))
+				if (!setupThesePatches.Contains(nco))
 				{
-					setupThesePatches.Add (np);
+					setupThesePatches.Add (nco);
 				}
 #if NEIGH_CHUNKS
 				
@@ -1478,8 +1533,8 @@ public class ChunkManager : MonoBehaviour
 				{
 					neico = neighborsToStart[i];
 					neipatch = makeNoisePatchIfNotExistsAtNoiseCoordAndGet(neico);
-					if (!setupThesePatches.Contains(neipatch)) 
-						setupThesePatches.Add(neipatch);
+					if (!setupThesePatches.Contains(neico)) 
+						setupThesePatches.Add(neico);
 					
 					yield return new WaitForSeconds(PATCH_UPDATE_WAIT_SECONDS); 
 				}
@@ -1495,21 +1550,70 @@ public class ChunkManager : MonoBehaviour
 		return null;
 	}
 	
-	NoisePatch patchClosestToPlayerViewFromSetupPatchesSet()
+	private NoiseCoord patchCoordClosestToPlayerViewFromSetupPatchesSet()
+	{
+		return patchCoordClosestToPlayerViewFromSetupPatchesSet(true);
+	}
+	
+	private NoiseCoord patchCoordClosestToPlayerNotStartedSetup()
+	{
+		return patchCoordClosestToPlayerViewFromSetupPatchesSet(false);
+	}
+	
+	private NoiseCoord patchCoordClosestToPlayerViewFromSetupPatchesSet(bool wantSetupPatchesContains)
 	{
 		int squareRadius = 1;
 		int camAngle = playerCameraAngleDegrees();
-		List<int> angles = CrudeTrig.SquareAnglesForRadiusAndAngle(squareRadius, camAngle );
 		NoiseCoord playerNco = playerNoiseCoord();
+		
+		List<int> angles = CrudeTrig.SquareAnglesForRadiusAndAngle(squareRadius, camAngle );
 		
 		foreach(int ang in angles)
 		{
 			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
 			NoiseCoord nco = new NoiseCoord(nudge) + playerNco;
-//			if (setupThesePatches.Contains())
+
+			if (noiseCoordReturnCondition(nco, wantSetupPatchesContains)) {
+				return nco;
+			}
 		}
 		
-		return null;
+		angles = CrudeTrig.SquareAnglesForRadiusAndAngle(++squareRadius, camAngle );
+		
+		foreach(int ang in angles)
+		{
+			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
+			NoiseCoord nco = new NoiseCoord(nudge) + playerNco;
+
+			if (noiseCoordReturnCondition(nco, wantSetupPatchesContains)) {
+				return nco;
+			}
+		}
+		
+		angles = CrudeTrig.SquareAnglesForRadiusAndAngle(--squareRadius, camAngle + 180 );
+		
+		foreach(int ang in angles)
+		{
+			Coord nudge = CoordRadarUtil.NudgeCoordXZForYAxisAngleAndRadius(ang, squareRadius);
+			NoiseCoord nco = new NoiseCoord(nudge) + playerNco;
+
+			if (noiseCoordReturnCondition(nco, wantSetupPatchesContains)) {
+				return nco;
+			}
+		}
+		
+		return NoiseCoord.TheErsatzNullNoiseCoord();
+	}
+	
+	private bool noiseCoordReturnCondition(NoiseCoord nco, bool wantSetupPatchesContains)
+	{
+		if (wantSetupPatchesContains) {
+			return setupThesePatches.Contains(nco);
+		}
+		else {
+			// NCO doesn't exist yet...
+			return !blocks.noisePatchAtNoiseCoordHasBuiltOrIsBuildingCurrently(nco);
+		}
 	}
 
 	
@@ -1520,20 +1624,26 @@ public class ChunkManager : MonoBehaviour
 		{
 			if (setupThesePatches.Count > 0) 
 			{	
-				NoisePatch np =  patchClosestToPlayerViewFromSetupPatchesSet(); // setupThesePatches [0];
+				NoiseCoord nco = patchCoordClosestToPlayerViewFromSetupPatchesSet(); // setupThesePatches [0];
+				NoisePatch np =  blocks.noisePatchAtNoiseCoord(nco);
 
 				if (np != null) 
 				{
 					if (!np.hasStarted) {
 						np.populateBlocksAsync (); // async does seem to smooth out game play...
 					}
-
-				} else {
-					throw new Exception("block from set up these patches was null");
-				}
+					
+					setupThesePatches.Remove(nco);
+					checkDoneForThesePatches.Add(np);
+					
+				} 
+//				else {
+//					throw new Exception("block from set up these patches was null");
+//				}
 				
-				setupThesePatches.RemoveAt (0);
-				checkDoneForThesePatches.Add(np);
+//				setupThesePatches.RemoveAt (0);
+//				setupThesePatches.Remove(nco);
+//				checkDoneForThesePatches.Add(np);
 			}
 			yield return new WaitForSeconds (.82f); //silly
 		}
@@ -1616,7 +1726,7 @@ public class ChunkManager : MonoBehaviour
 						//TODO: check that this noise patch doesn't contain any chunks maybe?
 						
 						if (npatch.IsDone) {
-							setupThesePatches.Remove(npatch);
+							setupThesePatches.Remove(farAwayNCo);
 							blocks.destroyPatchAt(farAwayNCo);
 						}
 						else { 
@@ -1680,8 +1790,8 @@ public class ChunkManager : MonoBehaviour
 	
 	NoiseCoord noiseCoordClosestToPlayer(int RadiusLimit, bool wantNotSetUp)
 	{
-//		Coord playerCoord = playerPosCoord();
-		NoiseCoord playerNCo = playerNoiseCoord();//  noiseCoordContainingWorldCoord(playerCoord);
+		Coord playerCoord = playerPosCoord();
+		NoiseCoord playerNCo = noiseCoordContainingWorldCoord(playerCoord);
 				
 		Coord currentNCoWoco = worldCoordForNoiseCoord(playerNCo);
 		
@@ -1904,10 +2014,10 @@ public class ChunkManager : MonoBehaviour
 	{
 		bug ("heard from noise patch?");
 
-		if (setupThesePatches.Contains(npatch))
+		if (setupThesePatches.Contains(npatch.coord))
 		{
 			bug ("removing patch at: " + npatch.coord.toString ());
-			setupThesePatches.Remove (npatch);
+			setupThesePatches.Remove (npatch.coord);
 		}
 
 		if (!firstNoisePatchDone ) // && setupThesePatches.Count == 0)
@@ -2157,11 +2267,11 @@ public class ChunkManager : MonoBehaviour
 //		DebugLinesUtil.drawDebugCubesForNoiseCoordList(bugNoiseCoordsThatDidntExist, Color.red, 1);
 //		drawDebugLinesForNoisePatch(new NoiseCoord(0,0));
 		
-//		DebugLinesUtil.drawDebugCubesForAllUncreatedChunks(createTheseChunks);
+		DebugLinesUtil.drawDebugCubesForAllUncreatedChunks(createTheseChunks);
 //		DebugLinesUtil.drawDebugCubesForChunkCoordList(bugCoordsThatWaitedForAdjacentNPatches, new Color(.1f,.7f,.4f,1f), new Coord(-2,0,2));
 //		DebugLinesUtil.drawDebugCubesForChunksOnDestroyList(destroyTheseChunks);
 //		DebugLinesUtil.drawDebugCubesForChunksOnCheckASyncList(checkTheseAsyncChunksDoneCalculating);
-		DebugLinesUtil.drawDebugCubesForChunkList(activeChunks, new Color(.9f,.4f,.4f,1.0f), new Coord(1,0,4));
+//		DebugLinesUtil.drawDebugCubesForChunkList(activeChunks, new Color(.9f,.4f,.4f,1.0f), new Coord(1,0,4));
 //		drawDebugCubesForEverBeenDestroyedList();
 
 

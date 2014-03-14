@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System;
+using Wintellect.PowerCollections;
 
 public struct CoordLine
 {
@@ -74,7 +75,7 @@ public static class DebugLinesUtil
 	
 	
 	
-	public static void drawDebugCubesForAllUncreatedChunks(List<Coord> createTheseVeryCloseAndInFrontChunks)
+	public static void drawDebugCubesForAllUncreatedChunks(Set<Coord> createTheseVeryCloseAndInFrontChunks)
 	{
 		foreach(Coord chco in createTheseVeryCloseAndInFrontChunks)
 		{
@@ -91,7 +92,7 @@ public static class DebugLinesUtil
 		}
 	}
 	
-	public static void DrawDebugCubesForChunksCoords(List<Coord> chunkCos)
+	public static void DrawDebugCubesForChunksCoords(Set<Coord> chunkCos)
 	{
 		Coord nudge = new Coord(3, 0, 3); // avoid occluding create very close lines
 		foreach(Coord co in chunkCos)

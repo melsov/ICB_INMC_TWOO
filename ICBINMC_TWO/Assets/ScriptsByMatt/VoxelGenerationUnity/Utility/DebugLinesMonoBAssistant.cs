@@ -128,7 +128,7 @@ public class DebugLinesMonoBAssistant : MonoBehaviour
 	void drawDestroyedChunkCoords()
 	{
 
-		DebugLinesUtil.DrawDebugCubesForChunksCoords(everGotDestroyChunkCos);
+//		DebugLinesUtil.DrawDebugCubesForChunksCoords(everGotDestroyChunkCos);
 	}
 	
 	void drawUnitCubes()

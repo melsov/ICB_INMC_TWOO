@@ -125,7 +125,7 @@ public class TestRunner : MonoBehaviour
 	
 	private void drawTrigCoords()
 	{
-		DebugLinesUtil.DrawDebugCubesForChunksCoords(testTrigCoords);
+//		DebugLinesUtil.DrawDebugCubesForChunksCoords(testTrigCoords);
 		DebugLinesUtil.DrawDebugForChunkCoord(currentTestTrigCoord, new Color(.2f,.7f,.7f,1f ));
 	}
 	
