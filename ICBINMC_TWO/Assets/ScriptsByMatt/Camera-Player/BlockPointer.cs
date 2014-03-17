@@ -26,28 +26,32 @@ public class BlockPointer : MonoBehaviour {
 //		}
 		Vector3 midScreen = new Vector3 (Screen.width * .5f, Screen.height * .5f, 0f);
 		RaycastHit hit;
-
-		if (Input.GetMouseButtonDown (1)) { // right clicks are just clicks (for placing blocks) therefore, use GetMouseButtonDOWN (not GetMouseButton)
-			
+		
+		// right clicks are just clicks (for placing blocks) i.e. 
+		// we don't test for the time the RMB was down
+		// therefore, use GetMouseButtonDOWN (not GetMouseButton)
+		if (Input.GetMouseButtonDown (1)) 
+		{ 
 			hitHandler.handleLeftButtonUp();
 			
 			if (!Physics.Raycast(camera.ScreenPointToRay(midScreen), out hit))
 				return;
 			
-			
 			hitHandler.handleRightButtonHit (hit);
-
 			return;
 		}
 		
-		if (Input.GetMouseButtonUp(0)) { //just picked up LMB
+		//just picked up LMB
+		if (Input.GetMouseButtonUp(0)) { 
 			hitHandler.handleLeftButtonUp();
 		}
 		
 		if (!Physics.Raycast(camera.ScreenPointToRay(midScreen), out hit))
 			return;
-
-		if (Input.GetMouseButton (0)) { //GetMouseButton(0) is true for the whole time that the left mouse button is down (so useful for punching blocks)
+		
+		// GetMouseButton(0) is true for the whole time that 
+		// the left mouse button is down (useful for punching blocks)
+		if (Input.GetMouseButton (0)) { 
 			
 			hitHandler.handleLeftButtonHit (hit);
 			
