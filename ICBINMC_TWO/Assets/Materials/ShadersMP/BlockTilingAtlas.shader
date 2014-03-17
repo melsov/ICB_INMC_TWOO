@@ -212,14 +212,8 @@
 			half2 tile_o = half2(index - blocky * TILES_PER_DIM , blocky) * 0.25;
 			o.color.xy = tile_o; // store in color for now
 			
-//			//			TEST //TEST
-//			o.color.xy = half2(.01,.01);
-			// END OF GET TILE OFFSET
-			
-//			o.color.zw = float2(pposx, pposy); //_PlayerLoc.xz;  // light_level;
+//			o.color.zw = float2(pposx, pposy); //_PlayerLoc.xz;  
 			o.color.z = light_level;
-//			o.color.w = half(local_light);
-
 			
 			o.uv.xy =  half2(vx, vy);
 			
@@ -299,7 +293,10 @@
 			// FLIPPING THE NORMALS IN THE VERT SHADER?
 			
 			half2 model_rel_twoD = fmod(chunkCoord, FACE_SET_MAX_LENGTH);
-			float index = getIndex(i.overhangLightLevel, model_rel_twoD.x); // 0; // (fmod(floor(model_rel_twoD.x), FACE_SET_MAX_LENGTH) > 1.0) ? ll_two : local_light_index; 
+			
+			float index = getIndex(i.overhangLightLevel, model_rel_twoD.x); //WANT!! 
+
+			 // (fmod(floor(model_rel_twoD.x), FACE_SET_MAX_LENGTH) > 1.0) ? ll_two : local_light_index; 
 			
 //			float facemodx = fmod(floor(model_rel_twoD.x), HALF_FACE_SET_MAX_LENGTH);
 //			float facemodz = fmod(floor(model_rel_twoD.y), FACE_SET_MAX_LENGTH);
@@ -313,7 +310,11 @@
 
 			//ALT POW 4 version
 //			float facemodz = fmod(floor(model_rel_twoD.y), FACE_SET_MAX_LENGTH); 
+			
+			
+			// WANT!! 
 			float power_lookup = floor(index / pow(NUM_LIGHT_LEVELS, model_rel_twoD.y)); 
+//			float power_lookup = floor(index / pow(NUM_LIGHT_LEVELS, abs(model_rel_twoD.y))); 
 			half light_one = fmod( power_lookup , NUM_LIGHT_LEVELS  );
 			
 //			fixed local_light = (light_one + 2.0) / NUM_LIGHT_LEVELS_PLUS_ONE; // LOWEST IS NOT ZERO //   light_one / 3.0;
@@ -325,7 +326,9 @@
 //				return fixed4(0.4, 0.4 * model_rel_twoD.y/FACE_SET_MAX_LENGTH,0.0,1.0) * i.color.z; //test	
 
 			
-	        return tex2D(_BlockTex, scaled_uv) * i.color.z * local_light; // color z == light level
+			
+			//WANT!
+	        return tex2D(_BlockTex, scaled_uv) * i.color.z * local_light; // i.colorz == sun w shadows
 
         }
 

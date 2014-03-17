@@ -121,7 +121,7 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	// some terrain gen constants
 	private const int BIOMELOOKUPOFFSET = 100;
 	private const float BIOMEFREQUENCY = 120f;
-	private const float NOISESCALE2D = 1f;
+	private const float NOISESCALE2D = 2f;
 	private static int CAVE_MAX_LIKELIHOOD_LEVEL = (int)(patchDimensions.y * .2f);
 	private const float CAVEBASETHRESHOLD = .75f;
 	private const float CAVETHRESHOLDRANGE = 1f - CAVEBASETHRESHOLD + CAVEBASETHRESHOLD * .3f;
@@ -2231,7 +2231,8 @@ public class NoisePatch : ThreadedJob, IEquatable<NoisePatch>
 	}
 	
 	private float get2DNoise(int xx, int zz) {
-		return m_chunkManager.m_libnoiseNetHandler.Get2DValue((float)((patchDimensions.x * coord.x + xx) * NOISESCALE2D / (float)patchDimensions.x), 	
+		return m_chunkManager.m_libnoiseNetHandler.Get2DValue(
+			(float)((patchDimensions.x * coord.x + xx) * NOISESCALE2D / (float)patchDimensions.x), 	
 			(float)((patchDimensions.z * coord.z + zz) * NOISESCALE2D/(float)patchDimensions.z)); 
 	}
 	

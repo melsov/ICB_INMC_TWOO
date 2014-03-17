@@ -76,6 +76,7 @@ public class LightDataProvider : ILightDataProvider
 				//THE SHADER WILL TAKE THE VALUE FROM COMPONENT WITH 'INDEX' 3 (7 % 4 => 3)
 				rows[(quad.origin.s + i) % FaceSet.MAX_DIMENSIONS.s] |= colorValueFloatWith((quad.origin.t + j) 
 					% FaceSet.MAX_DIMENSIONS.t, lightValue);
+
 			}
 		}
 

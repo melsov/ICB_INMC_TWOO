@@ -1,4 +1,4 @@
-﻿Shader "Custom/BlockTilingAtlas" {
+﻿Shader "Custom/VGrassy" {
 	Properties {
 		_BlockTex ("Base RGB!", 2D) = "white" {}
 		_GameClock ("Clock", Range(0, 1.0)) = 1.0

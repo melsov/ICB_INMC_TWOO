@@ -64,6 +64,7 @@
      <None Include="Assets\ScriptsByMatt\VoxelGeneration\Resources\LibNoise.Unity\COPYING.txt" />
      <None Include="Assets\Materials\CubicWord\Water.shader" />
      <None Include="Assets\ScriptsByMatt\VoxelGeneration\Resources\LibNoise.Unity\COPYING.LESSER.txt" />
+     <None Include="Assets\Materials\ShadersMP\BlockTilingAtlasOLDIDEAS.shader" />
      <None Include="Assets\Materials\ShadersMP\experiments\AmbientTest.shader" />
      <None Include="Assets\Materials\ShadersMP\BlockTilingAtlas.shader" />
      <None Include="Assets\Materials\ShadersMP\OTHERSHADERS\BlockShader.shader" />

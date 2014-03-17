@@ -1,4 +1,4 @@
-﻿Shader "Custom/BlockTilingAtlas" {
+﻿Shader "Graveyard/BlockTilingAtlasOLD" {
 	Properties {
 		_BlockTex ("Base RGB!", 2D) = "white" {}
 		_GameClock ("Clock", Range(0, 1.0)) = 1.0
